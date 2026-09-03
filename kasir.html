@@ -832,15 +832,20 @@ tr:last-child td { border-bottom: none; }
         await authReady;
     
         console.log("UPDATE STATUS:", key, "→", newStatus);
-
-        let query = supabase.from("orders").update({ status: newStatus });
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) {
-            query = query.eq("id", key);
-        } else {
-            query = query.eq("order_id", key);
-        }
-
-        const { data, error } = await query.select("id, order_id, status");
+    
+        const isUUID =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(String(key));
+    
+        const column = isUUID ? "id" : "order_id";
+    
+        console.log("FILTER:", column, "=", key);
+    
+        const { data, error } = await supabase
+          .from("orders")
+          .update({ status: newStatus })
+          .eq(column, key)
+          .select("id, order_id, status");
     
         if (error) {
           console.error("SUPABASE UPDATE ERROR:", error);
@@ -849,22 +854,53 @@ tr:last-child td { border-bottom: none; }
     
         console.log("HASIL UPDATE:", data);
     
-        let localOrders = JSON.parse(localStorage.getItem("local_orders") || "[]");
+        if (!data || data.length === 0) {
+          console.warn(
+            "UPDATE TIDAK MENGUBAH ROW. Cek ID/order_id atau RLS policy Supabase."
+          );
+    
+          alert(
+            "Status tidak berubah.\n\n" +
+            "Data pesanan tidak ditemukan atau UPDATE diblokir oleh RLS Supabase."
+          );
+    
+          return;
+        }
+    
+        let localOrders = JSON.parse(
+          localStorage.getItem("local_orders") || "[]"
+        );
+    
         localOrders = localOrders.map(order => {
-          const orderKey = order.id || order.order_id;
-          if (String(orderKey) === String(key)) {
-            return { ...order, status: newStatus };
+          if (
+            String(order.id) === String(key) ||
+            String(order.order_id) === String(key)
+          ) {
+            return {
+              ...order,
+              status: newStatus
+            };
           }
+    
           return order;
         });
-        localStorage.setItem("local_orders", JSON.stringify(localOrders));
-
+    
+        localStorage.setItem(
+          "local_orders",
+          JSON.stringify(localOrders)
+        );
+    
         await window.loadOrders();
+    
         alert("Status pesanan berhasil diperbarui!");
     
       } catch (error) {
         console.error("GAGAL UPDATE STATUS:", error);
-        alert("Status gagal disimpan ke database Supabase.\n\n" + error.message);
+    
+        alert(
+          "Status gagal disimpan ke database Supabase.\n\n" +
+          error.message
+        );
       }
     };
 
