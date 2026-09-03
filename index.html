@@ -624,16 +624,44 @@
             let proofReference = 'Pending / Cash';
 
             try {
+                await authReady;
                 if (fileInput.files && fileInput.files.length > 0) {
                     const file = fileInput.files[0];
-                    proofReference = await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
+                    const fileExt = file.name.split('.').pop().toLowerCase();
+                    const fileName = `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
+
+                    // Convert file to ArrayBuffer / Blob for robust upload bypassing RLS if bucket is public,
+                    // or storing base64 data string as reliable fallback for private buckets.
+                    const reader = new FileReader();
+                    proofReference = await new Promise((resolve, reject) => {
+                        reader.onload = async (e) => {
+                            const base64Data = e.target.result;
+                            try {
+                                const { data: uploadData, error: uploadError } = await supabase.storage
+                                    .from('payment-proofs')
+                                    .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+                                if (!uploadError) {
+                                    const { data: publicUrlData } = supabase.storage
+                                        .from('payment-proofs')
+                                        .getPublicUrl(fileName);
+                                    if (publicUrlData && publicUrlData.publicUrl) {
+                                        resolve(publicUrlData.publicUrl);
+                                        return;
+                                    }
+                                }
+                                // Fallback to storing Base64 string directly if storage upload fails due to policies
+                                resolve(base64Data);
+                            } catch (err) {
+                                resolve(base64Data);
+                            }
+                        };
+                        reader.onerror = (err) => reject(err);
                         reader.readAsDataURL(file);
                     });
                 }
-            } catch (err) {
-                console.error("File processing error:", err);
+            } catch (storageErr) {
+                console.warn("Storage warning, using base64 reference:", storageErr);
             }
 
             pendingOrderData.payment_proof = proofReference;
@@ -669,7 +697,7 @@ Nama: ${pendingOrderData.customer_name}
 No. WA: ${pendingOrderData.phone}
 Alamat: ${pendingOrderData.address}
 Pembayaran: ${pendingOrderData.payment_method}
-Bukti Pembayaran: ${paymentMethod === 'Cash' ? 'Cash / COD' : 'Tersimpan di Sistem & Database'}
+Bukti Pembayaran: ${proofReference.startsWith('data:') ? '[Bukti Terlampir di Sistem]' : proofReference}
 
 Mohon segera diproses ya Kak, terima kasih! 🙏`
             );
@@ -711,10 +739,12 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
             resultDiv.classList.remove('hidden');
             if (foundOrder) {
                 let proofDisplay = '';
-                if (foundOrder.payment_proof && foundOrder.payment_proof.startsWith('data:image')) {
-                    proofDisplay = `<div class="pt-2"><p class="text-xs text-slate-500 mb-1 font-semibold">Bukti Pembayaran:</p><img src="${foundOrder.payment_proof}" class="w-32 h-32 object-cover rounded-xl border border-slate-200"></div>`;
-                } else if (foundOrder.payment_proof) {
-                    proofDisplay = `<div class="pt-2"><span class="text-xs text-brand-600 font-semibold">${foundOrder.payment_proof}</span></div>`;
+                if (foundOrder.payment_proof && foundOrder.payment_proof !== 'Pending / Cash') {
+                    if (foundOrder.payment_proof.startsWith('data:image')) {
+                        proofDisplay = `<div class="pt-2"><p class="text-xs text-slate-500 mb-1 font-semibold">Bukti Pembayaran:</p><img src="${foundOrder.payment_proof}" class="w-32 h-32 object-cover rounded-xl border border-slate-200"></div>`;
+                    } else {
+                        proofDisplay = `<div class="pt-2"><a href="${foundOrder.payment_proof}" target="_blank" class="text-xs text-brand-600 underline font-semibold">Lihat Bukti Pembayaran ↗</a></div>`;
+                    }
                 }
 
                 resultDiv.innerHTML = `
