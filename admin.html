@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Admin - ChimChum</title>
+<link rel="icon" type="image/jpeg" href="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+:root{
+  --primary:#ff6b35;
+  --secondary:#fff5f0;
+  --dark:#222;
+  --gray:#666;
+  --white:#fff;
+  --success:#2ecc71;
+}
+
+*{
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+  margin: 0; padding: 0;
+}
+
+body{
+  background: var(--secondary);
+  color: var(--dark);
+  transform: scale(0.9);
+    transform-origin: top left;
+    width: 111.11%; /* compensate for scaling */
+}
+
+/* HEADER */
+/* ================= HEADER STYLE ================= */
+header {
+  background: white;
+  padding: 12px 25px; /* Sedikit lebih ramping & presisi */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  position: sticky;   /* Membuat header tetap di atas saat scroll */
+  top: 0;
+  z-index: 999;
+}
+
+/* Pembungkus Link Logo + Tulisan Judul */
+header .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;               /* Jarak konsisten antara gambar dan teks h2 */
+  text-decoration: none;   /* Menghilangkan garis bawah link */
+  color: inherit;
+}
+
+/* logo img */
+header .logo img {
+  height:42px;
+  width:auto;
+  object-fit:contain;
+}
+
+
+/* Pengaturan Judul Dashboard */
+header h2 {
+  font-size: 18px;         /* Ukuran teks lebih seimbang */
+  color: var(--primary);      /* Warna gelap dominan */
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  transition: color 0.2s ease;
+}
+
+/* Efek interaktif saat logo di-hover mouse */
+header .logo:hover h2 {
+  color: var(--gray);   /* Berubah oranye saat diarahkan */
+}
+
+/* Mengubah status teks biasa menjadi Badge/Pill Modern */
+header .status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #27ae60;          /* Warna hijau sukses */
+  background: #ebf7ee;     /* Background hijau soft transparan */
+  padding: 6px 14px;
+  border-radius: 20px;     /* Membuat efek kapsul */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d4eedb;
+}
+
+/* RESPONSIVE: Agar otomatis menyesuaikan saat dibuka di handphone */
+@media (max-width: 600px) {
+  header {
+    padding: 12px 15px;
+  }
+  header h2 {
+    font-size: 13px;       /* Mengecilkan font di layar HP */
+  }
+  header .logo img {
+    width: 32px;
+    height: 32px;          /* Mengecilkan logo di HP */
+  }
+  header .status-badge {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+}
+
+/* TABS NAVIGATION */
+.tabs-nav {
+  display: flex;
+  gap: 10px;
+  padding: 15px 25px;
+  background: #fdfdfd;
+  border-bottom: 1px solid #eee;
+}
+.tab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: #f1f2f6;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray);
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+.btn-logout {
+  margin-left: auto;
+  background: #ff4757;
+  color: white;
+}
+
+/* CONTAINER & SECTIONS */
+.container { padding: 25px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* CARD & LAYOUT */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.card h3 { margin-bottom: 15px; font-size: 18px; }
+
+/* FORM CONTROL */
+input, textarea, select {
+  width: 100%;
+  padding: 11px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+input:focus, textarea:focus { border-color: var(--primary); }
+
+/* BUTTONS */
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-edit { background: #ffa502; color: white; }
+.btn-delete { background: #ff4757; color: white; }
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  margin-top: 10px;
+}
+th, td {
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: 14px;
+}
+th { background: #fff1ea; font-weight: 600; }
+img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; }
+.action-btns { display: flex; gap: 5px; }
+
+/* KASIR DINE-IN INTERFACE */
+.kasir-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+}
+.kasir-menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.kasir-item-card {
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: 0.15s;
+}
+.kasir-item-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+.kasir-item-card img {
+  width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;
+}
+.kasir-item-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.kasir-item-card p { font-size: 13px; color: var(--primary); font-weight: 700; }
+
+.kasir-receipt {
+  background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  height: fit-content; position: sticky; top: 20px;
+}
+.receipt-items {
+  max-height: 240px; overflow-y: auto; margin: 15px 0; border-top: 1px dashed #ddd; padding-top: 10px;
+}
+.receipt-item {
+  display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px;
+}
+.receipt-qty-control button { padding: 2px 6px; font-size: 12px; }
+
+@media(max-width: 768px){
+  .kasir-grid { grid-template-columns: 1fr; }
+  .tabs-nav { flex-wrap: wrap; }
+  .btn-logout { margin-left: 0; width: 100%; text-align: center; justify-content: center; }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#">
+    <img src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
+         alt="ChimChum Malang Logo" onerror="this.style.display='none'">
+    <h2>ChimChum Malang — Panel Manajemen</h2>
+  </a>
+  
+  <span class="status-badge">
+    <i class="fa-solid fa-user-shield"></i> Terautentikasi
+  </span>
+</header>
+
+<div class="tabs-nav">
+  <button class="tab-btn active" onclick="switchTab('tab-kasir', this)"><i class="fa-solid fa-cash-register"></i> Kasir Dine-In</button>
+  <button class="tab-btn" onclick="switchTab('tab-pesanan', this)"><i class="fa-solid fa-receipt"></i> Pesanan Masuk</button>
+  <button class="tab-btn" onclick="switchTab('tab-produk', this)"><i class="fa-solid fa-box"></i> Kelola Produk</button>
+  <button class="tab-btn" onclick="switchTab('tab-stok', this)"><i class="fa-solid fa-warehouse"></i> Monitoring Stok</button>
+  <button class="tab-btn" onclick="switchTab('tab-laporan', this)"><i class="fa-solid fa-chart-line"></i> Laporan Keuangan</button>
+  <button class="tab-btn btn-logout" onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+</div>
+
+<div class="container">
+
+  <div id="tab-produk" class="tab-content">
+    <div class="card">
+      <h3><i class="fa-solid fa-pen-to-square"></i> Tambah / Edit Produk</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+        <div><label style="font-size:13px; font-weight:500;">Nama Produk</label><input id="nama" placeholder="Contoh: Dimsum Mentai Premium"></div>
+        <div><label style="font-size:13px; font-weight:500;">Kategori</label><input id="kategori" placeholder="Contoh: Mentai / Original / Frozen"></div>
+        <div><label style="font-size:13px; font-weight:500;">Isi (Pcs / Pack)</label><input id="isi" placeholder="Contoh: 4"></div>
+        <div>
+            <label style="font-size:13px; font-weight:500;">Harga Jual (Rp)</label>
+            <input id="harga" placeholder="Contoh: 15000">
+        </div>
+
+        <div>
+            <label style="font-size:13px; font-weight:500;">HPP (Rp)</label>
+            <input id="hpp" placeholder="Contoh: 8000">
+        </div>
+        <div><label style="font-size:13px; font-weight:500;">Stok Porsi</label><input id="stok" placeholder="Contoh: 50"></div>
+        <div>
+            <label style="font-size:13px; font-weight:500;">Upload Foto Produk</label>
+            <input type="file" id="fotoFile" accept="image/*">
+        </div>
+      </div>
+      <label style="font-size:13px; font-weight:500;">Deskripsi Rasa / Menu</label>
+      <textarea id="deskripsi" placeholder="Tulis deskripsi singkat produk di sini..." rows="2"></textarea>
+      <button class="btn-primary" onclick="saveProduct()"><i class="fa-solid fa-floppy-disk"></i> Simpan Informasi Produk</button>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Foto</th>
+            <th>Nama</th>
+            <th>Kategori</th>
+            <th>Isi</th>
+            <th>Harga Jual</th>
+            <th>HPP</th>
+            <th>Stok</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== TAB PESANAN MASUK ===== -->
+  <div id="tab-pesanan" class="tab-content">
+    <div class="card">
+      <h3><i class="fa-solid fa-receipt"></i> Riwayat Pesanan &amp; Transaksi</h3>
+    </div>
+    <div id="orderSummary"
+         style="display:grid;
+                grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+                gap:12px;
+                margin-bottom:15px;">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Pelanggan</th>
+          <th>WhatsApp</th>
+          <th>Tipe / Bayar</th>
+          <th>Status</th>
+          <th>Item Pesanan</th>
+          <th>Total</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="orderTableBody">
+        <tr>
+          <td colspan="7" style="text-align:center; color:#aaa; padding:30px;">
+            Klik tab untuk memuat data...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div id="tab-kasir" class="tab-content active">
+    <div class="kasir-controls" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <div style="flex: 1; min-width: 250px;">
+        <input type="text" id="searchMenuKasir" placeholder="🔍 Cari nama menu atau produk..." style="width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; margin: 0;">
+      </div>
+      <div style="width: 200px;">
+        <select id="filterKategoriKasir" style="width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; background: white; cursor: pointer; margin: 0;">
+          <option value="Semua">All Kategori</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kasir-grid">
+      <div>
+        <div class="card" style="padding:12px; margin-bottom:12px;">
+          <p style="font-size:14px; font-weight:500;"><i class="fa-solid fa-store"></i> Klik menu untuk memasukkan ke dalam struk belanja meja:</p>
+        </div>
+        <div class="kasir-menu-list" id="kasirMenuList"></div>
+      </div>
+      
+      <div class="kasir-receipt">
+        <h3><i class="fa-solid fa-file-invoice-dollar"></i> Struk Kasir Dine-In</h3>
+        <div class="receipt-items" id="kasirCartItems">
+          <p style="text-align:center; color:#aaa; font-size:13px; padding:20px 0;">
+            Belum ada item dipilih.
+          </p>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px; margin:15px 0;">
+          <span>Total Tagihan:</span>
+          <span id="kasirGrandTotal" style="color:var(--primary)">Rp 0</span>
+        </div>
+
+        <div style="background:#fff5f0; padding:15px; border-radius:14px;
+                    margin-top:15px; border:1px solid #ffe0d0;">
+          <h4 style="font-size:14px; margin-bottom:12px; color:#222; font-weight:600;">
+            📋 Data Pelanggan Dine-In
+          </h4>
+
+          <div style="display:flex; gap:10px; margin-bottom:10px; align-items:end; flex-wrap:wrap;">
+            <div style="flex:0.7; min-width:100px;">
+              <label style="font-size:12px; font-weight:500; display:block; margin-bottom:4px;">
+                Nama Pelanggan *
+              </label>
+              <input type="text" id="kasirNomorMeja" placeholder="Arqam"
+                     style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin:0;">
+            </div>
+            <div style="flex:1.3; min-width:130px;">
+              <label style="font-size:12px; font-weight:500; display:block; margin-bottom:4px;">
+                WhatsApp
+              </label>
+              <input type="number" id="kasirWaPelanggan" placeholder="No WA Pelanggan"
+                     style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin:0;">
+            </div>
+            <div style="flex:1; min-width:120px;">
+              <label style="font-size:12px; font-weight:500; display:block; margin-bottom:4px;">
+                Pembayaran *
+              </label>
+              <select id="kasirMetodeBayar"
+                      style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin:0;"
+                      onchange="window.toggleCashSection()">
+                <option value="Cash">Cash (Tunai)</option>
+                <option value="QRIS">QRIS</option>
+                <option value="Transfer">Transfer Bank</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="sectionKalkulatorCash"
+               style="background:white; padding:12px; border-radius:10px;
+                      border:1px solid #ffd0b8; margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--gray);">
+              Uang Tunai Diterima (Rp)
+            </label>
+            <input type="number" id="kasirUangBayar" placeholder="Contoh: 100000"
+                   style="padding:10px; border:1px solid #ddd; border-radius:8px;
+                          margin-top:4px; margin-bottom:8px;"
+                   oninput="window.hitungKembalian()">
+            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
+              <button type="button"
+                      style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;"
+                      onclick="window.setUangCepat(20000)">20.000</button>
+              <button type="button"
+                      style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;"
+                      onclick="window.setUangCepat(50000)">50.000</button>
+              <button type="button"
+                      style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;"
+                      onclick="window.setUangCepat(100000)">100.000</button>
+              <button type="button"
+                      style="padding:4px 8px; font-size:11px; background:var(--primary); color:white;"
+                      onclick="window.setUangPas()">Uang Pas</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600;">
+              <span>Kembalian:</span>
+              <span id="kasirKembalian" style="color:var(--success);">Rp 0</span>
+            </div>
+          </div>
+
+          <div style="border-top:1px dashed #ff6b35; padding-top:10px;">
+            <label style="display:flex; align-items:center; gap:10px; font-weight:600;
+                          font-size:13px; cursor:pointer; color:#222;">
+              <input type="checkbox" id="printStrukCheck"
+                     style="width:18px; height:18px; accent-color:#ff6b35; cursor:pointer;" checked>
+              🖨️ Otomatis Print Struk Belanja
+            </label>
+          </div>
+        </div>
+
+        <button class="btn-primary"
+                style="width:100%; padding:12px; background:var(--success)"
+                onclick="submitKasirOrder()">
+          <i class="fa-solid fa-circle-check"></i> Proses &amp; Simpan Transaksi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB MONITORING STOK ── -->
+  <div id="tab-stok" class="tab-content">
+
+    <!-- Summary cards (klik untuk filter) -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px;" id="stokSummary"></div>
+    
+    <!-- Search + Refresh -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;">
+      <div style="flex:1; position:relative;">
+        <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#aaa; font-size:13px;"></i>
+        <input id="stokSearch" placeholder="Cari produk..." oninput="window.renderStokTable()"
+          style="width:100%; padding:10px 14px 10px 36px; border:1px solid #ddd; border-radius:8px; outline:none; font-family:'Poppins',sans-serif; margin:0;">
+      </div>
+      <button onclick="window.loadStokMonitor()"
+        style="padding:10px 16px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap;">
+        <i class="fa-solid fa-rotate-right"></i> Refresh
+      </button>
+    </div>
+
+    <!-- Stok table -->
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Foto</th>
+            <th>Nama Produk</th>
+            <th>Kategori</th>
+            <th>Stok</th>
+            <th>Status</th>
+            <th>Edit Stok</th>
+          </tr>
+        </thead>
+        <tbody id="stokTableBody">
+          <tr><td colspan="6" style="text-align:center;color:#aaa;padding:30px;">Memuat data stok...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TAB LAPORAN KEUANGAN ── -->
+<div id="tab-laporan" class="tab-content">
+
+  <!-- Filter tanggal -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;align-items:end;background:white;padding:16px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);">
+    <div>
+      <label style="font-size:12px;font-weight:600;color:var(--gray);display:block;margin-bottom:4px;">Dari Tanggal</label>
+      <input type="date" id="laporanTglMulai" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;outline:none;margin:0;">
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:600;color:var(--gray);display:block;margin-bottom:4px;">Sampai Tanggal</label>
+      <input type="date" id="laporanTglAkhir" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;outline:none;margin:0;">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.setLaporanRange(7)" style="padding:9px 14px;background:#f1f2f6;color:#222;border:none;border-radius:8px;font-weight:600;cursor:pointer;">7 Hari</button>
+      <button onclick="window.setLaporanRange(30)" style="padding:9px 14px;background:#f1f2f6;color:#222;border:none;border-radius:8px;font-weight:600;cursor:pointer;">30 Hari</button>
+      <button onclick="window.loadLaporanKeuangan()" style="padding:9px 16px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
+        <i class="fa-solid fa-magnifying-glass-chart"></i> Tampilkan
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;" id="laporanSummary"></div>
+
+  <!-- Chart -->
+  <div class="card">
+    <h3><i class="fa-solid fa-chart-column"></i> Grafik Pemasukan vs HPP vs Profit (Harian)</h3>
+    <div style="position:relative; height:340px; margin-top:10px;">
+      <canvas id="laporanChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Tabel rincian harian -->
+  <div style="overflow-x:auto;margin-top:20px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Jumlah Transaksi</th>
+          <th>Omzet (Pemasukan)</th>
+          <th>HPP (Pengeluaran)</th>
+          <th>Profit</th>
+          <th>Margin</th>
+        </tr>
+      </thead>
+      <tbody id="laporanTableBody">
+        <tr><td colspan="6" style="text-align:center;color:#aaa;padding:30px;">Pilih rentang tanggal lalu klik Tampilkan...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+</div>
+
+<script type="module" src="./js/main.js"></script>
+
+
+</body>
+</html>
