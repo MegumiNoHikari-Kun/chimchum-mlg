@@ -46,9 +46,13 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
+                <a href="kasir.html" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-cash-register"></i>
+                    <span class="hidden sm:inline">Kasir</span>
+                </a>
                 <button onclick="openTrackerModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center space-x-2 transition">
                     <i class="fa-solid fa-receipt"></i>
-                    <span class="hidden sm:inline">Lacak Pesanan</span>
+                    <span class="hidden sm:inline">Lacak</span>
                 </button>
                 <button onclick="toggleCartModal()" class="relative bg-brand-50 hover:bg-brand-100 text-brand-600 px-4 py-2.5 rounded-xl font-semibold flex items-center space-x-2 transition">
                     <i class="fa-solid fa-bag-shopping"></i>
@@ -88,6 +92,44 @@
             <div class="col-span-full text-center py-12 text-slate-400">Memuat katalog menu dari Supabase...</div>
         </div>
     </main>
+
+    <!-- Lokasi Kami Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mb-16">
+        <div class="text-center mb-8">
+            <h3 class="text-2xl font-bold text-slate-900 tracking-tight">Lokasi Kami</h3>
+            <p class="text-slate-500 text-sm">Kunjungi atau gunakan sebagai patokan pemesanan</p>
+        </div>
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="flex items-start space-x-4 p-4 bg-slate-50 rounded-2xl">
+                <div class="text-2xl">📍</div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-900 mb-1">Alamat</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">Jl. Danau Laut Tawar 1 G2A 2 Sawojajar Kec. Kedungkandang, Kota Malang</p>
+                </div>
+            </div>
+            <div class="flex items-start space-x-4 p-4 bg-slate-50 rounded-2xl">
+                <div class="text-2xl">🕐</div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-900 mb-1">Jam Operasional</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">Setiap hari 08.00 – 20.00</p>
+                </div>
+            </div>
+            <div class="flex items-start space-x-4 p-4 bg-slate-50 rounded-2xl">
+                <div class="text-2xl"><i class="fa-brands fa-whatsapp text-emerald-600"></i></div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-900 mb-1">WhatsApp</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">0857-2378-5380</p>
+                </div>
+            </div>
+            <div class="flex items-start space-x-4 p-4 bg-slate-50 rounded-2xl">
+                <div class="text-2xl">📦</div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-900 mb-1">Layanan</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">Take Away & Delivery</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-8 text-center text-slate-500 text-sm">
