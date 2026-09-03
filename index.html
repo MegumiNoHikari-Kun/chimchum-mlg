@@ -622,6 +622,7 @@
             }
 
             let proofReference = 'Pending / Cash';
+            let shortProofLink = 'Pending / Cash';
 
             try {
                 await authReady;
@@ -630,8 +631,6 @@
                     const fileExt = file.name.split('.').pop().toLowerCase();
                     const fileName = `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
 
-                    // Convert file to ArrayBuffer / Blob for robust upload bypassing RLS if bucket is public,
-                    // or storing base64 data string as reliable fallback for private buckets.
                     const reader = new FileReader();
                     proofReference = await new Promise((resolve, reject) => {
                         reader.onload = async (e) => {
@@ -650,7 +649,6 @@
                                         return;
                                     }
                                 }
-                                // Fallback to storing Base64 string directly if storage upload fails due to policies
                                 resolve(base64Data);
                             } catch (err) {
                                 resolve(base64Data);
@@ -665,6 +663,17 @@
             }
 
             pendingOrderData.payment_proof = proofReference;
+
+            // Generate a mobile-friendly short link indicator or direct view helper for WhatsApp
+            if (proofReference.startsWith('http')) {
+                // If it's a valid Supabase public storage URL, use it directly or shorten representation for WA
+                shortProofLink = proofReference;
+            } else if (proofReference.startsWith('data:image')) {
+                // For base64 data, provide a clean mobile-friendly label instead of raw 50,000 character string
+                shortProofLink = `[Bukti Gambar Diunggah & Tersimpan di Database Web (ID: ${pendingOrderData.order_id})]`;
+            } else {
+                shortProofLink = proofReference;
+            }
 
             try {
                 await authReady;
@@ -697,7 +706,7 @@ Nama: ${pendingOrderData.customer_name}
 No. WA: ${pendingOrderData.phone}
 Alamat: ${pendingOrderData.address}
 Pembayaran: ${pendingOrderData.payment_method}
-Bukti Pembayaran: ${proofReference}
+Bukti Pembayaran: ${shortProofLink}
 
 Mohon segera diproses ya Kak, terima kasih! 🙏`
             );
