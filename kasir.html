@@ -767,8 +767,8 @@ tr:last-child td { border-bottom: none; }
             const tgl = o.created_at ? new Date(o.created_at).toLocaleString('id-ID') : '-';
             const items = o.items || [];
             const itemsStr = Array.isArray(items) ? items.map(i => `${i.nama || i.name} (${i.qty}x)`).join(', ') : '-';
-            const orderKey = o.id || o.order_id;
             const currentStatus = (o.status || 'new').toLowerCase();
+            const recordKey = o.id || o.order_id;
 
             return `
                 <tr>
@@ -777,7 +777,7 @@ tr:last-child td { border-bottom: none; }
                     <td>${o.phone || '-'}</td>
                     <td><span style="font-weight:500; font-size:12px;">${o.address || '-'}</span></td>
                     <td>
-                        <select onchange="updateOrderStatus('${orderKey}', this.value)" style="padding:6px 10px; font-size:12px; border-radius:8px; font-weight:600; margin:0;">
+                        <select onchange="updateOrderStatus('${recordKey}', this.value)" style="padding:6px 10px; font-size:12px; border-radius:8px; font-weight:600; margin:0;">
                             <option value="new" ${currentStatus === 'new' ? 'selected' : ''}>New</option>
                             <option value="disiapkan" ${currentStatus === 'disiapkan' ? 'selected' : ''}>Disiapkan</option>
                             <option value="dikirim" ${currentStatus === 'dikirim' ? 'selected' : ''}>Dikirim</option>
@@ -789,8 +789,8 @@ tr:last-child td { border-bottom: none; }
                     <td style="color:var(--success); font-weight:700;">${rupiah(o.grand_total || 0)}</td>
                     <td>
                         <div style="display:flex; gap:6px;">
-                            <button onclick="reprintOrder('${orderKey}')" style="padding:6px 10px; font-size:12px; background:#f1f5f9; color:var(--dark);" title="Cetak Struk">🖨️</button>
-                            <button onclick="deleteOrder('${orderKey}')" class="btn-delete" style="padding:6px 10px; font-size:12px;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="reprintOrder('${recordKey}')" style="padding:6px 10px; font-size:12px; background:#f1f5f9; color:var(--dark);" title="Cetak Struk">🖨️</button>
+                            <button onclick="deleteOrder('${recordKey}')" class="btn-delete" style="padding:6px 10px; font-size:12px;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -802,10 +802,11 @@ tr:last-child td { border-bottom: none; }
         await authReady;
         let list = [];
         try {
-            const { data } = await supabase.from("orders").select("*").order('created_at', { ascending: false });
+            const { data, error } = await supabase.from("orders").select("*").order('created_at', { ascending: false });
+            if (error) throw error;
             if (data) list = data;
         } catch (e) {
-            console.error(e);
+            console.error("Supabase load orders error:", e);
         }
         if (list.length === 0) {
             list = JSON.parse(localStorage.getItem('local_orders') || '[]');
@@ -815,36 +816,45 @@ tr:last-child td { border-bottom: none; }
         renderOrdersTable();
     };
 
-    window.updateOrderStatus = async (id, newStatus) => {
+    window.updateOrderStatus = async (key, newStatus) => {
         try {
-            await supabase.from("orders").update({ status: newStatus }).eq('order_id', id);
+            // Try updating by UUID 'id' first, then fallback to 'order_id'
+            let { error } = await supabase.from("orders").update({ status: newStatus }).eq('id', key);
+            if (error) {
+                await supabase.from("orders").update({ status: newStatus }).eq('order_id', key);
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Supabase update status error:", e);
         }
+
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
         localOrders = localOrders.map(o => {
-            if (o.order_id === id || o.id === id) o.status = newStatus;
+            if (o.id === key || o.order_id === key) o.status = newStatus;
             return o;
         });
         localStorage.setItem('local_orders', JSON.stringify(localOrders));
         window.loadOrders();
     };
 
-    window.reprintOrder = (id) => {
-        const order = cachedOrders.find(o => o.order_id === id || o.id === id);
+    window.reprintOrder = (key) => {
+        const order = cachedOrders.find(o => (o.id === key || o.order_id === key));
         if (!order) { alert("Pesanan tidak ditemukan."); return; }
         cetakStrukThermal(order.customer_name, order.phone, order.items, order.grand_total, order.payment_method || 'Online', order.grand_total, 0);
     };
 
-    window.deleteOrder = async (id) => {
+    window.deleteOrder = async (key) => {
         if (!confirm("Hapus pesanan ini?")) return;
         try {
-            await supabase.from("orders").delete().eq('order_id', id);
+            let { error } = await supabase.from("orders").delete().eq('id', key);
+            if (error) {
+                await supabase.from("orders").delete().eq('order_id', key);
+            }
         } catch (e) {
-            console.error(e);
+            console.error("Supabase delete error:", e);
         }
+
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-        localOrders = localOrders.filter(o => o.order_id !== id && o.id !== id);
+        localOrders = localOrders.filter(o => o.id !== key && o.order_id !== key);
         localStorage.setItem('local_orders', JSON.stringify(localOrders));
         window.loadOrders();
     };
