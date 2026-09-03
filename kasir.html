@@ -697,8 +697,22 @@ tr:last-child td { border-bottom: none; }
 
         try {
             await authReady;
-            const { error } = await supabase.from("orders").insert([orderData]);
-            if (error) console.error("Supabase insert error:", error);
+            const { data, error } = await supabase
+                .from("orders")
+                .insert([orderData])
+                .select()
+                .single();
+            
+            if (error) {
+                console.error("Supabase insert error:", error);
+            
+                alert(
+                    "Gagal menyimpan pesanan ke database.\n\n" +
+                    error.message
+                );
+            
+                return;
+            }
         } catch (err) {
             console.error("Supabase order insert error:", err);
         }
@@ -819,33 +833,123 @@ tr:last-child td { border-bottom: none; }
     };
 
     window.updateOrderStatus = async (key, newStatus) => {
+        const allowedStatuses = [
+            'new',
+            'disiapkan',
+            'dikirim',
+            'selesai',
+            'cancel'
+        ];
+    
+        if (!allowedStatuses.includes(newStatus)) {
+            alert("Status tidak valid.");
+            return;
+        }
+    
         try {
             await authReady;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
-            
-            let query = supabase.from("orders").update({ status: newStatus });
-            if (isUuid) {
-                query = query.eq('id', key);
+    
+            // Cari order berdasarkan ID atau order_id
+            const order = cachedOrders.find(
+                o => String(o.id) === String(key) ||
+                     String(o.order_id) === String(key)
+            );
+    
+            if (!order) {
+                throw new Error("Order tidak ditemukan.");
+            }
+    
+            let query;
+    
+            // Prioritaskan UUID id
+            if (order.id) {
+                query = supabase
+                    .from("orders")
+                    .update({
+                        status: newStatus
+                    })
+                    .eq("id", order.id)
+                    .select()
+                    .single();
             } else {
-                query = query.eq('order_id', key);
+                query = supabase
+                    .from("orders")
+                    .update({
+                        status: newStatus
+                    })
+                    .eq("order_id", order.order_id)
+                    .select()
+                    .single();
             }
-            
-            const { error } = await query;
+    
+            const { data, error } = await query;
+    
             if (error) {
-                console.error("Supabase update error:", error);
-                await supabase.from("orders").update({ status: newStatus }).eq('order_id', key);
+                console.error("Gagal update status:", error);
+                throw error;
             }
-        } catch (e) {
-            console.error("Supabase update status exception:", e);
+    
+            if (!data) {
+                throw new Error(
+                    "Data order tidak berubah. Kemungkinan terkena RLS policy Supabase."
+                );
+            }
+    
+            // Update cache
+            cachedOrders = cachedOrders.map(o => {
+                if (
+                    String(o.id) === String(key) ||
+                    String(o.order_id) === String(key)
+                ) {
+                    return {
+                        ...o,
+                        status: newStatus
+                    };
+                }
+                return o;
+            });
+    
+            // Update localStorage
+            let localOrders = JSON.parse(
+                localStorage.getItem('local_orders') || '[]'
+            );
+    
+            localOrders = localOrders.map(o => {
+                if (
+                    String(o.id) === String(key) ||
+                    String(o.order_id) === String(key)
+                ) {
+                    return {
+                        ...o,
+                        status: newStatus
+                    };
+                }
+                return o;
+            });
+    
+            localStorage.setItem(
+                'local_orders',
+                JSON.stringify(localOrders)
+            );
+    
+            renderOrderSummary(cachedOrders);
+            renderOrdersTable();
+    
+            console.log(
+                `Status order ${key} berhasil diubah menjadi ${newStatus}`
+            );
+    
+        } catch (error) {
+            console.error("UPDATE STATUS ERROR:", error);
+    
+            alert(
+                "Gagal mengubah status pesanan.\n\n" +
+                (error.message || "Periksa Supabase RLS Policy dan struktur tabel orders.")
+            );
+    
+            // Kembalikan tampilan ke data sebenarnya dari database
+            await window.loadOrders();
         }
-
-        let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-        localOrders = localOrders.map(o => {
-            if (o.id === key || o.order_id === key) o.status = newStatus;
-            return o;
-        });
-        localStorage.setItem('local_orders', JSON.stringify(localOrders));
-        window.loadOrders();
     };
 
     window.reprintOrder = (key) => {
@@ -856,27 +960,86 @@ tr:last-child td { border-bottom: none; }
 
     window.deleteOrder = async (key) => {
         if (!confirm("Hapus pesanan ini?")) return;
+    
         try {
             await authReady;
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
-            let query = supabase.from("orders").delete();
-            if (isUuid) {
-                query = query.eq('id', key);
+    
+            const order = cachedOrders.find(
+                o => String(o.id) === String(key) ||
+                     String(o.order_id) === String(key)
+            );
+    
+            if (!order) {
+                throw new Error("Order tidak ditemukan.");
+            }
+    
+            let query;
+    
+            if (order.id) {
+                query = supabase
+                    .from("orders")
+                    .delete()
+                    .eq("id", order.id)
+                    .select()
+                    .single();
             } else {
-                query = query.eq('order_id', key);
+                query = supabase
+                    .from("orders")
+                    .delete()
+                    .eq("order_id", order.order_id)
+                    .select()
+                    .single();
             }
-            const { error } = await query;
+    
+            const { data, error } = await query;
+    
             if (error) {
-                await supabase.from("orders").delete().eq('order_id', key);
+                console.error("Gagal delete order:", error);
+                throw error;
             }
-        } catch (e) {
-            console.error("Supabase delete exception:", e);
+    
+            if (!data) {
+                throw new Error(
+                    "Pesanan tidak terhapus. Kemungkinan terkena RLS policy Supabase."
+                );
+            }
+    
+            // Hapus dari cache
+            cachedOrders = cachedOrders.filter(
+                o => String(o.id) !== String(key) &&
+                     String(o.order_id) !== String(key)
+            );
+    
+            // Hapus dari localStorage
+            let localOrders = JSON.parse(
+                localStorage.getItem('local_orders') || '[]'
+            );
+    
+            localOrders = localOrders.filter(
+                o => String(o.id) !== String(key) &&
+                     String(o.order_id) !== String(key)
+            );
+    
+            localStorage.setItem(
+                'local_orders',
+                JSON.stringify(localOrders)
+            );
+    
+            renderOrderSummary(cachedOrders);
+            renderOrdersTable();
+    
+            alert("Pesanan berhasil dihapus.");
+    
+        } catch (error) {
+            console.error("DELETE ORDER ERROR:", error);
+    
+            alert(
+                "Gagal menghapus pesanan.\n\n" +
+                (error.message || "Periksa Supabase RLS Policy dan struktur tabel orders.")
+            );
+    
+            await window.loadOrders();
         }
-
-        let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-        localOrders = localOrders.filter(o => o.id !== key && o.order_id !== key);
-        localStorage.setItem('local_orders', JSON.stringify(localOrders));
-        window.loadOrders();
     };
 
     window.addEventListener('DOMContentLoaded', () => {
