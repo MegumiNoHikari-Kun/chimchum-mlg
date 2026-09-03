@@ -405,6 +405,7 @@ tr:last-child td { border-bottom: none; }
                 margin-bottom:20px;">
     </div>
 
+    <!-- ... existing code ... -->
     <div style="overflow-x:auto;">
       <table>
         <thead>
@@ -705,12 +706,7 @@ tr:last-child td { border-bottom: none; }
             
             if (error) {
                 console.error("Supabase insert error:", error);
-            
-                alert(
-                    "Gagal menyimpan pesanan ke database.\n\n" +
-                    error.message
-                );
-            
+                alert("Gagal menyimpan pesanan ke database.\n\n" + error.message);
                 return;
             }
         } catch (err) {
@@ -837,25 +833,15 @@ tr:last-child td { border-bottom: none; }
         await authReady;
     
         console.log("UPDATE STATUS:", key, "→", newStatus);
-    
-        const {
-          data: { user },
-          error: userError
-        } = await supabase.auth.getUser();
-    
-        if (userError || !user) {
-          throw new Error("User belum login ke Supabase");
+
+        let query = supabase.from("orders").update({ status: newStatus });
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) {
+            query = query.eq("id", key);
+        } else {
+            query = query.eq("order_id", key);
         }
-    
-        console.log("Supabase user:", user.id);
-    
-        const { data, error } = await supabase
-          .from("orders")
-          .update({
-            status: newStatus
-          })
-          .eq("id", key)
-          .select("id, status");
+
+        const { data, error } = await query.select("id, order_id, status");
     
         if (error) {
           console.error("SUPABASE UPDATE ERROR:", error);
@@ -864,51 +850,27 @@ tr:last-child td { border-bottom: none; }
     
         console.log("HASIL UPDATE:", data);
     
-        if (!data || data.length === 0) {
-          throw new Error(
-            "Tidak ada row yang di-update. Periksa ID atau RLS policy UPDATE."
-          );
-        }
-    
-        console.log(
-          `Status ${key}: ${data[0].status} berhasil disimpan ke Supabase`
-        );
-    
-        // Update local cache
-        let localOrders = JSON.parse(
-          localStorage.getItem("local_orders") || "[]"
-        );
-    
+        let localOrders = JSON.parse(localStorage.getItem("local_orders") || "[]");
         localOrders = localOrders.map(order => {
           const orderKey = order.id || order.order_id;
-    
-          if (orderKey === key) {
-            return {
-              ...order,
-              status: newStatus
-            };
+          if (String(orderKey) === String(key)) {
+            return { ...order, status: newStatus };
           }
-    
           return order;
         });
-    
-        localStorage.setItem(
-          "local_orders",
-          JSON.stringify(localOrders)
-        );
+        localStorage.setItem("local_orders", JSON.stringify(localOrders));
+
+        await window.loadOrders();
+        alert("Status pesanan berhasil diperbarui!");
     
       } catch (error) {
         console.error("GAGAL UPDATE STATUS:", error);
-    
-        alert(
-          "Status gagal disimpan ke database Supabase.\n\n" +
-          error.message
-        );
+        alert("Status gagal disimpan ke database Supabase.\n\n" + error.message);
       }
     };
 
     window.reprintOrder = (key) => {
-        const order = cachedOrders.find(o => (o.id === key || o.order_id === key));
+        const order = cachedOrders.find(o => String(o.id) === String(key) || String(o.order_id) === String(key));
         if (!order) { alert("Pesanan tidak ditemukan."); return; }
         cetakStrukThermal(order.customer_name, order.phone, order.items, order.grand_total, order.payment_method || 'Online', order.grand_total, 0);
     };
@@ -919,14 +881,8 @@ tr:last-child td { border-bottom: none; }
         try {
             await authReady;
     
-            let query = supabase
-                .from("orders")
-                .delete();
-    
-            if (
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-                .test(String(key))
-            ) {
+            let query = supabase.from("orders").delete();
+            if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) {
                 query = query.eq("id", key);
             } else {
                 query = query.eq("order_id", key);
@@ -939,26 +895,11 @@ tr:last-child td { border-bottom: none; }
                 throw error;
             }
     
-            cachedOrders = cachedOrders.filter(
-                o =>
-                    String(o.id) !== String(key) &&
-                    String(o.order_id) !== String(key)
-            );
+            cachedOrders = cachedOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
     
-            let localOrders = JSON.parse(
-                localStorage.getItem("local_orders") || "[]"
-            );
-    
-            localOrders = localOrders.filter(
-                o =>
-                    String(o.id) !== String(key) &&
-                    String(o.order_id) !== String(key)
-            );
-    
-            localStorage.setItem(
-                "local_orders",
-                JSON.stringify(localOrders)
-            );
+            let localOrders = JSON.parse(localStorage.getItem("local_orders") || "[]");
+            localOrders = localOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
+            localStorage.setItem("local_orders", JSON.stringify(localOrders));
     
             renderOrderSummary(cachedOrders);
             renderOrdersTable();
@@ -967,11 +908,7 @@ tr:last-child td { border-bottom: none; }
     
         } catch (error) {
             console.error("DELETE ORDER ERROR:", error);
-    
-            alert(
-                "Gagal menghapus pesanan.\n\n" +
-                (error.message || "Unknown error")
-            );
+            alert("Gagal menghapus pesanan.\n\n" + (error.message || "Unknown error"));
         }
     };
 
@@ -980,6 +917,5 @@ tr:last-child td { border-bottom: none; }
         window.loadOrders();
     });
 </script>
-
 </body>
 </html>
