@@ -298,7 +298,14 @@
                     <!-- Dynamic payment instructions -->
                 </div>
 
-                <div class="space-y-1.5 text-left">
+                <!-- <div class="space-y-1.5 text-left">
+                    <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
+                    <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+                    <p class="text-[10px] text-slate-400">Pastikan bukti pembayaran yang diupload sesuai</p>
+                </div> -->
+
+                <!-- Tambahkan id="payment-proof-container" di sini -->
+                <div id="payment-proof-container" class="space-y-1.5 text-left">
                     <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
                     <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
                     <p class="text-[10px] text-slate-400">Pastikan bukti pembayaran yang diupload sesuai</p>
@@ -589,7 +596,12 @@
             };
 
             const instructionBox = document.getElementById('payment-instruction-box');
+             // Ambil elemen container upload bukti pembayaran
+            // Ambil elemen container upload bukti pembayaran
+            const proofContainer = document.getElementById('payment-proof-container');
+
             if (paymentMethod === 'QRIS') {
+                if (proofContainer) proofContainer.style.display = 'block';
                 instructionBox.innerHTML = `
                     <p class="font-bold text-slate-900 mb-1">Scan QRIS untuk Pembayaran:</p>
                     <p class="text-slate-600 mb-2">Total: <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
@@ -598,6 +610,7 @@
                     </div>
                 `;
             } else if (paymentMethod === 'Transfer') {
+                if (proofContainer) proofContainer.style.display = 'block';
                 instructionBox.innerHTML = `
                     <div class="flex items-center space-x-2.5 mb-2 pb-2 border-b border-slate-200">
                         <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 flex-shrink-0">
@@ -614,6 +627,8 @@
                     <p class="text-slate-600 mt-1">Total Tagihan : <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
                 `;
             } else {
+                // Jika Cash / COD, sembunyikan kotak upload foto bukti pembayaran
+                if (proofContainer) proofContainer.style.display = 'none';
                 instructionBox.innerHTML = `
                     <p class="font-bold text-slate-900 mb-1">Pembayaran Cash / COD:</p>
                     <p class="text-slate-600">Silakan siapkan uang pas sebesar <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span> saat kurir tiba.</p>
