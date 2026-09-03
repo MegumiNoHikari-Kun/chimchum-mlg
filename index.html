@@ -27,7 +27,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <!-- Supabase JS Client -->
+    <!-- Supabase JS Client via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Poppins', sans-serif; }
@@ -83,15 +83,15 @@
             </div>
             <div class="grid grid-cols-2 gap-4 w-full md:w-auto">
                 <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 backdrop-blur text-center flex flex-col items-center justify-center">
-                    <div class="w-12 h-12 mb-2 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm border border-purple-200">
-                        <i class="fa-solid fa-stamp text-lg"></i>
+                    <div class="w-12 h-12 mb-2 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm border border-emerald-200">
+                        <i class="fa-solid fa-certificate text-lg"></i>
                     </div>
                     <h3 class="font-bold text-lg">Halal</h3>
                     <p class="text-xs text-slate-400">BPJPH Resmi</p>
                 </div>
                 <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 backdrop-blur text-center flex flex-col items-center justify-center">
                     <div class="w-12 h-12 mb-2 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm border border-amber-200">
-                        <i class="fa-solid fa-award text-lg"></i>
+                        <i class="fa-solid fa-drumstick-bite text-lg"></i>
                     </div>
                     <h3 class="font-bold text-lg">Premium</h3>
                     <p class="text-xs text-slate-400">Renyah & Juicy</p>
@@ -117,7 +117,6 @@
 
         <!-- Product Grid -->
         <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Rendered by JS -->
             <div class="bg-white rounded-2xl p-6 shadow-sm animate-pulse flex flex-col justify-between h-80">
                 <div class="bg-slate-200 h-40 rounded-xl mb-4"></div>
                 <div class="bg-slate-200 h-4 rounded w-3/4 mb-2"></div>
@@ -194,13 +193,6 @@
                             <p class="text-xs text-slate-600 leading-relaxed">0857-2378-5380</p>
                         </div>
                     </div>
-                    <div class="flex items-start space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <div class="bg-brand-500 text-white p-3 rounded-xl"><i class="fa-solid fa-box"></i></div>
-                        <div>
-                            <h4 class="font-bold text-slate-900 text-sm mb-1">Layanan</h4>
-                            <p class="text-xs text-slate-600 leading-relaxed">Take Away & Delivery</p>
-                        </div>
-                    </div>
                     <a href="https://maps.google.com/?q=Jl.+Danau+Laut+Tawar+1+G2A+2+Sawojajar+Malang" target="_blank" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 transition shadow-md">
                         <i class="fa-solid fa-map-location-dot"></i>
                         <span>Buka di Google Maps</span>
@@ -234,20 +226,20 @@
                 </button>
             </div>
 
-            <!-- Cart Items Container -->
-            <div id="cart-items-container" class="p-4 flex-grow overflow-y-auto space-y-2.5">
+            <!-- Cart Items Container (Scrollable & Balanced) -->
+            <div id="cart-items-container" class="p-4 flex-grow overflow-y-auto space-y-2">
                 <!-- Rendered by JS -->
             </div>
 
-            <!-- Cart Footer -->
-            <div class="p-4 border-t border-slate-100 bg-slate-50 space-y-2.5">
-                <div class="space-y-1 mb-1">
+            <!-- Cart Footer (Compact & Proportionally Balanced) -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 space-y-2">
+                <div class="space-y-1">
                     <div class="flex justify-between text-[11px] text-slate-500">
                         <span>Subtotal</span>
                         <span id="cart-subtotal">Rp 0</span>
                     </div>
                     <div class="flex justify-between text-[11px] text-slate-500">
-                        <span>Biaya Layanan/Antar</span>
+                        <span>Biaya Antar</span>
                         <span>Rp 5.000</span>
                     </div>
                     <div class="flex justify-between text-xs font-bold text-slate-900 pt-1 border-t border-slate-200">
@@ -256,13 +248,14 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2">
+                <!-- Compact Customer Inputs -->
+                <div class="grid grid-cols-2 gap-1.5">
                     <input type="text" id="customer-name" placeholder="Nama Lengkap" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500">
                     <input type="text" id="customer-phone" placeholder="No. WhatsApp" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500">
                 </div>
                 <textarea id="customer-address" placeholder="Alamat Pengiriman Lengkap" rows="1" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"></textarea>
 
-                <!-- Payment Gateway Selector -->
+                <!-- Simple Payment Gateway Selector -->
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">Metode Pembayaran</label>
                     <div class="grid grid-cols-3 gap-1.5">
@@ -305,17 +298,18 @@
             </div>
             <div class="p-6 space-y-4 text-center">
                 <div id="payment-instruction-box" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left text-xs space-y-2">
-                    <!-- Dynamic instructions based on method -->
+                    <!-- Dynamic payment instructions -->
                 </div>
 
                 <div class="space-y-1.5 text-left">
                     <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
                     <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
-                    <p class="text-[10px] text-slate-400">File otomatis tersimpan di Supabase Storage (bucket: payment-proofs) dan link URL dicatat ke database.</p>
+                    <p class="text-[10px] text-slate-400">File otomatis diunggah ke bucket Supabase Storage <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-600">payment-proofs</code> dan link URL dicatat ke tabel.</p>
                 </div>
 
-                <button onclick="confirmAndSubmitOrder()" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition text-sm">
-                    Konfirmasi & Kirim Pesanan
+                <button onclick="confirmAndSubmitOrder()" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition text-sm flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Konfirmasi & Kirim Pesanan</span>
                 </button>
             </div>
         </div>
@@ -386,8 +380,9 @@
         </div>
     </div>
 
-    <script>
-        // Sample Products Catalog (ChimChum Malang)
+    <script type="module">
+        import { supabase, authReady } from './js/supabase.js';
+
         const sampleProducts = [
             { id: 1, name: 'Dimsum Mentai Mix (4 Pcs)', category: 'dimsum', price: 22000, desc: 'Dimsum lembut dengan saus mentai gurih dibakar sempurna.', image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500&auto=format&fit=crop&q=60' },
             { id: 2, name: 'Dimsum Udang Keju (4 Pcs)', category: 'dimsum', price: 24000, desc: 'Dimsum udang segar dengan lelehan keju mozzarella di dalam.', image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=500&auto=format&fit=crop&q=60' },
@@ -400,7 +395,6 @@
         let products = [];
         let cart = [];
         let currentFilter = 'all';
-        let supabaseClient = null;
         let pendingOrderData = null;
         const WA_TARGET_NUMBER = '6285723785380';
 
@@ -410,20 +404,14 @@
         });
 
         function initSupabaseFromStorage() {
-            const url = localStorage.getItem('sb_url') || 'https://your-supabase-project.supabase.co';
-            const key = localStorage.getItem('sb_key') || 'your-anon-key';
-            if (localStorage.getItem('sb_url') && localStorage.getItem('sb_key')) {
-                try {
-                    supabaseClient = window.supabase.createClient(url, key);
-                    document.getElementById('db-status-dot').className = 'absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white';
-                } catch (e) {
-                    console.error('Supabase init error:', e);
-                    document.getElementById('db-status-dot').className = 'absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 border-2 border-white';
-                }
+            const url = localStorage.getItem('sb_url');
+            const key = localStorage.getItem('sb_key');
+            if (url && key) {
+                document.getElementById('db-status-dot').className = 'absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white';
             }
         }
 
-        function saveSupabaseConfig() {
+        window.saveSupabaseConfig = function() {
             const url = document.getElementById('supabase-url').value.trim();
             const key = document.getElementById('supabase-key').value.trim();
             if (!url || !key) {
@@ -435,30 +423,27 @@
             initSupabaseFromStorage();
             openConfigModal();
             showNotification('Berhasil', 'Koneksi Supabase tersimpan!', 'success');
-        }
+        };
 
         async function loadProductsFromSupabase() {
-            if (supabaseClient) {
-                try {
-                    const { data, error } = await supabaseClient.from('products').select('*');
-                    if (error) throw error;
-                    if (data && data.length > 0) {
-                        products = data.map(p => ({
-                            id: p.id,
-                            name: p.nama || p.name,
-                            category: (p.kategori || p.category || 'umum').toLowerCase(),
-                            price: Number(p.harga || p.price || 0),
-                            desc: p.deskripsi || p.desc || '',
-                            image: p.foto || p.image || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500'
-                        }));
-                    } else {
-                        products = sampleProducts;
-                    }
-                } catch (e) {
-                    console.warn('Fallback to sample products due to Supabase error:', e);
+            await authReady;
+            try {
+                const { data, error } = await supabase.from('products').select('*');
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    products = data.map(p => ({
+                        id: p.id,
+                        name: p.nama || p.name,
+                        category: (p.kategori || p.category || 'umum').toLowerCase(),
+                        price: Number(p.harga || p.price || 0),
+                        desc: p.deskripsi || p.desc || '',
+                        image: p.foto || p.image || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500'
+                    }));
+                } else {
                     products = sampleProducts;
                 }
-            } else {
+            } catch (e) {
+                console.warn('Fallback to sample products:', e);
                 products = sampleProducts;
             }
             renderProducts(products);
@@ -492,7 +477,7 @@
             });
         }
 
-        function filterCategory(category) {
+        window.filterCategory = function(category) {
             currentFilter = category;
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.className = 'category-btn bg-white hover:bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 transition whitespace-nowrap';
@@ -506,9 +491,9 @@
             } else {
                 renderProducts(products.filter(p => p.category === category));
             }
-        }
+        };
 
-        function addToCart(productId) {
+        window.addToCart = function(productId) {
             const product = products.find(p => String(p.id) === String(productId));
             if (!product) return;
             const existing = cart.find(item => String(item.id) === String(productId));
@@ -519,9 +504,9 @@
             }
             updateCartUI();
             showNotification('Keranjang', `${product.name} ditambahkan.`, 'success');
-        }
+        };
 
-        function updateCartQty(productId, change) {
+        window.updateCartQty = function(productId, change) {
             const item = cart.find(i => String(i.id) === String(productId));
             if (item) {
                 item.qty += change;
@@ -530,7 +515,7 @@
                 }
             }
             updateCartUI();
-        }
+        };
 
         function updateCartUI() {
             const container = document.getElementById('cart-items-container');
@@ -576,7 +561,7 @@
             totalEl.innerText = `Rp ${(subtotal + 5000).toLocaleString('id-ID')}`;
         }
 
-        function proceedToPayment() {
+        window.proceedToPayment = function() {
             if (cart.length === 0) {
                 showNotification('Perhatian', 'Keranjang belanja masih kosong.', 'warning');
                 return;
@@ -632,13 +617,13 @@
 
             toggleCartModal();
             document.getElementById('payment-modal').classList.remove('hidden');
-        }
+        };
 
-        function closePaymentModal() {
+        window.closePaymentModal = function() {
             document.getElementById('payment-modal').classList.add('hidden');
-        }
+        };
 
-        async function confirmAndSubmitOrder() {
+        window.confirmAndSubmitOrder = async function() {
             const fileInput = document.getElementById('payment-proof-file');
             const paymentMethod = pendingOrderData.payment_method;
 
@@ -649,49 +634,44 @@
 
             let proofUrl = 'Pending / Cash';
 
-            if (supabaseClient && fileInput.files && fileInput.files.length > 0) {
-                try {
+            try {
+                await authReady;
+                if (fileInput.files && fileInput.files.length > 0) {
                     const file = fileInput.files[0];
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
-                    const filePath = `${fileName}`;
-
-                    // Upload file to Supabase Storage bucket 'payment-proofs'
-                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    
+                    // Upload to Supabase Storage bucket 'payment-proofs'
+                    const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('payment-proofs')
-                        .upload(filePath, file);
+                        .upload(fileName, file, { upsert: true });
 
                     if (uploadError) {
                         console.error('Storage upload error:', uploadError);
                     } else {
-                        // Retrieve Public URL
-                        const { data: urlData } = supabaseClient.storage
+                        const { data: urlData } = supabase.storage
                             .from('payment-proofs')
-                            .getPublicUrl(filePath);
+                            .getPublicUrl(fileName);
                         if (urlData && urlData.publicUrl) {
                             proofUrl = urlData.publicUrl;
                         }
                     }
-                } catch (storageErr) {
-                    console.error('Storage exception:', storageErr);
                 }
-            } else if (fileInput.files && fileInput.files.length > 0) {
-                proofUrl = 'local_proof_' + fileInput.files[0].name;
+            } catch (storageErr) {
+                console.error('Storage exception:', storageErr);
             }
 
-            // Save public URL reference into order data object
             pendingOrderData.payment_proof = proofUrl;
 
             // Insert order into Supabase orders table
-            if (supabaseClient) {
-                try {
-                    const { error } = await supabaseClient.from('orders').insert([pendingOrderData]);
-                    if (error) {
-                        console.error('Supabase insert error:', error);
-                    }
-                } catch (e) {
-                    console.error('Supabase exception during checkout:', e);
+            try {
+                await authReady;
+                const { error: insertError } = await supabase.from('orders').insert([pendingOrderData]);
+                if (insertError) {
+                    console.error('Supabase order insert error:', insertError);
                 }
+            } catch (dbErr) {
+                console.error('Database exception:', dbErr);
             }
 
             // Local fallback storage
@@ -699,7 +679,7 @@
             localOrders.push(pendingOrderData);
             localStorage.setItem('local_orders', JSON.stringify(localOrders));
 
-            // Generate WhatsApp order message invoice
+            // Generate WhatsApp message with public URL proof
             const itemsListStr = pendingOrderData.items.map(i => `• ${i.name} (${i.qty}x) - Rp ${(i.price * i.qty).toLocaleString('id-ID')}`).join('\n');
             const waText = encodeURIComponent(
 `*INVOICE PEMESANAN CHIMCHUM MALANG*
@@ -732,9 +712,9 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
             setTimeout(() => {
                 window.open(`https://wa.me/${WA_TARGET_NUMBER}?text=${waText}`, '_blank');
             }, 1200);
-        }
+        };
 
-        async function fetchOrderStatus() {
+        window.fetchOrderStatus = async function() {
             const orderId = document.getElementById('tracker-order-id').value.trim();
             const resultDiv = document.getElementById('tracker-result');
             if (!orderId) {
@@ -743,14 +723,12 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
             }
 
             let foundOrder = null;
-
-            if (supabaseClient) {
-                try {
-                    const { data, error } = await supabaseClient.from('orders').select('*').eq('order_id', orderId).maybeSingle();
-                    if (data) foundOrder = data;
-                } catch (e) {
-                    console.error(e);
-                }
+            try {
+                await authReady;
+                const { data } = await supabase.from('orders').select('*').eq('order_id', orderId).maybeSingle();
+                if (data) foundOrder = data;
+            } catch (e) {
+                console.error(e);
             }
 
             if (!foundOrder) {
@@ -766,7 +744,7 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
                         <div class="flex justify-between"><span class="text-slate-500">Nama Pemesan:</span><span class="font-semibold">${foundOrder.customer_name}</span></div>
                         <div class="flex justify-between"><span class="text-slate-500">Total Harga:</span><span class="font-bold text-brand-600">Rp ${Number(foundOrder.grand_total || foundOrder.total_price || 0).toLocaleString('id-ID')}</span></div>
                         <div class="flex justify-between"><span class="text-slate-500">Status:</span><span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase">${foundOrder.status}</span></div>
-                        ${foundOrder.payment_proof ? `<div class="pt-2"><a href="${foundOrder.payment_proof}" target="_blank" class="text-xs text-brand-600 underline font-semibold">Lihat Bukti Pembayaran ↗</a></div>` : ''}
+                        ${foundOrder.payment_proof && foundOrder.payment_proof !== 'Pending / Cash' ? `<div class="pt-2"><a href="${foundOrder.payment_proof}" target="_blank" class="text-xs text-brand-600 underline font-semibold">Lihat Bukti Pembayaran ↗</a></div>` : ''}
                     </div>
                 `;
             } else {
@@ -776,26 +754,26 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
                     </div>
                 `;
             }
-        }
+        };
 
-        function toggleCartModal() {
+        window.toggleCartModal = function() {
             document.getElementById('cart-modal').classList.toggle('hidden');
-        }
+        };
 
-        function openTrackerModal() {
+        window.openTrackerModal = function() {
             document.getElementById('tracker-modal').classList.toggle('hidden');
-        }
+        };
 
-        function openConfigModal() {
+        window.openConfigModal = function() {
             const modal = document.getElementById('config-modal');
             modal.classList.toggle('hidden');
             if(!modal.classList.contains('hidden')) {
                 document.getElementById('supabase-url').value = localStorage.getItem('sb_url') || '';
                 document.getElementById('supabase-key').value = localStorage.getItem('sb_key') || '';
             }
-        }
+        };
 
-        function showNotification(title, message, type = 'success') {
+        window.showNotification = function(title, message, type = 'success') {
             const modal = document.getElementById('notification-modal');
             document.getElementById('notification-title').innerText = title;
             document.getElementById('notification-message').innerText = message;
@@ -808,11 +786,11 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
                 iconContainer.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
             }
             modal.classList.remove('hidden');
-        }
+        };
 
-        function closeNotification() {
+        window.closeNotification = function() {
             document.getElementById('notification-modal').classList.add('hidden');
-        }
+        };
     </script>
 </body>
 </html>
