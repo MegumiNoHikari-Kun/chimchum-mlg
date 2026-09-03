@@ -227,7 +227,7 @@ th { background: #fff1ea; font-weight: 600; }
     <h2>ChimChum Malang — Panel Kasir</h2>
   </a>
   <span class="status-badge">
-    <i class="fa-solid fa-cash-register"></i> Live POS Kasir
+    <i class="fa-solid fa-cash-register"></i> Live POS Kasir & Online Orders
   </span>
 </header>
 
@@ -236,7 +236,7 @@ th { background: #fff1ea; font-weight: 600; }
     <i class="fa-solid fa-cash-register"></i> Kasir Dine-In / POS
   </button>
   <button class="tab-btn" onclick="switchTab('tab-pesanan', this)">
-    <i class="fa-solid fa-receipt"></i> Pesanan Masuk
+    <i class="fa-solid fa-receipt"></i> Pesanan Masuk (Online & Dine-In)
   </button>
   <button class="tab-btn btn-logout" onclick="logoutKasir()">
     <i class="fa-solid fa-right-from-bracket"></i> Keluar
@@ -371,10 +371,10 @@ th { background: #fff1ea; font-weight: 600; }
     </div>
   </div>
 
-  <!-- ===== TAB PESANAN MASUK ===== -->
+  <!-- ===== TAB PESANAN MASUK (ONLINE + DINE-IN) ===== -->
   <div id="tab-pesanan" class="tab-content">
     <div class="card">
-      <h3><i class="fa-solid fa-receipt"></i> Riwayat Pesanan &amp; Transaksi</h3>
+      <h3><i class="fa-solid fa-receipt"></i> Riwayat Pesanan Masuk (Online &amp; Dine-In)</h3>
     </div>
     <div id="orderSummary"
          style="display:grid;
@@ -410,16 +410,7 @@ th { background: #fff1ea; font-weight: 600; }
 </div><!-- /container -->
 
 <script>
-    // Inisialisasi Supabase menggunakan konfigurasi lokal atau fallback
-    const SUPABASE_URL = localStorage.getItem('sb_url') || 'https://your-supabase-project.supabase.co';
-    const SUPABASE_ANON_KEY = localStorage.getItem('sb_key') || 'your-anon-key';
-    let db = null;
-    
-    try {
-        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } catch (e) {
-        console.error("Gagal inisialisasi Supabase client:", e);
-    }
+    import { supabase } from './js/supabase.js';
 
     let cachedProducts = [];
     let cachedOrders = [];
@@ -531,7 +522,6 @@ th { background: #fff1ea; font-weight: 600; }
             const kategori = p.category || p.kategori || 'Umum';
             const foto = p.image || p.foto || '';
             const stok = Number(p.stok) || 100;
-            const isi = p.isi || '1';
             const habis = stok <= 0;
             
             return `
@@ -547,7 +537,6 @@ th { background: #fff1ea; font-weight: 600; }
     }
 
     window.addToKasirCart = (id, nama, harga, stok) => {
-        const inCart  = kasirCart[id]?.qty || 0;
         if (kasirCart[id]) kasirCart[id].qty++;
         else kasirCart[id] = { id, nama, harga, qty: 1, stok: stok };
         updateKasirCartUI();
@@ -604,8 +593,8 @@ th { background: #fff1ea; font-weight: 600; }
         const tgl = new Date().toLocaleString('id-ID');
         const itemsHtml = items.map(i => `
           <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;">
-            <span>${i.nama} x${i.qty}</span>
-            <span>${rupiah(i.qty * i.harga)}</span>
+            <span>${i.nama || i.name} x${i.qty}</span>
+            <span>${rupiah(i.qty * (i.harga || i.price))}</span>
           </div>`).join('');
 
         printWindow.document.write(`
@@ -707,6 +696,7 @@ th { background: #fff1ea; font-weight: 600; }
         document.getElementById("kasirWaPelanggan").value = "";
         document.getElementById("kasirUangBayar").value = "";
         updateKasirCartUI();
+        window.loadOrders();
     };
 
     function renderOrderSummary(list) {
@@ -714,7 +704,7 @@ th { background: #fff1ea; font-weight: 600; }
         const counts = { all: list.length, new: 0, selesai: 0 };
         list.forEach(o => {
             if ((o.status || 'new') === 'new') counts.new++;
-            else if ((o.status || '') === 'selesai') counts.selesai++;
+            else if ((o.status || '') === 'selesai' || (o.status || '') === 'Selesai') counts.selesai++;
         });
 
         summaryEl.innerHTML = `
@@ -742,18 +732,23 @@ th { background: #fff1ea; font-weight: 600; }
 
         tbody.innerHTML = cachedOrders.map(o => {
             const tgl = o.created_at ? new Date(o.created_at).toLocaleString('id-ID') : '-';
-            const itemsStr = Array.isArray(o.items) ? o.items.map(i => `${i.nama} (${i.qty}x)`).join(', ') : '-';
+            const items = o.items || [];
+            const itemsStr = Array.isArray(items) ? items.map(i => `${i.nama || i.name} (${i.qty}x)`).join(', ') : '-';
+            const orderKey = o.id || o.order_id;
             return `
                 <tr>
                     <td style="font-size:12px; color:#666;">${tgl}</td>
-                    <td><b>${o.customer_name || '-'}</b></td>
+                    <td><b>${o.customer_name || '-'}</b><br><span style="font-size:11px; color:#888;">ID: ${o.order_id || '-'}</span></td>
                     <td>${o.phone || '-'}</td>
                     <td>${o.address || '-'}</td>
                     <td><span style="background:#ffe8cc; color:#d35400; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600;">${o.status || 'new'}</span></td>
                     <td style="font-size:13px;">${itemsStr}</td>
                     <td style="color:var(--success); font-weight:700;">${rupiah(o.grand_total || 0)}</td>
                     <td>
-                        <button onclick="deleteOrder('${o.id || o.order_id}')" class="btn-delete" style="padding:6px 10px; font-size:12px;">Hapus</button>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="updateOrderStatus('${orderKey}', 'selesai')" style="padding:6px 10px; font-size:12px; background:var(--success); color:white;">Selesai</button>
+                            <button onclick="deleteOrder('${orderKey}')" class="btn-delete" style="padding:6px 10px; font-size:12px;">Hapus</button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -778,8 +773,32 @@ th { background: #fff1ea; font-weight: 600; }
         renderOrdersTable();
     };
 
+    window.updateOrderStatus = async (id, newStatus) => {
+        if (db) {
+            try {
+                await db.from("orders").update({ status: newStatus }).eq('order_id', id);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+        localOrders = localOrders.map(o => {
+            if (o.order_id === id || o.id === id) o.status = newStatus;
+            return o;
+        });
+        localStorage.setItem('local_orders', JSON.stringify(localOrders));
+        window.loadOrders();
+    };
+
     window.deleteOrder = async (id) => {
         if (!confirm("Hapus pesanan ini?")) return;
+        if (db) {
+            try {
+                await db.from("orders").delete().eq('order_id', id);
+            } catch (e) {
+                console.error(e);
+            }
+        }
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
         localOrders = localOrders.filter(o => o.order_id !== id && o.id !== id);
         localStorage.setItem('local_orders', JSON.stringify(localOrders));
@@ -788,6 +807,7 @@ th { background: #fff1ea; font-weight: 600; }
 
     window.addEventListener('DOMContentLoaded', () => {
         window.loadProducts();
+        window.loadOrders();
     });
 </script>
 
