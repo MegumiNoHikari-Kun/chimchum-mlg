@@ -151,7 +151,6 @@ button {
 }
 .btn-primary { background: var(--primary); color: white; }
 .btn-primary:hover { opacity: 0.9; }
-.btn-edit { background: #ffa502; color: white; }
 .btn-delete { background: #ff4757; color: white; }
 
 /* TABLES */
@@ -411,7 +410,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
   <!-- ===== TAB MONITORING STOK ===== -->
   <div id="tab-stok" class="tab-content">
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
         <div>
           <h3><i class="fa-solid fa-warehouse" style="color:var(--primary);"></i> Monitoring &amp; Update Stok</h3>
           <p style="font-size:12px; color:var(--gray);">Pantau ketersediaan stok produk secara real-time.</p>
@@ -420,6 +419,13 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
           <i class="fa-solid fa-rotate-right"></i> Refresh
         </button>
       </div>
+
+      <div id="stokSummary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:20px;"></div>
+
+      <div style="margin-bottom:15px;">
+        <input type="text" id="stokSearch" placeholder="🔍 Cari nama produk untuk update stok..." style="margin:0;" oninput="renderStokTable()">
+      </div>
+
       <div style="overflow-x:auto;">
         <table>
           <thead>
@@ -428,11 +434,12 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
               <th>Nama Produk</th>
               <th>Kategori</th>
               <th>Stok Saat Ini</th>
+              <th>Status</th>
               <th>Update Stok Cepat</th>
             </tr>
           </thead>
           <tbody id="stokTableBody">
-            <tr><td colspan="5" style="text-align:center; color:#aaa; padding:35px;">Memuat stok...</td></tr>
+            <tr><td colspan="6" style="text-align:center; color:#aaa; padding:35px;">Memuat stok...</td></tr>
           </tbody>
         </table>
       </div>
@@ -514,6 +521,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     let cachedProducts = [];
     let cachedOrders = [];
     let currentOrderFilter = 'all';
+    let currentStokFilter = 'all';
     let kasirCart = {};
     let currentKasirGrandTotal = 0;
 
@@ -530,6 +538,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         await loadKasirMenu();
         await loadAdminOrders();
         await loadProductsList();
+        await loadStokMonitor();
     });
 
     // --- KASIR DINE-IN LOGIC ---
@@ -933,7 +942,6 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
                         foto = publicUrlData.publicUrl;
                     }
                 } else {
-                    // Fallback to base64 if bucket upload fails
                     foto = await new Promise((resolve) => {
                         const reader = new FileReader();
                         reader.onload = (e) => resolve(e.target.result);
@@ -955,6 +963,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             document.getElementById('p-deskripsi').value = '';
             loadProductsList();
             loadKasirMenu();
+            loadStokMonitor();
         } catch (err) {
             alert('Gagal menyimpan produk: ' + err.message);
         }
@@ -969,6 +978,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         } catch (e) {
             console.warn(e);
         }
+        cachedProducts = products;
         const tbody = document.getElementById('productsTableBody');
         if (!tbody) return;
         if (products.length === 0) {
@@ -995,6 +1005,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             await supabase.from('products').delete().eq('id', id);
             loadProductsList();
             loadKasirMenu();
+            loadStokMonitor();
             alert('Produk berhasil dihapus.');
         } catch (e) {
             alert('Gagal menghapus produk.');
@@ -1011,26 +1022,106 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         } catch (e) {
             console.warn(e);
         }
+        cachedProducts = products;
+        renderStokSummary();
+        renderStokTable();
+    };
+
+    function renderStokSummary() {
+        const summary = document.getElementById('stokSummary');
+        if (!summary) return;
+
+        let total = cachedProducts.length;
+        let aman = 0;
+        let menipis = 0;
+        let habis = 0;
+
+        cachedProducts.forEach(p => {
+            const st = Number(p.stok) || 0;
+            if (st <= 0) habis++;
+            else if (st <= 10) menipis++;
+            else aman++;
+        });
+
+        const cards = [
+            { key: 'all', title: '📦 Total Produk', count: total, color: '#475569' },
+            { key: 'aman', title: '✅ Stok Aman (>10)', count: aman, color: '#10b981' },
+            { key: 'menipis', title: '⚠️ Stok Menipis (1-10)', count: menipis, color: '#f59e0b' },
+            { key: 'habis', title: '❌ Stok Habis (0)', count: habis, color: '#ef4444' }
+        ];
+
+        summary.innerHTML = cards.map(c => `
+            <div onclick="filterStokByStatus('${c.key}')" style="background:white; padding:16px; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.05); cursor:pointer; border:2px solid ${currentStokFilter === c.key ? c.color : '#f1f5f9'}; transition:all 0.2s;">
+                <div style="font-size:12px; color:var(--gray); font-weight:500;">${c.title}</div>
+                <div style="font-size:24px; font-weight:700; color:${c.color}; margin-top:2px;">${c.count}</div>
+            </div>
+        `).join('');
+    }
+
+    window.filterStokByStatus = function(status) {
+        currentStokFilter = status;
+        renderStokSummary();
+        renderStokTable();
+    };
+
+    window.renderStokTable = function() {
         const tbody = document.getElementById('stokTableBody');
+        const searchInput = document.getElementById('stokSearch');
+        const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
         if (!tbody) return;
-        if (products.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa; padding:30px;">Belum ada produk.</td></tr>`;
+
+        let filtered = [...cachedProducts];
+
+        // Filter by keyword
+        if (keyword) {
+            filtered = filtered.filter(p => {
+                const nama = (p.nama || p.name || '').toLowerCase();
+                const kat = (p.kategori || p.category || '').toLowerCase();
+                return nama.includes(keyword) || kat.includes(keyword);
+            });
+        }
+
+        // Filter by status card
+        if (currentStokFilter !== 'all') {
+            filtered = filtered.filter(p => {
+                const st = Number(p.stok) || 0;
+                if (currentStokFilter === 'habis') return st <= 0;
+                if (currentStokFilter === 'menipis') return st > 0 && st <= 10;
+                if (currentStokFilter === 'aman') return st > 10;
+                return true;
+            });
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa; padding:30px;">Tidak ada produk yang sesuai.</td></tr>`;
             return;
         }
-        tbody.innerHTML = products.map(p => `
-            <tr>
-                <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
-                <td><b>${p.nama || p.name}</b></td>
-                <td>${p.kategori || p.category || '-'}</td>
-                <td><span class="font-bold text-base" id="stok-val-${p.id}">${p.stok || 0}</span></td>
-                <td>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <button onclick="updateStock('${p.id}', ${(p.stok || 0) - 1})" style="background:#f1f2f6; padding:6px 10px; border-radius:6px;">-</button>
-                        <button onclick="updateStock('${p.id}', ${(p.stok || 0) + 1})" style="background:#f1f2f6; padding:6px 10px; border-radius:6px;">+</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+
+        tbody.innerHTML = filtered.map(p => {
+            const st = Number(p.stok) || 0;
+            let statusBadge = `<span style="background:#ecfdf5; color:#059669; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:600;">Aman</span>`;
+            if (st <= 0) {
+                statusBadge = `<span style="background:#fef2f2; color:#dc2626; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:600;">Habis</span>`;
+            } else if (st <= 10) {
+                statusBadge = `<span style="background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:600;">Menipis</span>`;
+            }
+
+            return `
+                <tr>
+                    <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
+                    <td><b>${p.nama || p.name}</b></td>
+                    <td>${p.kategori || p.category || '-'}</td>
+                    <td><span class="font-bold text-base" id="stok-val-${p.id}">${st}</span></td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button onclick="updateStock('${p.id}', ${st - 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700;">-</button>
+                            <button onclick="updateStock('${p.id}', ${st + 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700;">+</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     };
 
     window.updateStock = async function(id, newStok) {
@@ -1038,8 +1129,12 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         await authReady;
         try {
             await supabase.from('products').update({ stok: newStok }).eq('id', id);
-            const el = document.getElementById(`stok-val-${id}`);
-            if (el) el.innerText = newStok;
+            cachedProducts = cachedProducts.map(p => {
+                if (String(p.id) === String(id)) p.stok = newStok;
+                return p;
+            });
+            renderStokSummary();
+            renderStokTable();
         } catch (e) {
             console.error(e);
         }
