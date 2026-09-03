@@ -7,7 +7,7 @@
 <link rel="icon" type="image/jpeg" href="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<!-- Supabase JS Client -->
+<!-- Supabase JS Client via CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -227,7 +227,7 @@ th { background: #fff1ea; font-weight: 600; }
     <h2>ChimChum Malang — Panel Kasir</h2>
   </a>
   <span class="status-badge">
-    <i class="fa-solid fa-cash-register"></i> Live POS Kasir & Online Orders
+    <i class="fa-solid fa-cash-register"></i> POS Kasir & Online Real-time
   </span>
 </header>
 
@@ -409,14 +409,14 @@ th { background: #fff1ea; font-weight: 600; }
 
 </div><!-- /container -->
 
-<script>
-    import { supabase } from './js/supabase.js';
+<!-- Import Centralized Supabase Client Module -->
+<script type="module">
+    import { supabase, authReady } from './js/supabase.js';
 
     let cachedProducts = [];
     let cachedOrders = [];
     let kasirCart = {};
     let currentKasirGrandTotal = 0;
-    let currentOrderFilter = "all";
 
     function rupiah(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
 
@@ -436,9 +436,9 @@ th { background: #fff1ea; font-weight: 600; }
     };
 
     window.loadProducts = async () => {
-        if (!db) return;
+        await authReady;
         try {
-            const { data, error } = await db.from("products").select("*");
+            const { data, error } = await supabase.from("products").select("*");
             if (error) throw error;
             cachedProducts = data || [];
             const kategoriSet = new Set();
@@ -449,7 +449,6 @@ th { background: #fff1ea; font-weight: 600; }
             renderKasirMenu();
         } catch (err) {
             console.error("Error load produk:", err);
-            // Fallback sample
             cachedProducts = [
                 { id: 1, name: 'Dimsum Mentai Mix', category: 'dimsum', price: 22000, isi: '4', stok: 30, image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500' },
                 { id: 2, name: 'Ayam Krispy Spesial', category: 'chicken', price: 25000, isi: '1', stok: 40, image: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500' }
@@ -672,15 +671,12 @@ th { background: #fff1ea; font-weight: 600; }
             created_at: new Date().toISOString()
         };
 
-        if (db) {
-            try {
-                await db.from("orders").insert([orderData]);
-            } catch (err) {
-                console.error("Supabase order insert error:", err);
-            }
+        try {
+            await supabase.from("orders").insert([orderData]);
+        } catch (err) {
+            console.error("Supabase order insert error:", err);
         }
 
-        // Local fallback
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
         localOrders.push(orderData);
         localStorage.setItem('local_orders', JSON.stringify(localOrders));
@@ -756,14 +752,13 @@ th { background: #fff1ea; font-weight: 600; }
     }
 
     window.loadOrders = async () => {
+        await authReady;
         let list = [];
-        if (db) {
-            try {
-                const { data } = await db.from("orders").select("*");
-                if (data) list = data;
-            } catch (e) {
-                console.error(e);
-            }
+        try {
+            const { data } = await supabase.from("orders").select("*");
+            if (data) list = data;
+        } catch (e) {
+            console.error(e);
         }
         if (list.length === 0) {
             list = JSON.parse(localStorage.getItem('local_orders') || '[]');
@@ -774,12 +769,10 @@ th { background: #fff1ea; font-weight: 600; }
     };
 
     window.updateOrderStatus = async (id, newStatus) => {
-        if (db) {
-            try {
-                await db.from("orders").update({ status: newStatus }).eq('order_id', id);
-            } catch (e) {
-                console.error(e);
-            }
+        try {
+            await supabase.from("orders").update({ status: newStatus }).eq('order_id', id);
+        } catch (e) {
+            console.error(e);
         }
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
         localOrders = localOrders.map(o => {
@@ -792,12 +785,10 @@ th { background: #fff1ea; font-weight: 600; }
 
     window.deleteOrder = async (id) => {
         if (!confirm("Hapus pesanan ini?")) return;
-        if (db) {
-            try {
-                await db.from("orders").delete().eq('order_id', id);
-            } catch (e) {
-                console.error(e);
-            }
+        try {
+            await supabase.from("orders").delete().eq('order_id', id);
+        } catch (e) {
+            console.error(e);
         }
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
         localOrders = localOrders.filter(o => o.order_id !== id && o.id !== id);
