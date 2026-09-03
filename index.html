@@ -356,9 +356,12 @@
         </div>
     </div>
 
-    <script>
+    <!-- Import Centralized Supabase Client Module -->
+    <script type="module">
+        import { supabase, authReady } from './js/supabase.js';
+
         // Sample Products Catalog (ChimChum Malang)
-        const products = [
+        const sampleProducts = [
             { id: 1, name: 'Dimsum Mentai Mix (4 Pcs)', category: 'dimsum', price: 22000, desc: 'Dimsum lembut dengan saus mentai gurih dibakar sempurna.', image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500&auto=format&fit=crop&q=60' },
             { id: 2, name: 'Dimsum Udang Keju (4 Pcs)', category: 'dimsum', price: 24000, desc: 'Dimsum udang segar dengan lelehan keju mozzarella di dalam.', image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=500&auto=format&fit=crop&q=60' },
             { id: 3, name: 'Ayam Krispy Dada Spesial', category: 'chicken', price: 25000, desc: 'Dada ayam pilihan dilapisi tepung bumbu renyah gurih.', image: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500&auto=format&fit=crop&q=60' },
@@ -367,41 +370,36 @@
             { id: 6, name: 'Lemon Tea Dingin', category: 'drink', price: 8000, desc: 'Perpaduan teh segar dan perasan buah lemon asli.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop&q=60' }
         ];
 
+        let products = [];
         let cart = [];
         let currentFilter = 'all';
-        let supabaseClient = null;
 
-        window.addEventListener('DOMContentLoaded', () => {
-            renderProducts(products);
-            initSupabaseFromStorage();
+        window.addEventListener('DOMContentLoaded', async () => {
+            await authReady;
+            await loadProductsFromSupabase();
         });
 
-        function initSupabaseFromStorage() {
-            const url = localStorage.getItem('sb_url') || 'https://your-supabase-project.supabase.co';
-            const key = localStorage.getItem('sb_key') || 'your-anon-key';
-            if (localStorage.getItem('sb_url') && localStorage.getItem('sb_key')) {
-                try {
-                    supabaseClient = window.supabase.createClient(url, key);
-                    document.getElementById('db-status-dot').className = 'absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white';
-                } catch (e) {
-                    console.error('Supabase init error:', e);
-                    document.getElementById('db-status-dot').className = 'absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 border-2 border-white';
+        async function loadProductsFromSupabase() {
+            try {
+                const { data, error } = await supabase.from('products').select('*');
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    products = data.map(p => ({
+                        id: p.id,
+                        name: p.nama || p.name,
+                        category: (p.kategori || p.category || 'umum').toLowerCase(),
+                        price: Number(p.harga || p.price || 0),
+                        desc: p.deskripsi || p.desc || '',
+                        image: p.foto || p.image || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500'
+                    }));
+                } else {
+                    products = sampleProducts;
                 }
+            } catch (e) {
+                console.warn('Fallback to sample products due to Supabase error:', e);
+                products = sampleProducts;
             }
-        }
-
-        function saveSupabaseConfig() {
-            const url = document.getElementById('supabase-url').value.trim();
-            const key = document.getElementById('supabase-key').value.trim();
-            if (!url || !key) {
-                showNotification('Peringatan', 'URL dan Key wajib diisi dengan benar.', 'warning');
-                return;
-            }
-            localStorage.setItem('sb_url', url);
-            localStorage.setItem('sb_key', key);
-            initSupabaseFromStorage();
-            openConfigModal();
-            showNotification('Berhasil', 'Koneksi Supabase tersimpan!', 'success');
+            renderProducts(products);
         }
 
         function renderProducts(items) {
@@ -422,7 +420,7 @@
                         </div>
                         <div class="p-5 pt-0 flex items-center justify-between">
                             <span class="font-bold text-brand-600">Rp ${item.price.toLocaleString('id-ID')}</span>
-                            <button onclick="addToCart(${item.id})" class="bg-brand-50 hover:bg-brand-500 text-brand-600 hover:text-white px-3.5 py-2 rounded-xl font-semibold text-xs transition flex items-center space-x-1.5">
+                            <button onclick="window.addToCart('${item.id}')" class="bg-brand-50 hover:bg-brand-500 text-brand-600 hover:text-white px-3.5 py-2 rounded-xl font-semibold text-xs transition flex items-center space-x-1.5">
                                 <i class="fa-solid fa-plus"></i>
                                 <span>Tambah</span>
                             </button>
@@ -432,7 +430,7 @@
             });
         }
 
-        function filterCategory(category) {
+        window.filterCategory = function(category) {
             currentFilter = category;
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.className = 'category-btn bg-white hover:bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium border border-slate-200 transition whitespace-nowrap';
@@ -446,30 +444,31 @@
             } else {
                 renderProducts(products.filter(p => p.category === category));
             }
-        }
+        };
 
-        function addToCart(productId) {
-            const product = products.find(p => p.id === productId);
-            const existing = cart.find(item => item.id === productId);
+        window.addToCart = function(productId) {
+            const product = products.find(p => String(p.id) === String(productId));
+            if (!product) return;
+            const existing = cart.find(item => String(item.id) === String(productId));
             if (existing) {
                 existing.qty += 1;
             } else {
                 cart.push({ ...product, qty: 1 });
             }
             updateCartUI();
-            showNotification('Keranjang', `${product.name} ditambahkan.`, 'success');
-        }
+            // showNotification('Keranjang', `${product.name} ditambahkan.`, 'success');
+        };
 
-        function updateCartQty(productId, change) {
-            const item = cart.find(i => i.id === productId);
+        window.updateCartQty = function(productId, change) {
+            const item = cart.find(i => String(i.id) === String(productId));
             if (item) {
                 item.qty += change;
                 if (item.qty <= 0) {
-                    cart = cart.filter(i => i.id !== productId);
+                    cart = cart.filter(i => String(i.id) !== String(productId));
                 }
             }
             updateCartUI();
-        }
+        };
 
         function updateCartUI() {
             const container = document.getElementById('cart-items-container');
@@ -503,9 +502,9 @@
                             <p class="text-[11px] text-brand-600 font-medium">Rp ${item.price.toLocaleString('id-ID')}</p>
                         </div>
                         <div class="flex items-center space-x-1.5 flex-shrink-0">
-                            <button onclick="updateCartQty(${item.id}, -1)" class="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 text-[10px]"><i class="fa-solid fa-minus"></i></button>
+                            <button onclick="window.updateCartQty('${item.id}', -1)" class="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 text-[10px]"><i class="fa-solid fa-minus"></i></button>
                             <span class="text-xs font-semibold w-4 text-center">${item.qty}</span>
-                            <button onclick="updateCartQty(${item.id}, 1)" class="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 text-[10px]"><i class="fa-solid fa-plus"></i></button>
+                            <button onclick="window.updateCartQty('${item.id}', 1)" class="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 text-[10px]"><i class="fa-solid fa-plus"></i></button>
                         </div>
                     </div>
                 `;
@@ -515,7 +514,7 @@
             totalEl.innerText = `Rp ${(subtotal + 5000).toLocaleString('id-ID')}`;
         }
 
-        async function checkoutOrder() {
+        window.checkoutOrder = async function() {
             if (cart.length === 0) {
                 showNotification('Perhatian', 'Keranjang belanja masih kosong.', 'warning');
                 return;
@@ -546,15 +545,16 @@
                 created_at: new Date().toISOString()
             };
 
-            if (supabaseClient) {
-                try {
-                    const { error } = await supabaseClient.from('orders').insert([orderData]);
-                    if (error) {
-                        console.error('Supabase insert error:', error);
-                    }
-                } catch (e) {
-                    console.error(e);
+            try {
+                await authReady;
+                const { error } = await supabase.from('orders').insert([orderData]);
+                if (error) {
+                    console.error('Supabase insert error:', error);
+                } else {
+                    console.log('Order successfully inserted into Supabase!');
                 }
+            } catch (e) {
+                console.error('Supabase exception during checkout:', e);
             }
 
             // Local fallback
@@ -567,9 +567,9 @@
             updateCartUI();
 
             showNotification('Pesanan Berhasil!', `ID Pesanan Anda: ${orderId}. Pembayaran via ${paymentMethod}.`, 'success');
-        }
+        };
 
-        async function fetchOrderStatus() {
+        window.fetchOrderStatus = async function() {
             const orderId = document.getElementById('tracker-order-id').value.trim();
             const resultDiv = document.getElementById('tracker-result');
             if (!orderId) {
@@ -579,13 +579,12 @@
 
             let foundOrder = null;
 
-            if (supabaseClient) {
-                try {
-                    const { data, error } = await supabaseClient.from('orders').select('*').eq('order_id', orderId).maybeSingle();
-                    if (data) foundOrder = data;
-                } catch (e) {
-                    console.error(e);
-                }
+            try {
+                await authReady;
+                const { data } = await supabase.from('orders').select('*').eq('order_id', orderId).maybeSingle();
+                if (data) foundOrder = data;
+            } catch (e) {
+                console.error(e);
             }
 
             if (!foundOrder) {
@@ -610,26 +609,22 @@
                     </div>
                 `;
             }
-        }
+        };
 
-        function toggleCartModal() {
+        window.toggleCartModal = function() {
             document.getElementById('cart-modal').classList.toggle('hidden');
-        }
+        };
 
-        function openTrackerModal() {
+        window.openTrackerModal = function() {
             document.getElementById('tracker-modal').classList.toggle('hidden');
-        }
+        };
 
-        function openConfigModal() {
+        window.openConfigModal = function() {
             const modal = document.getElementById('config-modal');
             modal.classList.toggle('hidden');
-            if(!modal.classList.contains('hidden')) {
-                document.getElementById('supabase-url').value = localStorage.getItem('sb_url') || '';
-                document.getElementById('supabase-key').value = localStorage.getItem('sb_key') || '';
-            }
-        }
+        };
 
-        function showNotification(title, message, type = 'success') {
+        window.showNotification = function(title, message, type = 'success') {
             const modal = document.getElementById('notification-modal');
             document.getElementById('notification-title').innerText = title;
             document.getElementById('notification-message').innerText = message;
@@ -642,11 +637,11 @@
                 iconContainer.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
             }
             modal.classList.remove('hidden');
-        }
+        };
 
-        function closeNotification() {
+        window.closeNotification = function() {
             document.getElementById('notification-modal').classList.add('hidden');
-        }
+        };
     </script>
 </body>
-</html>
+</html>s
