@@ -599,6 +599,15 @@
                 `;
             } else if (paymentMethod === 'Transfer') {
                 instructionBox.innerHTML = `
+                    <div class="flex items-center space-x-2.5 mb-2 pb-2 border-b border-slate-200">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 flex-shrink-0">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-900 text-xs">Transfer Bank BCA Syariah</p>
+                            <p class="text-[10px] text-slate-500">Silakan transfer sesuai nominal tagihan</p>
+                        </div>
+                    </div>
                     <p class="font-bold text-slate-900 mb-1">Transfer Bank:</p>
                     <p class="text-slate-600">Nama Bank : <span class="font-bold text-slate-900">BCA Syariah</span></p>
                     <p class="text-slate-600">No. Rekening : <span class="font-bold text-slate-900">8881798766</span></p>
