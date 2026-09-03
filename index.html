@@ -632,42 +632,68 @@
                 return;
             }
 
-            let proofUrl = 'Pending / Cash';
+            let proofPath = 'Pending / Cash';
 
             try {
                 await authReady;
+            
                 if (fileInput.files && fileInput.files.length > 0) {
                     const file = fileInput.files[0];
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
-                    
-                    // Upload to Supabase Storage bucket 'payment-proofs'
-                    const { data: signedData, error: signedError } = await supabase.storage
-                        .from('payment-proofs')
-                        .createSignedUrl(fileName, 3600);
-                    
-                    if (signedError) {
-                        console.error('Signed URL error:', signedError);
-                    } else {
-                        proofUrl = signedData.signedUrl;
-                    }
-
-                    if (uploadError) {
-                        console.error('Storage upload error:', uploadError);
-                    } else {
-                        const { data: urlData } = supabase.storage
+            
+                    const fileExt = file.name
+                        .split('.')
+                        .pop()
+                        .toLowerCase();
+            
+                    const fileName =
+                        `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
+            
+                    console.log("UPLOAD PAYMENT PROOF:", fileName);
+            
+                    const { data: uploadData, error: uploadError } =
+                        await supabase.storage
                             .from('payment-proofs')
-                            .getPublicUrl(fileName);
-                        if (urlData && urlData.publicUrl) {
-                            proofUrl = urlData.publicUrl;
-                        }
+                            .upload(fileName, file, {
+                                contentType: file.type,
+                                upsert: true
+                            });
+            
+                    if (uploadError) {
+                        console.error("STORAGE UPLOAD ERROR:", uploadError);
+                        throw uploadError;
+                    }
+            
+                    console.log("UPLOAD BERHASIL:", uploadData);
+            
+                    // Simpan PATH saja, jangan signed URL
+                    proofPath = fileName;
+            
+                    // Opsional: tes apakah file benar-benar bisa dibuat signed URL
+                    const { data: signedData, error: signedError } =
+                        await supabase.storage
+                            .from('payment-proofs')
+                            .createSignedUrl(fileName, 3600);
+            
+                    if (signedError) {
+                        console.error("SIGNED URL ERROR:", signedError);
+                    } else {
+                        console.log("SIGNED URL:", signedData.signedUrl);
                     }
                 }
+            
             } catch (storageErr) {
-                console.error('Storage exception:', storageErr);
+                console.error("STORAGE EXCEPTION:", storageErr);
+            
+                showNotification(
+                    'Upload Gagal',
+                    'Bukti pembayaran gagal diupload: ' + storageErr.message,
+                    'error'
+                );
+            
+                return;
             }
-
-            pendingOrderData.payment_proof = proofUrl;
+            
+            pendingOrderData.payment_proof = proofPath;
 
             // Insert order into Supabase orders table
             try {
