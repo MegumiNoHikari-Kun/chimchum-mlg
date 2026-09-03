@@ -1,6 +1,8 @@
 {
 "rewrites": [
 { "source": "/admin", "destination": "/admin.html" },
-{ "source": "/kasir", "destination": "/kasir.html" }
+{ "source": "/kasir", "destination": "/kasir.html" },
+{ "source": "/lacak/:orderId", "destination": "/lacak.html" },
+{ "source": "/lacak.html/:orderId", "destination": "/lacak.html" }
 ]
 }
