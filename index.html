@@ -569,6 +569,12 @@
             const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
             const grandTotal = subtotal + 5000;
 
+            // Format current date explicitly to Jakarta GMT+7 ISO string
+            const now = new Date();
+            const jakartaOffset = 7 * 60; // WIB is UTC+7
+            const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOffset) * 60000);
+            const jakartaISOString = localTime.toISOString().replace('Z', '+07:00');
+
             pendingOrderData = {
                 order_id: orderId,
                 customer_name: name,
@@ -578,7 +584,7 @@
                 grand_total: grandTotal,
                 payment_method: paymentMethod,
                 status: 'new',
-                created_at: new Date().toISOString()
+                created_at: jakartaISOString
             };
 
             const instructionBox = document.getElementById('payment-instruction-box');
