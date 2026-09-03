@@ -292,7 +292,7 @@
                 <div class="space-y-1.5 text-left">
                     <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
                     <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
-                    <p class="text-[10px] text-slate-400">Bukti disimpan sebagai referensi digital database & invoice WhatsApp.</p>
+                    <p class="text-[10px] text-slate-400">Pastikan bukti pembayaran sesuai</p>
                 </div>
 
                 <button onclick="confirmAndSubmitOrder()" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition text-sm flex items-center justify-center space-x-2">
@@ -585,7 +585,7 @@
                     <p class="font-bold text-slate-900 mb-1">Scan QRIS untuk Pembayaran:</p>
                     <p class="text-slate-600 mb-2">Total: <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
                     <div class="bg-white p-3 rounded-xl border border-slate-200 text-center">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=CHIMCHUM-QRIS-${orderId}" alt="QRIS Code" class="mx-auto w-32 h-32 object-contain">
+                        <img src="/assets/ChimChum-QRISSHOPEE.png" alt="QRIS Code" class="mx-auto w-32 h-32 object-contain">
                     </div>
                 `;
             } else if (paymentMethod === 'Transfer') {
@@ -688,6 +688,8 @@
             localStorage.setItem('local_orders', JSON.stringify(localOrders));
 
             const itemsListStr = pendingOrderData.items.map(i => `• ${i.name} (${i.qty}x) - Rp ${(i.price * i.qty).toLocaleString('id-ID')}`).join('\n');
+            // Format tracking link for WhatsApp message
+            const trackingLink = `https://chimchum-mlg.vercel.app/lacak.html/${pendingOrderData.order_id}`;
             const waText = encodeURIComponent(
 `*INVOICE PEMESANAN CHIMCHUM MALANG*
 ID Pesanan: ${pendingOrderData.order_id}
@@ -696,7 +698,6 @@ ID Pesanan: ${pendingOrderData.order_id}
 ${itemsListStr}
 ────────────────
 Subtotal: Rp ${(pendingOrderData.grand_total - 5000).toLocaleString('id-ID')}
-Biaya Antar: Rp 5.000
 *Total: Rp ${pendingOrderData.grand_total.toLocaleString('id-ID')}*
 
 *Data Pemesan:*
@@ -704,7 +705,7 @@ Nama: ${pendingOrderData.customer_name}
 No. WA: ${pendingOrderData.phone}
 Alamat: ${pendingOrderData.address}
 Pembayaran: ${pendingOrderData.payment_method}
-Bukti Pembayaran: ${shortProofLink}
+Bukti Pembayaran: ${trackingLink}
 
 Mohon segera diproses ya Kak, terima kasih! 🙏`
             );
