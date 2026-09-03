@@ -98,37 +98,90 @@
 
     <script type="module">
         import { supabase, authReady } from './js/supabase.js';
-
-        // Extract Order ID automatically from URL path or query parameter
+    
+        // =========================================================
+        // AMBIL ORDER ID DARI URL
+        // Support:
+        // /lacak.html/ORD-1692
+        // /lacak.html?id=ORD-1692
+        // /lacak.html?order=ORD-1692
+        // /lacak.html?order_id=ORD-1692
+        // =========================================================
         function extractOrderIdFromURL() {
             const pathname = window.location.pathname;
-            const segments = pathname.split('/').filter(Boolean);
-            
+    
+            // Decode URL dan pecah berdasarkan "/"
+            const segments = pathname
+                .split('/')
+                .filter(Boolean)
+                .map(segment => {
+                    try {
+                        return decodeURIComponent(segment);
+                    } catch {
+                        return segment;
+                    }
+                });
+    
+            // Cari segment ORD-xxxx atau KSR-xxxx
             for (let i = segments.length - 1; i >= 0; i--) {
-                const seg = decodeURIComponent(segments[i]);
-                if (seg.startsWith('ORD-') || seg.startsWith('KSR-')) {
-                    return seg;
+                const seg = segments[i].trim();
+    
+                if (/^(ORD|KSR)-[A-Za-z0-9_-]+$/i.test(seg)) {
+                    return seg.toUpperCase();
                 }
             }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const idParam = urlParams.get('id') || urlParams.get('order') || urlParams.get('order_id');
+    
+            // Support query parameter
+            const params = new URLSearchParams(window.location.search);
+    
+            const idParam =
+                params.get('id') ||
+                params.get('order') ||
+                params.get('order_id');
+    
             if (idParam) {
-                return idParam.trim();
+                const normalized = idParam.trim().toUpperCase();
+    
+                if (/^(ORD|KSR)-[A-Za-z0-9_-]+$/i.test(normalized)) {
+                    return normalized;
+                }
             }
-
+    
             return null;
         }
-
-        // Properly assign the actual async function to window
+    
+    
+        // =========================================================
+        // FORMAT RUPIAH
+        // =========================================================
+        function formatRupiah(value) {
+            return Number(value || 0).toLocaleString('id-ID');
+        }
+    
+    
+        // =========================================================
+        // FETCH ORDER
+        // =========================================================
         window.fetchOrderStatus = async function(manualId = null) {
+    
             const inputEl = document.getElementById('tracker-order-id');
-            const orderIdInput = manualId || (inputEl ? inputEl.value.trim() : '');
             const resultDiv = document.getElementById('tracker-result');
-            
+    
+            let orderIdInput = manualId;
+    
+            if (!orderIdInput && inputEl) {
+                orderIdInput = inputEl.value.trim();
+            }
+    
+            if (orderIdInput) {
+                orderIdInput = orderIdInput.trim().toUpperCase();
+            }
+    
+            // Tidak ada ID
             if (!orderIdInput) {
-                if (!manualId && resultDiv) {
+                if (resultDiv) {
                     resultDiv.classList.remove('hidden');
+    
                     resultDiv.innerHTML = `
                         <div class="text-center py-6 text-amber-600 text-sm bg-amber-50 rounded-2xl border border-amber-200">
                             <i class="fa-solid fa-circle-exclamation text-xl mb-1"></i>
@@ -136,105 +189,403 @@
                         </div>
                     `;
                 }
+    
                 return;
             }
-
+    
+            // =====================================================
+            // PENTING:
+            // ISI KOTAK PENCARIAN DENGAN ID DARI URL
+            // =====================================================
             if (inputEl) {
                 inputEl.value = orderIdInput;
             }
-
-            let foundOrder = null;
-            try {
-                await authReady;
-                const { data, error } = await supabase.from('orders').select('*').eq('order_id', orderIdInput).maybeSingle();
-                if (data && !error) {
-                    foundOrder = data;
-                }
-            } catch (e) {
-                console.error('Supabase fetch error:', e);
-            }
-
-            if (!foundOrder) {
-                let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-                foundOrder = localOrders.find(o => o.order_id === orderIdInput);
-            }
-
+    
+            // Tampilkan loading
             if (resultDiv) {
                 resultDiv.classList.remove('hidden');
-                if (foundOrder) {
-                    let proofDisplay = '';
-                    if (foundOrder.payment_proof && foundOrder.payment_proof !== 'Pending / Cash') {
-                        if (foundOrder.payment_proof.startsWith('data:image')) {
-                            proofDisplay = `<div class="pt-2"><p class="text-xs text-slate-500 mb-1 font-semibold">Bukti Pembayaran:</p><img src="${foundOrder.payment_proof}" class="w-32 h-32 object-cover rounded-xl border border-slate-200"></div>`;
-                        } else {
-                            proofDisplay = `<div class="pt-2"><a href="${foundOrder.payment_proof}" target="_blank" class="text-xs text-brand-600 underline font-semibold">Lihat Bukti Pembayaran ↗</a></div>`;
-                        }
-                    }
-
-                    const itemsList = Array.isArray(foundOrder.items) 
-                        ? foundOrder.items.map(i => `<div class="flex justify-between text-xs py-1 border-b border-slate-100 last:border-none"><span>${i.nama || i.name} (${i.qty}x)</span><span class="font-medium">Rp ${((i.price || i.harga) * i.qty).toLocaleString('id-ID')}</span></div>`).join('')
-                        : '-';
-
-                    const orderTime = foundOrder.created_at ? new Date(foundOrder.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : '-';
-
-                    resultDiv.innerHTML = `
-                        <div class="bg-slate-50 p-5 rounded-2xl space-y-3 text-sm border border-slate-100">
-                            <div class="flex justify-between items-center pb-2 border-b border-slate-200">
-                                <span class="text-slate-500 text-xs">ID Pesanan:</span>
-                                <span class="font-bold text-slate-900">${foundOrder.order_id}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-500 text-xs">Waktu Pemesanan (WIB):</span>
-                                <span class="font-medium text-slate-800 text-xs">${orderTime}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-500 text-xs">Nama Pemesan:</span>
-                                <span class="font-semibold text-slate-800">${foundOrder.customer_name}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-500 text-xs">No. WhatsApp:</span>
-                                <span class="font-medium text-slate-800">${foundOrder.phone}</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-500 text-xs">Metode Pembayaran:</span>
-                                <span class="font-medium text-slate-800">${foundOrder.payment_method || 'Cash'}</span>
-                            </div>
-                            <div class="flex justify-between items-center pb-2 border-b border-slate-200">
-                                <span class="text-slate-500 text-xs">Status Pesanan:</span>
-                                <span class="bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full font-bold uppercase">${foundOrder.status}</span>
-                            </div>
-                            <div class="pt-1">
-                                <p class="text-xs text-slate-500 font-semibold mb-1">Rincian Item:</p>
-                                <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
-                                    ${itemsList}
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-slate-200 font-bold text-base">
-                                <span class="text-slate-700">Total Harga:</span>
-                                <span class="text-brand-600">Rp ${Number(foundOrder.grand_total || foundOrder.total_price || 0).toLocaleString('id-ID')}</span>
-                            </div>
-                            ${proofDisplay}
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-2xl border border-slate-100">
-                            <i class="fa-solid fa-circle-exclamation text-2xl mb-2 text-amber-500"></i>
-                            <p>Pesanan dengan ID <b>${orderIdInput}</b> tidak ditemukan.</p>
-                            <p class="text-xs text-slate-400 mt-1">Pastikan ID yang diakses pada URL sudah benar atau tersimpan.</p>
-                        </div>
-                    `;
+    
+                resultDiv.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-sm bg-slate-50 rounded-2xl border border-slate-100">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-3 text-brand-500"></i>
+                        <p class="font-medium">Mencari pesanan...</p>
+                        <p class="text-xs text-slate-400 mt-1">
+                            ${orderIdInput}
+                        </p>
+                    </div>
+                `;
+            }
+    
+            let foundOrder = null;
+    
+            // =====================================================
+            // CARI DI SUPABASE
+            // =====================================================
+            try {
+    
+                console.log('[TRACKER] Menunggu Supabase...');
+    
+                await authReady;
+    
+                console.log('[TRACKER] Mencari order:', orderIdInput);
+    
+                const {
+                    data,
+                    error
+                } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('order_id', orderIdInput)
+                    .maybeSingle();
+    
+                console.log('[TRACKER] Supabase data:', data);
+                console.log('[TRACKER] Supabase error:', error);
+    
+                if (error) {
+                    console.error('[TRACKER] Supabase error:', error);
+                }
+    
+                if (data) {
+                    foundOrder = data;
+                }
+    
+            } catch (error) {
+                console.error('[TRACKER] Supabase fetch exception:', error);
+            }
+    
+    
+            // =====================================================
+            // FALLBACK LOCAL STORAGE
+            // =====================================================
+            if (!foundOrder) {
+                try {
+    
+                    const localOrders = JSON.parse(
+                        localStorage.getItem('local_orders') || '[]'
+                    );
+    
+                    foundOrder = localOrders.find(order => {
+                        return String(order.order_id || '')
+                            .trim()
+                            .toUpperCase() === orderIdInput;
+                    });
+    
+                    console.log('[TRACKER] LocalStorage result:', foundOrder);
+    
+                } catch (error) {
+                    console.error(
+                        '[TRACKER] localStorage error:',
+                        error
+                    );
                 }
             }
-        };
-
-        // Auto-check order status on page load if ID is present in URL
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlOrderId = extractOrderIdFromURL();
-            if (urlOrderId) {
-                window.fetchOrderStatus(urlOrderId);
+    
+    
+            // =====================================================
+            // HASIL
+            // =====================================================
+            if (!resultDiv) return;
+    
+    
+            // =====================================================
+            // ORDER DITEMUKAN
+            // =====================================================
+            if (foundOrder) {
+    
+                let proofDisplay = '';
+    
+                if (
+                    foundOrder.payment_proof &&
+                    foundOrder.payment_proof !== 'Pending / Cash'
+                ) {
+    
+                    if (
+                        String(foundOrder.payment_proof)
+                            .startsWith('data:image')
+                    ) {
+    
+                        proofDisplay = `
+                            <div class="pt-2">
+                                <p class="text-xs text-slate-500 mb-1 font-semibold">
+                                    Bukti Pembayaran:
+                                </p>
+    
+                                <img
+                                    src="${foundOrder.payment_proof}"
+                                    class="w-32 h-32 object-cover rounded-xl border border-slate-200"
+                                    alt="Bukti Pembayaran"
+                                >
+                            </div>
+                        `;
+    
+                    } else {
+    
+                        proofDisplay = `
+                            <div class="pt-2">
+                                <a
+                                    href="${foundOrder.payment_proof}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-xs text-brand-600 underline font-semibold"
+                                >
+                                    Lihat Bukti Pembayaran ↗
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+    
+    
+                // =================================================
+                // ITEMS
+                // =================================================
+                const itemsList = Array.isArray(foundOrder.items)
+                    ? foundOrder.items.map(item => {
+    
+                        const nama =
+                            item.nama ||
+                            item.name ||
+                            'Item';
+    
+                        const qty =
+                            Number(item.qty || 0);
+    
+                        const price =
+                            Number(item.price || item.harga || 0);
+    
+                        return `
+                            <div class="flex justify-between text-xs py-1 border-b border-slate-100 last:border-none">
+                                <span>
+                                    ${nama} (${qty}x)
+                                </span>
+    
+                                <span class="font-medium">
+                                    Rp ${formatRupiah(price * qty)}
+                                </span>
+                            </div>
+                        `;
+    
+                    }).join('')
+                    : '-';
+    
+    
+                // =================================================
+                // WAKTU ORDER
+                // =================================================
+                const orderTime = foundOrder.created_at
+                    ? new Date(foundOrder.created_at).toLocaleString(
+                        'id-ID',
+                        {
+                            timeZone: 'Asia/Jakarta'
+                        }
+                    )
+                    : '-';
+    
+    
+                // =================================================
+                // RENDER
+                // =================================================
+                resultDiv.innerHTML = `
+                    <div class="bg-slate-50 p-5 rounded-2xl space-y-3 text-sm border border-slate-100">
+    
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span class="text-slate-500 text-xs">
+                                ID Pesanan:
+                            </span>
+    
+                            <span class="font-bold text-slate-900">
+                                ${foundOrder.order_id || orderIdInput}
+                            </span>
+                        </div>
+    
+    
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">
+                                Waktu Pemesanan (WIB):
+                            </span>
+    
+                            <span class="font-medium text-slate-800 text-xs">
+                                ${orderTime}
+                            </span>
+                        </div>
+    
+    
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">
+                                Nama Pemesan:
+                            </span>
+    
+                            <span class="font-semibold text-slate-800">
+                                ${foundOrder.customer_name || '-'}
+                            </span>
+                        </div>
+    
+    
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">
+                                No. WhatsApp:
+                            </span>
+    
+                            <span class="font-medium text-slate-800">
+                                ${foundOrder.phone || '-'}
+                            </span>
+                        </div>
+    
+    
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">
+                                Metode Pembayaran:
+                            </span>
+    
+                            <span class="font-medium text-slate-800">
+                                ${foundOrder.payment_method || 'Cash'}
+                            </span>
+                        </div>
+    
+    
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+    
+                            <span class="text-slate-500 text-xs">
+                                Status Pesanan:
+                            </span>
+    
+                            <span class="bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full font-bold uppercase">
+                                ${foundOrder.status || '-'}
+                            </span>
+    
+                        </div>
+    
+    
+                        <div class="pt-1">
+    
+                            <p class="text-xs text-slate-500 font-semibold mb-1">
+                                Rincian Item:
+                            </p>
+    
+                            <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                                ${itemsList}
+                            </div>
+    
+                        </div>
+    
+    
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-200 font-bold text-base">
+    
+                            <span class="text-slate-700">
+                                Total Harga:
+                            </span>
+    
+                            <span class="text-brand-600">
+                                Rp ${formatRupiah(
+                                    foundOrder.grand_total ||
+                                    foundOrder.total_price
+                                )}
+                            </span>
+    
+                        </div>
+    
+                        ${proofDisplay}
+    
+                    </div>
+                `;
+    
+    
+                console.log(
+                    '[TRACKER] Order berhasil ditampilkan:',
+                    foundOrder.order_id
+                );
+    
             }
-        });
+    
+            // =====================================================
+            // ORDER TIDAK DITEMUKAN
+            // =====================================================
+            else {
+    
+                resultDiv.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-2xl border border-slate-100">
+    
+                        <i class="fa-solid fa-circle-exclamation text-2xl mb-2 text-amber-500"></i>
+    
+                        <p>
+                            Pesanan dengan ID
+                            <b class="text-slate-700">
+                                ${orderIdInput}
+                            </b>
+                            tidak ditemukan.
+                        </p>
+    
+                        <p class="text-xs text-slate-400 mt-1">
+                            Pastikan ID pesanan sudah benar.
+                        </p>
+    
+                    </div>
+                `;
+    
+                console.warn(
+                    '[TRACKER] Order tidak ditemukan:',
+                    orderIdInput
+                );
+            }
+        };
+    
+    
+        // =========================================================
+        // AUTO TRACKING
+        // =========================================================
+        async function autoTrackOrder() {
+    
+            const orderId = extractOrderIdFromURL();
+    
+            console.log(
+                '[TRACKER] URL:',
+                window.location.href
+            );
+    
+            console.log(
+                '[TRACKER] Order ID dari URL:',
+                orderId
+            );
+    
+            if (!orderId) {
+                console.log(
+                    '[TRACKER] Tidak ada Order ID di URL.'
+                );
+                return;
+            }
+    
+            // Pastikan DOM tersedia
+            const inputEl =
+                document.getElementById('tracker-order-id');
+    
+            if (inputEl) {
+                // AUTO ISI INPUT
+                inputEl.value = orderId;
+            }
+    
+            // AUTO SEARCH
+            await window.fetchOrderStatus(orderId);
+        }
+    
+    
+        // =========================================================
+        // JALANKAN AUTO SEARCH
+        // Tidak hanya mengandalkan DOMContentLoaded
+        // =========================================================
+        if (document.readyState === 'loading') {
+    
+            document.addEventListener(
+                'DOMContentLoaded',
+                autoTrackOrder,
+                { once: true }
+            );
+    
+        } else {
+    
+            autoTrackOrder();
+    
+        }
+    
     </script>
 </body>
 </html>
