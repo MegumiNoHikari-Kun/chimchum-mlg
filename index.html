@@ -404,6 +404,7 @@
         let cart = [];
         let currentFilter = 'all';
         let pendingOrderData = null;
+        const WA_TARGET_NUMBER = '6285723785380';
 
         window.addEventListener('DOMContentLoaded', async () => {
             await authReady;
@@ -617,13 +618,12 @@
                 return;
             }
 
-            let proofUrl = 'Pending / Cash';
+            let proofRef = 'Pending / Cash';
             if (fileInput.files && fileInput.files.length > 0) {
-                // Simulating upload proof reference
-                proofUrl = 'uploaded_proof_' + Date.now() + '.jpg';
+                proofRef = 'uploaded_proof_' + Date.now() + '.jpg';
             }
 
-            pendingOrderData.payment_proof = proofUrl;
+            pendingOrderData.payment_proof = proofRef;
 
             try {
                 await authReady;
@@ -642,13 +642,41 @@
             localOrders.push(pendingOrderData);
             localStorage.setItem('local_orders', JSON.stringify(localOrders));
 
+            // Generate WhatsApp message and redirect
+            const itemsListStr = pendingOrderData.items.map(i => `• ${i.name} (${i.qty}x) - Rp ${(i.price * i.qty).toLocaleString('id-ID')}`).join('\n');
+            const waText = encodeURIComponent(
+`*INVOICE PEMESANAN CHIMCHUM MALANG*
+ID Pesanan: ${pendingOrderData.order_id}
+
+*Detail Item:*
+${itemsListStr}
+────────────────
+Subtotal: Rp ${(pendingOrderData.grand_total - 5000).toLocaleString('id-ID')}
+Biaya Antar: Rp 5.000
+*Total: Rp ${pendingOrderData.grand_total.toLocaleString('id-ID')}*
+
+*Data Pemesan:*
+Nama: ${pendingOrderData.customer_name}
+No. WA: ${pendingOrderData.phone}
+Alamat: ${pendingOrderData.address}
+Pembayaran: ${pendingOrderData.payment_method} (${proofRef})
+
+Mohon segera diproses ya Kak, terima kasih! 🙏`
+            );
+
             closePaymentModal();
             cart = [];
             updateCartUI();
             fileInput.value = '';
 
-            showNotification('Pesanan Berhasil Dibuat!', `ID Pesanan Anda: ${pendingOrderData.order_id}. Terima kasih!`, 'success');
+            showNotification('Pesanan Berhasil Dibuat!', `ID Pesanan: ${pendingOrderData.order_id}. Mengalihkan ke WhatsApp...`, 'success');
+            
+            const targetOrder = pendingOrderData;
             pendingOrderData = null;
+
+            setTimeout(() => {
+                window.open(`https://wa.me/${WA_TARGET_NUMBER}?text=${waText}`, '_blank');
+            }, 1200);
         };
 
         window.fetchOrderStatus = async function() {
