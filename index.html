@@ -199,7 +199,7 @@
 
     <footer class="bg-white border-t border-slate-200 py-8 text-center text-slate-500 text-sm">
         <div class="max-w-7xl mx-auto px-4">
-            <p>&copy; 2026 ChimChum Malang. All rights reserved. Seamless Supabase Integration.</p>
+            <p>&copy; 2026 ChimChum Malang. All rights reserved.</p>
         </div>
     </footer>
 
@@ -590,10 +590,11 @@
                 `;
             } else if (paymentMethod === 'Transfer') {
                 instructionBox.innerHTML = `
-                    <p class="font-bold text-slate-900 mb-1">Transfer Bank BCA Syariah:</p>
-                    <p class="text-slate-600">No. Rekening: <span class="font-bold text-slate-900">8881798766</span></p>
-                    <p class="text-slate-600">Atas Nama: <span class="font-bold text-slate-900">Intan Dwi Ambalika</span></p>
-                    <p class="text-slate-600 mt-1">Total Tagihan: <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
+                    <p class="font-bold text-slate-900 mb-1">Transfer Bank:</p>
+                    <p class="text-slate-600">Nama Bank : <span class="font-bold text-slate-900">BCA Syariah</span></p>
+                    <p class="text-slate-600">No. Rekening : <span class="font-bold text-slate-900">8881798766</span></p>
+                    <p class="text-slate-600">Atas Nama : <span class="font-bold text-slate-900">Intan Dwi A I</span></p>
+                    <p class="text-slate-600 mt-1">Total Tagihan : <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
                 `;
             } else {
                 instructionBox.innerHTML = `
