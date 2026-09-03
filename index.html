@@ -50,10 +50,6 @@
             </div>
 
             <div class="flex items-center space-x-3">
-                <button onclick="openConfigModal()" class="text-slate-500 hover:text-brand-600 p-2.5 rounded-xl hover:bg-slate-100 transition relative" title="Pengaturan Supabase">
-                    <i class="fa-solid fa-database text-lg"></i>
-                    <span id="db-status-dot" class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white"></span>
-                </button>
                 <a href="#lokasi" class="hidden md:inline-flex text-slate-600 hover:text-brand-600 font-medium text-sm transition">Lokasi</a>
                 <button onclick="openTrackerModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center space-x-2 transition">
                     <i class="fa-solid fa-receipt"></i>
@@ -337,9 +333,6 @@
                     <i class="fa-solid fa-database text-brand-500 text-xl"></i>
                     <h3 class="font-bold text-lg text-slate-900">Koneksi Supabase</h3>
                 </div>
-                <button onclick="openConfigModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
             </div>
             <div class="p-6 space-y-4">
                 <p class="text-xs text-slate-500">Hubungkan project Supabase Anda agar pesanan langsung masuk ke database backend secara seamless.</p>
@@ -410,7 +403,6 @@
             localStorage.setItem('sb_url', url);
             localStorage.setItem('sb_key', key);
             initSupabaseFromStorage();
-            openConfigModal();
             showNotification('Berhasil', 'Koneksi Supabase tersimpan!', 'success');
         };
 
@@ -492,7 +484,7 @@
                 cart.push({ ...product, qty: 1 });
             }
             updateCartUI();
-            showNotification('Keranjang', `${product.name} ditambahkan.`, 'success');
+            // showNotification('Keranjang', `${product.name} ditambahkan.`, 'success');
         };
 
         window.updateCartQty = function(productId, change) {
@@ -786,15 +778,6 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
 
         window.openTrackerModal = function() {
             document.getElementById('tracker-modal').classList.toggle('hidden');
-        };
-
-        window.openConfigModal = function() {
-            const modal = document.getElementById('config-modal');
-            modal.classList.toggle('hidden');
-            if(!modal.classList.contains('hidden')) {
-                document.getElementById('supabase-url').value = localStorage.getItem('sb_url') || '';
-                document.getElementById('supabase-key').value = localStorage.getItem('sb_key') || '';
-            }
         };
 
         window.showNotification = function(title, message, type = 'success') {
