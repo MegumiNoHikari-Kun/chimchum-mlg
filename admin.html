@@ -377,7 +377,11 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         <div><label style="font-size:13px; font-weight:500;">Harga Jual (Rp)</label><input type="number" id="p-harga" placeholder="22000"></div>
         <div><label style="font-size:13px; font-weight:500;">HPP (Rp)</label><input type="number" id="p-hpp" placeholder="12000"></div>
         <div><label style="font-size:13px; font-weight:500;">Stok Porsi</label><input type="number" id="p-stok" placeholder="30"></div>
-        <div><label style="font-size:13px; font-weight:500;">URL Foto / Gambar</label><input id="p-foto" placeholder="https://images.unsplash.com/..."></div>
+        <div><label style="font-size:13px; font-weight:500;">URL Foto / Gambar (Opsional)</label><input id="p-foto" placeholder="https://images.unsplash.com/..."></div>
+      </div>
+      <div style="margin-top: 5px; margin-bottom: 14px;">
+        <label style="font-size:13px; font-weight:500; display:block; margin-bottom:6px;">Atau Upload File Gambar Produk</label>
+        <input type="file" id="p-foto-file" accept="image/*" style="padding: 8px; background: #fdfdfd;">
       </div>
       <label style="font-size:13px; font-weight:500;">Deskripsi Singkat</label>
       <textarea id="p-deskripsi" placeholder="Deskripsi produk..." rows="2"></textarea>
@@ -904,13 +908,40 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         const harga = Number(document.getElementById('p-harga').value);
         const hpp = Number(document.getElementById('p-hpp').value) || 0;
         const stok = Number(document.getElementById('p-stok').value) || 50;
-        const foto = document.getElementById('p-foto').value.trim();
+        let foto = document.getElementById('p-foto').value.trim();
+        const fileInput = document.getElementById('p-foto-file');
         const deskripsi = document.getElementById('p-deskripsi').value.trim();
 
         if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
 
         await authReady;
         try {
+            if (fileInput.files && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const fileName = `prod_${Date.now()}.${fileExt}`;
+                
+                const { error: uploadError } = await supabase.storage
+                    .from('product-images')
+                    .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+                if (!uploadError) {
+                    const { data: publicUrlData } = supabase.storage
+                        .from('product-images')
+                        .getPublicUrl(fileName);
+                    if (publicUrlData && publicUrlData.publicUrl) {
+                        foto = publicUrlData.publicUrl;
+                    }
+                } else {
+                    // Fallback to base64 if bucket upload fails
+                    foto = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(file);
+                    });
+                }
+            }
+
             const { error } = await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
             if (error) throw error;
             alert('Produk berhasil disimpan!');
@@ -920,8 +951,10 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             document.getElementById('p-hpp').value = '';
             document.getElementById('p-stok').value = '';
             document.getElementById('p-foto').value = '';
+            document.getElementById('p-foto-file').value = '';
             document.getElementById('p-deskripsi').value = '';
             loadProductsList();
+            loadKasirMenu();
         } catch (err) {
             alert('Gagal menyimpan produk: ' + err.message);
         }
@@ -961,6 +994,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         try {
             await supabase.from('products').delete().eq('id', id);
             loadProductsList();
+            loadKasirMenu();
             alert('Produk berhasil dihapus.');
         } catch (e) {
             alert('Gagal menghapus produk.');
