@@ -86,8 +86,8 @@
                     <div class="w-12 h-12 mb-2 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm border border-purple-200">
                         <i class="fa-solid fa-stamp text-lg"></i>
                     </div>
-                    <h3 class="font-bold text-lg">Halal BPJPH</h3>
-                    <p class="text-xs text-slate-400">Resmi & Terverifikasi</p>
+                    <h3 class="font-bold text-lg">Halal</h3>
+                    <p class="text-xs text-slate-400">BPJPH Resmi</p>
                 </div>
                 <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 backdrop-blur text-center flex flex-col items-center justify-center">
                     <div class="w-12 h-12 mb-2 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm border border-amber-200">
@@ -234,12 +234,12 @@
                 </button>
             </div>
 
-            <!-- Cart Items Container (Expanded space for items) -->
+            <!-- Cart Items Container -->
             <div id="cart-items-container" class="p-4 flex-grow overflow-y-auto space-y-2.5">
                 <!-- Rendered by JS -->
             </div>
 
-            <!-- Cart Footer (Compact Form Inputs for Wider List) -->
+            <!-- Cart Footer -->
             <div class="p-4 border-t border-slate-100 bg-slate-50 space-y-2.5">
                 <div class="space-y-1 mb-1">
                     <div class="flex justify-between text-[11px] text-slate-500">
@@ -311,7 +311,7 @@
                 <div class="space-y-1.5 text-left">
                     <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
                     <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
-                    <p class="text-[10px] text-slate-400">Catatan: Bukti disimpan sebagai referensi digital database & invoice WhatsApp.</p>
+                    <p class="text-[10px] text-slate-400">File otomatis tersimpan di Supabase Storage (bucket: payment-proofs) dan link URL dicatat ke database.</p>
                 </div>
 
                 <button onclick="confirmAndSubmitOrder()" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition text-sm">
@@ -647,15 +647,42 @@
                 return;
             }
 
-            let proofRef = 'Pending / Cash';
-            if (fileInput.files && fileInput.files.length > 0) {
-                // Since GitHub static hosting cannot run a server file-upload endpoint, 
-                // we reference the filename for the database record & WhatsApp invoice.
-                proofRef = 'bukti_transfer_' + Date.now() + '_' + fileInput.files[0].name;
+            let proofUrl = 'Pending / Cash';
+
+            if (supabaseClient && fileInput.files && fileInput.files.length > 0) {
+                try {
+                    const file = fileInput.files[0];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
+                    const filePath = `${fileName}`;
+
+                    // Upload file to Supabase Storage bucket 'payment-proofs'
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('payment-proofs')
+                        .upload(filePath, file);
+
+                    if (uploadError) {
+                        console.error('Storage upload error:', uploadError);
+                    } else {
+                        // Retrieve Public URL
+                        const { data: urlData } = supabaseClient.storage
+                            .from('payment-proofs')
+                            .getPublicUrl(filePath);
+                        if (urlData && urlData.publicUrl) {
+                            proofUrl = urlData.publicUrl;
+                        }
+                    }
+                } catch (storageErr) {
+                    console.error('Storage exception:', storageErr);
+                }
+            } else if (fileInput.files && fileInput.files.length > 0) {
+                proofUrl = 'local_proof_' + fileInput.files[0].name;
             }
 
-            pendingOrderData.payment_proof = proofRef;
+            // Save public URL reference into order data object
+            pendingOrderData.payment_proof = proofUrl;
 
+            // Insert order into Supabase orders table
             if (supabaseClient) {
                 try {
                     const { error } = await supabaseClient.from('orders').insert([pendingOrderData]);
@@ -667,12 +694,12 @@
                 }
             }
 
-            // Local fallback
+            // Local fallback storage
             let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
             localOrders.push(pendingOrderData);
             localStorage.setItem('local_orders', JSON.stringify(localOrders));
 
-            // Generate WhatsApp message and redirect
+            // Generate WhatsApp order message invoice
             const itemsListStr = pendingOrderData.items.map(i => `• ${i.name} (${i.qty}x) - Rp ${(i.price * i.qty).toLocaleString('id-ID')}`).join('\n');
             const waText = encodeURIComponent(
 `*INVOICE PEMESANAN CHIMCHUM MALANG*
@@ -689,7 +716,8 @@ Biaya Antar: Rp 5.000
 Nama: ${pendingOrderData.customer_name}
 No. WA: ${pendingOrderData.phone}
 Alamat: ${pendingOrderData.address}
-Pembayaran: ${pendingOrderData.payment_method} (${proofRef})
+Pembayaran: ${pendingOrderData.payment_method}
+Bukti Pembayaran: ${proofUrl}
 
 Mohon segera diproses ya Kak, terima kasih! 🙏`
             );
@@ -701,9 +729,6 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
 
             showNotification('Pesanan Berhasil Dibuat!', `ID Pesanan: ${pendingOrderData.order_id}. Mengalihkan ke WhatsApp...`, 'success');
             
-            const targetOrder = pendingOrderData;
-            pendingOrderData = null;
-
             setTimeout(() => {
                 window.open(`https://wa.me/${WA_TARGET_NUMBER}?text=${waText}`, '_blank');
             }, 1200);
@@ -741,6 +766,7 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
                         <div class="flex justify-between"><span class="text-slate-500">Nama Pemesan:</span><span class="font-semibold">${foundOrder.customer_name}</span></div>
                         <div class="flex justify-between"><span class="text-slate-500">Total Harga:</span><span class="font-bold text-brand-600">Rp ${Number(foundOrder.grand_total || foundOrder.total_price || 0).toLocaleString('id-ID')}</span></div>
                         <div class="flex justify-between"><span class="text-slate-500">Status:</span><span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase">${foundOrder.status}</span></div>
+                        ${foundOrder.payment_proof ? `<div class="pt-2"><a href="${foundOrder.payment_proof}" target="_blank" class="text-xs text-brand-600 underline font-semibold">Lihat Bukti Pembayaran ↗</a></div>` : ''}
                     </div>
                 `;
             } else {
