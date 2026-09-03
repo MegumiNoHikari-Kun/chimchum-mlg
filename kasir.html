@@ -821,7 +821,6 @@ tr:last-child td { border-bottom: none; }
     window.updateOrderStatus = async (key, newStatus) => {
         try {
             await authReady;
-            // Check if key is a valid UUID or a custom string order_id
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
             
             let query = supabase.from("orders").update({ status: newStatus });
@@ -834,7 +833,6 @@ tr:last-child td { border-bottom: none; }
             const { error } = await query;
             if (error) {
                 console.error("Supabase update error:", error);
-                // Fallback attempt by order_id
                 await supabase.from("orders").update({ status: newStatus }).eq('order_id', key);
             }
         } catch (e) {
