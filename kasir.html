@@ -696,7 +696,9 @@ tr:last-child td { border-bottom: none; }
         };
 
         try {
-            await supabase.from("orders").insert([orderData]);
+            await authReady;
+            const { error } = await supabase.from("orders").insert([orderData]);
+            if (error) console.error("Supabase insert error:", error);
         } catch (err) {
             console.error("Supabase order insert error:", err);
         }
@@ -818,13 +820,25 @@ tr:last-child td { border-bottom: none; }
 
     window.updateOrderStatus = async (key, newStatus) => {
         try {
-            // Try updating by UUID 'id' first, then fallback to 'order_id'
-            let { error } = await supabase.from("orders").update({ status: newStatus }).eq('id', key);
+            await authReady;
+            // Check if key is a valid UUID or a custom string order_id
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+            
+            let query = supabase.from("orders").update({ status: newStatus });
+            if (isUuid) {
+                query = query.eq('id', key);
+            } else {
+                query = query.eq('order_id', key);
+            }
+            
+            const { error } = await query;
             if (error) {
+                console.error("Supabase update error:", error);
+                // Fallback attempt by order_id
                 await supabase.from("orders").update({ status: newStatus }).eq('order_id', key);
             }
         } catch (e) {
-            console.error("Supabase update status error:", e);
+            console.error("Supabase update status exception:", e);
         }
 
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
@@ -845,12 +859,20 @@ tr:last-child td { border-bottom: none; }
     window.deleteOrder = async (key) => {
         if (!confirm("Hapus pesanan ini?")) return;
         try {
-            let { error } = await supabase.from("orders").delete().eq('id', key);
+            await authReady;
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+            let query = supabase.from("orders").delete();
+            if (isUuid) {
+                query = query.eq('id', key);
+            } else {
+                query = query.eq('order_id', key);
+            }
+            const { error } = await query;
             if (error) {
                 await supabase.from("orders").delete().eq('order_id', key);
             }
         } catch (e) {
-            console.error("Supabase delete error:", e);
+            console.error("Supabase delete exception:", e);
         }
 
         let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
