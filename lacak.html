@@ -69,7 +69,7 @@
             <div class="space-y-4">
                 <div class="flex flex-col sm:flex-row gap-2">
                     <input type="text" id="tracker-order-id" placeholder="Masukkan ID Pesanan (cth: ORD-1234)" class="flex-grow px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                    <button onclick="fetchOrderStatus()" class="bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition shadow-md shadow-brand-500/25 flex items-center justify-center space-x-2">
+                    <button type="button" onclick="window.fetchOrderStatus()" class="bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition shadow-md shadow-brand-500/25 flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-magnifying-glass"></i>
                         <span>Cek Status</span>
                     </button>
@@ -97,10 +97,12 @@
             const pathname = window.location.pathname;
             const segments = pathname.split('/').filter(Boolean);
             
-            // Check if last segment looks like an order ID (e.g. ORD-... or KSR-...)
-            const lastSegment = segments[segments.length - 1];
-            if (lastSegment && (lastSegment.startsWith('ORD-') || lastSegment.startsWith('KSR-'))) {
-                return decodeURIComponent(lastSegment);
+            // Check if any segment looks like an order ID (e.g. ORD-... or KSR-...)
+            for (let i = segments.length - 1; i >= 0; i--) {
+                const seg = decodeURIComponent(segments[i]);
+                if (seg.startsWith('ORD-') || seg.startsWith('KSR-')) {
+                    return seg;
+                }
             }
 
             // Check query parameters (?id=ORD-1234 or ?order=ORD-1234)
@@ -211,7 +213,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlOrderId = extractOrderIdFromURL();
             if (urlOrderId) {
-                fetchOrderStatus(urlOrderId);
+                window.fetchOrderStatus(urlOrderId);
             }
         });
     </script>
