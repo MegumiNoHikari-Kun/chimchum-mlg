@@ -832,13 +832,12 @@ tr:last-child td { border-bottom: none; }
         renderOrdersTable();
     };
 
-    async function updateOrderStatus(key, newStatus) {
+    window.updateOrderStatus = async function(key, newStatus) {
       try {
         await authReady;
     
         console.log("UPDATE STATUS:", key, "→", newStatus);
     
-        // Pastikan user sudah login
         const {
           data: { user },
           error: userError
@@ -850,7 +849,6 @@ tr:last-child td { border-bottom: none; }
     
         console.log("Supabase user:", user.id);
     
-        // Update berdasarkan UUID id
         const { data, error } = await supabase
           .from("orders")
           .update({
@@ -866,15 +864,14 @@ tr:last-child td { border-bottom: none; }
     
         console.log("HASIL UPDATE:", data);
     
-        // Kalau data kosong berarti tidak ada row yang berhasil di-update
         if (!data || data.length === 0) {
           throw new Error(
-            "UPDATE tidak mengubah row. Kemungkinan RLS policy Supabase menolak UPDATE atau ID tidak ditemukan."
+            "Tidak ada row yang di-update. Periksa ID atau RLS policy UPDATE."
           );
         }
     
         console.log(
-          `Status ${key}: berhasil disimpan ke Supabase → ${data[0].status}`
+          `Status ${key}: ${data[0].status} berhasil disimpan ke Supabase`
         );
     
         // Update local cache
@@ -900,20 +897,15 @@ tr:last-child td { border-bottom: none; }
           JSON.stringify(localOrders)
         );
     
-        // Refresh tampilan tanpa menimpa hasil dari database
-        if (typeof window.renderOrders === "function") {
-          window.renderOrders();
-        }
-    
       } catch (error) {
         console.error("GAGAL UPDATE STATUS:", error);
     
         alert(
           "Status gagal disimpan ke database Supabase.\n\n" +
-          (error.message || "Unknown error")
+          error.message
         );
       }
-    }
+    };
 
     window.reprintOrder = (key) => {
         const order = cachedOrders.find(o => (o.id === key || o.order_id === key));
