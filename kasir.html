@@ -832,126 +832,88 @@ tr:last-child td { border-bottom: none; }
         renderOrdersTable();
     };
 
-    window.updateOrderStatus = async (key, newStatus) => {
-        const allowedStatuses = [
-            'new',
-            'disiapkan',
-            'dikirim',
-            'selesai',
-            'cancel'
-        ];
+    async function updateOrderStatus(key, newStatus) {
+      try {
+        await authReady;
     
-        if (!allowedStatuses.includes(newStatus)) {
-            alert("Status tidak valid.");
-            return;
+        console.log("UPDATE STATUS:", key, "→", newStatus);
+    
+        // Pastikan user sudah login
+        const {
+          data: { user },
+          error: userError
+        } = await supabase.auth.getUser();
+    
+        if (userError || !user) {
+          throw new Error("User belum login ke Supabase");
         }
     
-        // Simpan status lama untuk rollback jika gagal
-        const oldOrder = cachedOrders.find(
-            o => String(o.id) === String(key) ||
-                 String(o.order_id) === String(key)
+        console.log("Supabase user:", user.id);
+    
+        // Update berdasarkan UUID id
+        const { data, error } = await supabase
+          .from("orders")
+          .update({
+            status: newStatus
+          })
+          .eq("id", key)
+          .select("id, status");
+    
+        if (error) {
+          console.error("SUPABASE UPDATE ERROR:", error);
+          throw error;
+        }
+    
+        console.log("HASIL UPDATE:", data);
+    
+        // Kalau data kosong berarti tidak ada row yang berhasil di-update
+        if (!data || data.length === 0) {
+          throw new Error(
+            "UPDATE tidak mengubah row. Kemungkinan RLS policy Supabase menolak UPDATE atau ID tidak ditemukan."
+          );
+        }
+    
+        console.log(
+          `Status ${key}: berhasil disimpan ke Supabase → ${data[0].status}`
         );
     
-        const oldStatus = oldOrder?.status || 'new';
+        // Update local cache
+        let localOrders = JSON.parse(
+          localStorage.getItem("local_orders") || "[]"
+        );
     
-        try {
-            await authReady;
+        localOrders = localOrders.map(order => {
+          const orderKey = order.id || order.order_id;
     
-            let query = supabase
-                .from("orders")
-                .update({ status: newStatus });
+          if (orderKey === key) {
+            return {
+              ...order,
+              status: newStatus
+            };
+          }
     
-            // Gunakan UUID id kalau tersedia
-            if (
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-                .test(String(key))
-            ) {
-                query = query.eq("id", key);
-            } else {
-                query = query.eq("order_id", key);
-            }
+          return order;
+        });
     
-            const { error } = await query;
+        localStorage.setItem(
+          "local_orders",
+          JSON.stringify(localOrders)
+        );
     
-            if (error) {
-                console.error("Gagal update status:", error);
-                throw error;
-            }
-    
-            // Update cache
-            cachedOrders = cachedOrders.map(o => {
-                if (
-                    String(o.id) === String(key) ||
-                    String(o.order_id) === String(key)
-                ) {
-                    return {
-                        ...o,
-                        status: newStatus
-                    };
-                }
-    
-                return o;
-            });
-    
-            // Update localStorage
-            let localOrders = JSON.parse(
-                localStorage.getItem("local_orders") || "[]"
-            );
-    
-            localOrders = localOrders.map(o => {
-                if (
-                    String(o.id) === String(key) ||
-                    String(o.order_id) === String(key)
-                ) {
-                    return {
-                        ...o,
-                        status: newStatus
-                    };
-                }
-    
-                return o;
-            });
-    
-            localStorage.setItem(
-                "local_orders",
-                JSON.stringify(localOrders)
-            );
-    
-            // Render tanpa reload database
-            renderOrderSummary(cachedOrders);
-            renderOrdersTable();
-    
-            console.log(
-                `Status ${key}: ${oldStatus} → ${newStatus}`
-            );
-    
-        } catch (error) {
-            console.error("UPDATE STATUS ERROR:", error);
-    
-            alert(
-                "Gagal mengubah status pesanan.\n\n" +
-                (error.message || "Unknown error")
-            );
-    
-            // Kembalikan select ke status sebelumnya
-            cachedOrders = cachedOrders.map(o => {
-                if (
-                    String(o.id) === String(key) ||
-                    String(o.order_id) === String(key)
-                ) {
-                    return {
-                        ...o,
-                        status: oldStatus
-                    };
-                }
-    
-                return o;
-            });
-    
-            renderOrderSummary(cachedOrders);
-            renderOrdersTable();
+        // Refresh tampilan tanpa menimpa hasil dari database
+        if (typeof window.renderOrders === "function") {
+          window.renderOrders();
         }
-    };
+    
+      } catch (error) {
+        console.error("GAGAL UPDATE STATUS:", error);
+    
+        alert(
+          "Status gagal disimpan ke database Supabase.\n\n" +
+          (error.message || "Unknown error")
+        );
+      }
+    }
 
     window.reprintOrder = (key) => {
         const order = cachedOrders.find(o => (o.id === key || o.order_id === key));
