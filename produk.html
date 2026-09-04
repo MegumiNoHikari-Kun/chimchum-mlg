@@ -122,20 +122,15 @@
             if (!nama || !harga) { alert('Nama dan Harga Jual wajib diisi!'); return; }
 
             await authReady;
+            // Clean payload matching standard table columns (avoiding schema mismatch issues)
             const productPayload = {
                 nama,
-                name: nama,
                 kategori,
-                category: kategori,
                 harga,
-                price: harga,
                 hpp,
                 stok,
-                stock: stok,
                 foto,
-                image: foto,
-                deskripsi,
-                desc: deskripsi
+                deskripsi
             };
 
             try {
