@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Keuangan - ChimChum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>body { font-family: 'Poppins', sans-serif; }</style>
+</head>
+<body class="bg-white p-6 overflow-y-auto">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-chart-line text-orange-500 mr-2"></i> Laporan Omzet &amp; Keuangan</h2>
+                <p class="text-xs text-slate-500">Analisis pemasukan, HPP, dan profit bersih.</p>
+            </div>
+            <div class="flex gap-2 items-center flex-wrap">
+                <input type="date" id="tglMulai" class="bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none">
+                <input type="date" id="tglAkhir" class="bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none">
+                <button onclick="renderReport()" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-xs font-semibold"><i class="fa-solid fa-filter mr-1"></i> Filter</button>
+            </div>
+        </div>
+
+        <div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+
+        <div class="relative h-64 mb-6 bg-slate-50 border rounded-2xl p-4">
+            <canvas id="reportChart"></canvas>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-orange-50 text-slate-700 font-semibold">
+                        <th class="p-3.5">Tanggal</th>
+                        <th class="p-3.5">Jumlah Transaksi</th>
+                        <th class="p-3.5">Omzet</th>
+                        <th class="p-3.5">Estimasi HPP</th>
+                        <th class="p-3.5">Profit Bersih</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTable" class="divide-y divide-slate-100">
+                    <tr><td colspan="5" class="text-center py-10 text-slate-400">Memuat laporan...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase, authReady } from './js/supabase.js';
+        let myChart = null;
+        function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+
+        window.renderReport = async function() {
+            const start = document.getElementById('tglMulai').value;
+            const end = document.getElementById('tglAkhir').value;
+            await authReady;
+
+            let orders = [];
+            try {
+                const { data } = await supabase.from('orders').select('*');
+                if (data) orders = data;
+            } catch(e) { console.warn(e); }
+            if (orders.length === 0) orders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+
+            const filtered = orders.filter(o => {
+                if (!o.created_at) return false;
+                const d = o.created_at.split('T')[0];
+                if (start && d < start) return false;
+                if (end && d > end) return false;
+                return (o.status || '').toLowerCase() !== 'cancel';
+            });
+
+            let omzetTotal = 0, hppTotal = 0;
+            const daily = {};
+
+            filtered.forEach(o => {
+                const d = (o.created_at || '').split('T')[0] || 'Unknown';
+                const omz = Number(o.grand_total || o.total_price || 0);
+                omzetTotal += omz;
+
+                let hpp = 0;
+                if (Array.isArray(o.items)) {
+                    o.items.forEach(i => hpp += Number(i.hpp || (i.harga ? i.harga * 0.5 : 10000)) * Number(i.qty || 1));
+                } else {
+                    hpp = omz * 0.5;
+                }
+                hppTotal += hpp;
+
+                if (!daily[d]) daily[d] = { count: 0, omzet: 0, hpp: 0 };
+                daily[d].count++;
+                daily[d].omzet += omz;
+                daily[d].hpp += hpp;
+            });
+
+            const profitTotal = omzetTotal - hppTotal;
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="border rounded-xl p-3 bg-slate-50"><div class="text-[11px] text-slate-500">Total Omzet</div><div class="text-base font-bold text-orange-600">${rupiah(omzetTotal)}</div></div>
+                <div class="border rounded-xl p-3 bg-slate-50"><div class="text-[11px] text-slate-500">Estimasi HPP</div><div class="text-base font-bold text-rose-600">${rupiah(hppTotal)}</div></div>
+                <div class="border rounded-xl p-3 bg-slate-50"><div class="text-[11px] text-slate-500">Profit Bersih</div><div class="text-base font-bold text-emerald-600">${rupiah(profitTotal)}</div></div>
+                <div class="border rounded-xl p-3 bg-slate-50"><div class="text-[11px] text-slate-500">Total Transaksi</div><div class="text-base font-bold text-slate-800">${filtered.length}</div></div>
+            `;
+
+            const dates = Object.keys(daily).sort();
+            const tbody = document.getElementById('reportTable');
+            if (dates.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-400">Tidak ada data transaksi.</td></tr>`;
+            } else {
+                tbody.innerHTML = dates.map(d => {
+                    const r = daily[d];
+                    const prof = r.omzet - r.hpp;
+                    return `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-semibold">${d}</td>
+                            <td class="p-3">${r.count} Transaksi</td>
+                            <td class="p-3 font-bold text-orange-600">${rupiah(r.omzet)}</td>
+                            <td class="p-3">${rupiah(r.hpp)}</td>
+                            <td class="p-3 font-bold text-emerald-600">${rupiah(prof)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const ctx = document.getElementById('reportChart');
+            if (ctx) {
+                if (myChart) myChart.destroy();
+                myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            { label: 'Omzet (Rp)', data: dates.map(d => daily[d].omzet), backgroundColor: '#ff6b35', borderRadius: 4 },
+                            { label: 'Profit (Rp)', data: dates.map(d => daily[d].omzet - daily[d].hpp), backgroundColor: '#2ecc71', borderRadius: 4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+                });
+            }
+        };
+
+        const today = new Date();
+        const first = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const last = today.toISOString().split('T')[0];
+        document.getElementById('tglMulai').value = first;
+        document.getElementById('tglAkhir').value = last;
+        renderReport();
+    </script>
+</body>
+</html>
