@@ -300,7 +300,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
 
 <div class="container">
 
-  <!-- ===== TAB PESANAN MASUK (DEFAULT SAAT LOGIN PERTAMA) ===== -->
+  <!-- ===== TAB PESANAN MASUK ===== -->
   <div id="tab-pesanan" class="tab-content active">
     <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
       <div>
@@ -379,7 +379,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             </div>
             <div style="flex:1; min-width:120px;">
               <label style="font-size:12px; font-weight:500; display:block; margin-bottom:4px;">Pembayaran *</label>
-              <select id="kasirMetodeBayar" style="margin:0;" onchange="window.toggleCashSection()">
+              <select id="kasirMetodeBayar" style="margin:0;" onchange="toggleCashSection()">
                 <option value="Cash">Cash (Tunai)</option>
                 <option value="QRIS">QRIS</option>
                 <option value="Transfer">Transfer Bank</option>
@@ -389,12 +389,12 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
 
           <div id="sectionKalkulatorCash" style="background:white; padding:12px; border-radius:10px; border:1px solid #ffd0b8; margin-bottom:12px;">
             <label style="font-size:11px; font-weight:600; color:var(--gray);">Uang Tunai Diterima (Rp)</label>
-            <input type="number" id="kasirUangBayar" placeholder="Contoh: 100000" style="margin-top:4px; margin-bottom:8px;" oninput="window.hitungKembalian()">
+            <input type="number" id="kasirUangBayar" placeholder="Contoh: 100000" style="margin-top:4px; margin-bottom:8px;" oninput="hitungKembalian()">
             <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
-              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;" onclick="window.setUangCepat(20000)">20.000</button>
-              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;" onclick="window.setUangCepat(50000)">50.000</button>
-              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;" onclick="window.setUangCepat(100000)">100.000</button>
-              <button type="button" style="padding:4px 8px; font-size:11px; background:var(--primary); color:white;" onclick="window.setUangPas()">Uang Pas</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;" onclick="setUangCepat(20000)">20.000</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;" onclick="setUangCepat(50000)">50.000</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f2f6; color:#222;" onclick="setUangCepat(100000)">100.000</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:var(--primary); color:white;" onclick="setUangPas()">Uang Pas</button>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600;">
               <span>Kembalian:</span>
@@ -435,7 +435,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
       </div>
       <label style="font-size:13px; font-weight:500;">Deskripsi Singkat</label>
       <textarea id="p-deskripsi" placeholder="Deskripsi produk..." rows="2"></textarea>
-      <button class="btn-primary" onclick="window.saveNewProduct()"><i class="fa-solid fa-plus"></i> Simpan Produk</button>
+      <button class="btn-primary" onclick="saveNewProduct()"><i class="fa-solid fa-plus"></i> Simpan Produk</button>
     </div>
 
     <div style="overflow-x: auto;">
@@ -463,7 +463,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     <div class="card" style="background:white; width:100%; max-width:500px; margin:0; max-height:90vh; overflow-y:auto;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h3 style="margin:0;">Edit Produk</h3>
-        <button onclick="window.closeEditModal()" style="background:none; border:none; font-size:16px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="closeEditModal()" style="background:none; border:none; font-size:16px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <input type="hidden" id="edit-p-id">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -479,8 +479,8 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         <textarea id="edit-p-deskripsi" rows="2"></textarea>
       </div>
       <div style="display:flex; gap:10px; margin-top:15px;">
-        <button class="btn-primary" style="flex:1;" onclick="window.submitEditProduct()">Simpan Perubahan</button>
-        <button onclick="window.closeEditModal()" style="background:#e2e8f0; color:#334155; flex:1; border:none; padding:10px; border-radius:8px; font-weight:600; cursor:pointer;">Batal</button>
+        <button class="btn-primary" style="flex:1;" onclick="submitEditProduct()">Simpan Perubahan</button>
+        <button onclick="closeEditModal()" style="background:#e2e8f0; color:#334155; flex:1; border:none; padding:10px; border-radius:8px; font-weight:600; cursor:pointer;">Batal</button>
       </div>
     </div>
   </div>
@@ -524,7 +524,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     </div>
   </div>
 
-  <!-- ===== TAB LAPORAN KEUANGAN DENGAN FILTER TANGGAL ===== -->
+  <!-- ===== TAB LAPORAN KEUANGAN ===== -->
   <div id="tab-laporan" class="tab-content">
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom:15px;">
@@ -584,42 +584,22 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         return localTime.toISOString().replace('Z', '+07:00');
     }
 
-    // LOGIN AUTHENTICATION CHECK AGAINST usersetup TABLE
     window.handleAdminLogin = async function(e) {
         e.preventDefault();
-    
         const email = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
         const errorEl = document.getElementById('loginError');
-    
         errorEl.style.display = 'none';
-    
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-    
-            if (error) {
-                throw error;
-            }
-    
-            if (!data.session) {
-                throw new Error('Session login tidak ditemukan.');
-            }
-    
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            if (!data.session) throw new Error('Session login tidak ditemukan.');
             sessionStorage.setItem('admin_logged_in', 'true');
-    
             document.getElementById('loginOverlay').style.display = 'none';
-    
             await initAdminDashboard();
-    
         } catch (err) {
             console.error('LOGIN ERROR:', err);
-    
-            errorEl.innerText =
-                'Login gagal: ' + (err.message || 'Username/password salah.');
-    
+            errorEl.innerText = 'Login gagal: ' + (err.message || 'Username/password salah.');
             errorEl.style.display = 'block';
         }
     };
@@ -654,7 +634,6 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     let currentKasirGrandTotal = 0;
 
     window.addEventListener('DOMContentLoaded', async () => {
-        // Check session login state
         if (sessionStorage.getItem('admin_logged_in') === 'true') {
             document.getElementById('loginOverlay').style.display = 'none';
             initAdminDashboard();
@@ -789,14 +768,14 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
 
         grandTotalEl.innerText = rupiah(total);
         currentKasirGrandTotal = total;
-        window.hitungKembalian();
+        hitungKembalian();
     }
 
     window.toggleCashSection = function() {
         const metode = document.getElementById('kasirMetodeBayar').value;
         const section = document.getElementById('sectionKalkulatorCash');
         if (section) section.style.display = (metode === 'Cash') ? 'block' : 'none';
-        window.hitungKembalian();
+        hitungKembalian();
     };
 
     window.hitungKembalian = function() {
@@ -817,12 +796,12 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
 
     window.setUangCepat = function(n) {
         document.getElementById('kasirUangBayar').value = n;
-        window.hitungKembalian();
+        hitungKembalian();
     };
 
     window.setUangPas = function() {
         document.getElementById('kasirUangBayar').value = currentKasirGrandTotal;
-        window.hitungKembalian();
+        hitungKembalian();
     };
 
     window.submitKasirOrder = async function() {
@@ -854,7 +833,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             items: items.map(i => ({ nama: i.nama, qty: i.qty, harga: i.harga })),
             grand_total: currentKasirGrandTotal,
             payment_method: metode,
-            status: 'new', // Dine-In saved as 'new' queue status
+            status: 'new',
             created_at: jakartaISOString
         };
 
@@ -1100,27 +1079,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
                 }
             }
 
-           const { data, error } = await supabase
-                .from('products')
-                .insert([{
-                    nama,
-                    kategori,
-                    harga,
-                    hpp,
-                    stok,
-                    foto,
-                    deskripsi
-                }])
-                .select()
-                .single();
-            
-            if (error) {
-                throw error;
-            }
-            
-            if (!data) {
-                throw new Error('Produk gagal dibuat.');
-            }
+            const { error } = await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
             if (error) throw error;
             alert('Produk berhasil disimpan!');
             document.getElementById('p-nama').value = '';
@@ -1141,103 +1100,36 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
 
     window.loadProductsList = async function() {
         await authReady;
-    
+        let products = [];
         try {
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .order('nama', { ascending: true });
-    
-            if (error) throw error;
-    
-            cachedProducts = data || [];
-    
-            const tbody = document.getElementById('productsTableBody');
-    
-            if (!tbody) return;
-    
-            if (cachedProducts.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7"
-                            style="text-align:center;color:#aaa;padding:30px;">
-                            Belum ada produk.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-    
-            tbody.innerHTML = cachedProducts.map(p => `
-                <tr>
-                    <td>
-                        <img
-                            src="${p.foto || p.image || 'https://placehold.co/50'}"
-                            class="prod-img"
-                            onerror="this.src='https://placehold.co/50'"
-                        >
-                    </td>
-    
-                    <td>
-                        <b>${p.nama || p.name || '-'}</b>
-                    </td>
-    
-                    <td>
-                        ${p.kategori || p.category || '-'}
-                    </td>
-    
-                    <td style="color:var(--primary);font-weight:600;">
-                        ${rupiah(p.harga || p.price || 0)}
-                    </td>
-    
-                    <td>
-                        ${rupiah(p.hpp || 0)}
-                    </td>
-    
-                    <td>
-                        <b>${Number(p.stok) || 0}</b>
-                    </td>
-    
-                    <td>
-                        <div style="display:flex;gap:6px;">
-    
-                            <button
-                                onclick="window.openEditModal('${p.id}')"
-                                style="padding:6px 10px;font-size:11px;background:#e0f2fe;color:#0284c7;"
-                                title="Edit">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-    
-                            <button
-                                onclick="window.deleteProduct('${p.id}')"
-                                class="btn-delete"
-                                style="padding:6px 10px;font-size:11px;"
-                                title="Hapus">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-    
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-    
-        } catch (error) {
-            console.error('LOAD PRODUCTS ERROR:', error);
-    
-            const tbody = document.getElementById('productsTableBody');
-    
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7"
-                            style="text-align:center;color:#dc2626;padding:30px;">
-                            Gagal mengambil produk:<br>
-                            ${error.message}
-                        </td>
-                    </tr>
-                `;
-            }
+            const { data } = await supabase.from('products').select('*').order('nama', { ascending: true });
+            if (data) products = data;
+        } catch (e) {
+            console.warn(e);
         }
+        cachedProducts = products;
+        const tbody = document.getElementById('productsTableBody');
+        if (!tbody) return;
+        if (products.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#aaa; padding:30px;">Belum ada produk.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = products.map(p => `
+            <tr>
+                <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
+                <td><b>${p.nama || p.name}</b></td>
+                <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:11px;">${p.kategori || p.category || '-'}</span></td>
+                <td style="color:var(--primary); font-weight:600;">${rupiah(p.harga || p.price)}</td>
+                <td>${rupiah(p.hpp || 0)}</td>
+                <td><b>${p.stok || 0}</b></td>
+                <td>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="window.openEditModal('${p.id}')" style="padding:6px 10px; font-size:11px; background:#e0f2fe; color:#0284c7; border:none; border-radius:6px; cursor:pointer;" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="window.deleteProduct('${p.id}')" class="btn-delete" style="padding:6px 10px; font-size:11px;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
     };
 
     window.openEditModal = function(id) {
@@ -1268,12 +1160,12 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         const foto = document.getElementById('edit-p-foto').value.trim();
         const deskripsi = document.getElementById('edit-p-deskripsi').value.trim();
 
-        if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
+        if (!id || !nama || !harga) { alert('ID, Nama, dan Harga wajib diisi!'); return; }
 
         await authReady;
         try {
             const { error } = await supabase.from('products').update({
-                nama, kategori, harga, hpp, stok, foto, deskripsi
+                nama, kategori, harga, hpp, stok: Math.max(0, stok), foto, deskripsi
             }).eq('id', id);
 
             if (error) throw error;
@@ -1321,9 +1213,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         if (!summary) return;
 
         let total = cachedProducts.length;
-        let aman = 0;
-        let menipis = 0;
-        let habis = 0;
+        let aman = 0, menipis = 0, habis = 0;
 
         cachedProducts.forEach(p => {
             const st = Number(p.stok) || 0;
@@ -1398,13 +1288,13 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
                     <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
                     <td><b>${p.nama || p.name}</b></td>
                     <td>${p.kategori || p.category || '-'}</td>
-                    <td><span class="font-bold text-base" id="stok-val-${p.id}">${st}</span></td>
+                    <td><span id="stok-val-${p.id}">${st}</span></td>
                     <td>${statusBadge}</td>
                     <td>
                         <div style="display:flex; gap:6px; align-items:center;">
-                            <button onclick="window.updateStock('${p.id}', ${st - 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">-</button>
-                            <input type="number" id="stok-input-${p.id}" value="${st}" style="width:60px; text-align:center; margin:0; padding:4px;" onchange="window.updateStockInput('${p.id}')">
-                            <button onclick="window.updateStock('${p.id}', ${st + 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">+</button>
+                            <button onclick="updateStock('${p.id}', ${st - 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">-</button>
+                            <input type="number" id="stok-input-${p.id}" value="${st}" style="width:60px; text-align:center; margin:0; padding:4px;" onchange="updateStockInput('${p.id}')">
+                            <button onclick="updateStock('${p.id}', ${st + 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">+</button>
                         </div>
                     </td>
                 </tr>
@@ -1413,59 +1303,23 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     };
 
     window.updateStock = async function(id, newStok) {
-
         newStok = Number(newStok);
-    
-        if (!Number.isFinite(newStok) || newStok < 0) {
-            newStok = 0;
-        }
-    
+        if (!Number.isFinite(newStok) || newStok < 0) newStok = 0;
+
         await authReady;
-    
         try {
-    
-            const { data, error } = await supabase
-                .from('products')
-                .update({
-                    stok: newStok
-                })
-                .eq('id', id)
-                .select()
-                .single();
-    
-            if (error) {
-                throw error;
-            }
-    
-            if (!data) {
-                throw new Error(
-                    'Produk tidak ditemukan atau update ditolak oleh RLS.'
-                );
-            }
-    
-            // Update cache
+            const { error } = await supabase.from('products').update({ stok: newStok }).eq('id', id);
+            if (error) throw error;
+
             cachedProducts = cachedProducts.map(p => {
-                if (String(p.id) === String(id)) {
-                    return {
-                        ...p,
-                        stok: newStok
-                    };
-                }
-    
+                if (String(p.id) === String(id)) return { ...p, stok: newStok };
                 return p;
             });
-    
+
             renderStokSummary();
             renderStokTable();
-    
         } catch (error) {
-    
-            console.error('UPDATE STOCK ERROR:', error);
-    
-            alert(
-                'Gagal mengupdate stok:\n\n' +
-                error.message
-            );
+            alert('Gagal mengupdate stok: ' + error.message);
         }
     };
 
@@ -1473,229 +1327,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         const inputEl = document.getElementById(`stok-input-${id}`);
         if (!inputEl) return;
         const val = Number(inputEl.value);
-        await window.updateStock(id, val >= 0 ? val : 0);
-    };
-
-    window.saveNewProduct = async function() {
-        const nama = document.getElementById('p-nama').value.trim();
-        const kategori = document.getElementById('p-kategori').value.trim().toLowerCase();
-        const harga = Number(document.getElementById('p-harga').value);
-        const hpp = Number(document.getElementById('p-hpp').value) || 0;
-        const stok = Number(document.getElementById('p-stok').value) || 50;
-        let foto = document.getElementById('p-foto').value.trim();
-        const fileInput = document.getElementById('p-foto-file');
-        const deskripsi = document.getElementById('p-deskripsi').value.trim();
-
-        if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
-
-        await authReady;
-        try {
-            if (fileInput.files && fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const fileExt = file.name.split('.').pop().toLowerCase();
-                const fileName = `prod_${Date.now()}.${fileExt}`;
-                
-                const { error: uploadError } = await supabase.storage
-                    .from('product-images')
-                    .upload(fileName, file, { cacheControl: '3600', upsert: true });
-
-                if (!uploadError) {
-                    const { data: publicUrlData } = supabase.storage
-                        .from('product-images')
-                        .getPublicUrl(fileName);
-                    if (publicUrlData && publicUrlData.publicUrl) {
-                        foto = publicUrlData.publicUrl;
-                    }
-                } else {
-                    foto = await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.readAsDataURL(file);
-                    });
-                }
-            }
-
-            const { error } = await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
-            if (error) throw error;
-            alert('Produk berhasil disimpan!');
-            document.getElementById('p-nama').value = '';
-            document.getElementById('p-kategori').value = '';
-            document.getElementById('p-harga').value = '';
-            document.getElementById('p-hpp').value = '';
-            document.getElementById('p-stok').value = '';
-            document.getElementById('p-foto').value = '';
-            document.getElementById('p-foto-file').value = '';
-            document.getElementById('p-deskripsi').value = '';
-            loadProductsList();
-            loadKasirMenu();
-            loadStokMonitor();
-        } catch (err) {
-            alert('Gagal menyimpan produk: ' + err.message);
-        }
-    };
-
-    window.loadProductsList = async function() {
-        await authReady;
-        let products = [];
-        try {
-            const { data } = await supabase.from('products').select('*');
-            if (data) products = data;
-        } catch (e) {
-            console.warn(e);
-        }
-        cachedProducts = products;
-        const tbody = document.getElementById('productsTableBody');
-        if (!tbody) return;
-        if (products.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#aaa; padding:30px;">Belum ada produk.</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = products.map(p => `
-            <tr>
-                <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
-                <td><b>${p.nama || p.name}</b></td>
-                <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:11px;">${p.kategori || p.category || '-'}</span></td>
-                <td style="color:var(--primary); font-weight:600;">${rupiah(p.harga || p.price)}</td>
-                <td>${rupiah(p.hpp || 0)}</td>
-                <td><b>${p.stok || 0}</b></td>
-                <td>
-                    <div style="display:flex; gap:6px;">
-                        <button onclick="window.openEditModal('${p.id}')" style="padding:6px 10px; font-size:11px; background:#e0f2fe; color:#0284c7; border:none; border-radius:6px; cursor:pointer;" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="window.deleteProduct('${p.id}')" class="btn-delete" style="padding:6px 10px; font-size:11px;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    };
-
-    window.openEditModal = function(id) {
-        const prod = cachedProducts.find(p => String(p.id) === String(id));
-        if (!prod) return;
-        document.getElementById('edit-p-id').value = prod.id;
-        document.getElementById('edit-p-nama').value = prod.nama || prod.name || '';
-        document.getElementById('edit-p-kategori').value = prod.kategori || prod.category || '';
-        document.getElementById('edit-p-harga').value = prod.harga || prod.price || 0;
-        document.getElementById('edit-p-hpp').value = prod.hpp || 0;
-        document.getElementById('edit-p-stok').value = prod.stok || 0;
-        document.getElementById('edit-p-foto').value = prod.foto || prod.image || '';
-        document.getElementById('edit-p-deskripsi').value = prod.deskripsi || prod.desc || '';
-        document.getElementById('edit-product-modal').style.display = 'flex';
-    };
-
-    window.closeEditModal = function() {
-        document.getElementById('edit-product-modal').style.display = 'none';
-    };
-
-    window.submitEditProduct = async function() {
-
-        const id = document.getElementById('edit-p-id').value;
-    
-        const nama =
-            document.getElementById('edit-p-nama').value.trim();
-    
-        const kategori =
-            document.getElementById('edit-p-kategori').value
-            .trim()
-            .toLowerCase();
-    
-        const harga =
-            Number(document.getElementById('edit-p-harga').value);
-    
-        const hpp =
-            Number(document.getElementById('edit-p-hpp').value) || 0;
-    
-        const stok =
-            Number(document.getElementById('edit-p-stok').value) || 0;
-    
-        const foto =
-            document.getElementById('edit-p-foto').value.trim();
-    
-        const deskripsi =
-            document.getElementById('edit-p-deskripsi').value.trim();
-    
-        if (!id) {
-            alert('ID produk tidak ditemukan.');
-            return;
-        }
-    
-        if (!nama) {
-            alert('Nama produk wajib diisi.');
-            return;
-        }
-    
-        if (!harga || harga <= 0) {
-            alert('Harga jual harus lebih dari 0.');
-            return;
-        }
-    
-        await authReady;
-    
-        try {
-    
-            const { data, error } = await supabase
-                .from('products')
-                .update({
-                    nama: nama,
-                    kategori: kategori,
-                    harga: harga,
-                    hpp: hpp,
-                    stok: Math.max(0, stok),
-                    foto: foto,
-                    deskripsi: deskripsi
-                })
-                .eq('id', id)
-                .select()
-                .single();
-    
-            if (error) {
-                throw error;
-            }
-    
-            if (!data) {
-                throw new Error(
-                    'Tidak ada data yang diperbarui. Periksa RLS dan ID produk.'
-                );
-            }
-    
-            alert('Produk berhasil diperbarui!');
-    
-            window.closeEditModal();
-    
-            await loadProductsList();
-            await loadKasirMenu();
-            await loadStokMonitor();
-    
-        } catch (error) {
-    
-            console.error('EDIT PRODUCT ERROR:', error);
-    
-            alert(
-                'Gagal memperbarui produk:\n\n' +
-                error.message
-            );
-        }
-    };
-
-    window.deleteProduct = async function(id) {
-        if (!confirm("Hapus produk ini?")) return;
-        await authReady;
-        try {
-            const { error } = await supabase.from('products').delete().eq('id', id);
-            if (error) throw error;
-            loadProductsList();
-            loadKasirMenu();
-            loadStokMonitor();
-            alert('Produk berhasil dihapus.');
-        } catch (e) {
-            alert('Gagal menghapus produk: ' + e.message);
-        }
-    };
-
-    window.updateStockInput = async function(id) {
-        const inputEl = document.getElementById(`stok-input-${id}`);
-        if (!inputEl) return;
-        const val = Number(inputEl.value);
-        await window.updateStock(id, val >= 0 ? val : 0);
+        await updateStock(id, val >= 0 ? val : 0);
     };
 
     let myChart = null;
