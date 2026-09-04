@@ -137,7 +137,7 @@
                         <td class="p-3 max-w-xs text-slate-600">${items}</td>
                         <td class="p-3 font-bold text-emerald-600">${rupiah(o.grand_total || 0)}</td>
                         <td class="p-3">
-                            <button onclick="reprintOrder('${recordKey}')" style="padding:6px 10px; font-size:12px; background:#f1f5f9; color:var(--dark);" title="Cetak Struk">🖨️</button>
+                            <button onclick="reprintOrder('${key}')" style="padding:6px 10px; font-size:12px; background:#f1f5f9; color:var(--dark);" title="Cetak Struk">🖨️</button>
                             <button onclick="deleteOrder('${key}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
