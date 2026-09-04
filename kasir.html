@@ -585,12 +585,21 @@ tr:last-child td { border-bottom: none; }
         try {
             const { data, error } = await supabase.from("products").select("*");
             if (error) throw error;
-            cachedProducts = data || [];
-            const kategoriSet = new Set();
+            const kategoriMap = new Map();
             cachedProducts.forEach(p => {
-                if (p.category || p.kategori) kategoriSet.add((p.category || p.kategori).trim());
+                const kategori = (p.category || p.kategori || '').trim();
+            
+                if (kategori) {
+                    const key = kategori.toLowerCase();
+            
+                    // Simpan satu versi saja
+                    if (!kategoriMap.has(key)) {
+                        kategoriMap.set(key, kategori);
+                    }
+                }
             });
-            updateKasirKategoriDropdown(kategoriSet);
+            
+            updateKasirKategoriDropdown(new Set(kategoriMap.values()));
             renderKasirMenu();
         } catch (err) {
             console.error("Error load produk:", err);
@@ -604,9 +613,14 @@ tr:last-child td { border-bottom: none; }
 
     function updateKasirKategoriDropdown(kategoriSet) {
         const el = document.getElementById('filterKategoriKasir');
-        el.innerHTML = ['Semua', ...Array.from(kategoriSet).sort()]
-            .map(k => `<option value="${k}">${k}</option>`)
-            .join('');
+    
+        el.innerHTML = `
+            <option value="Semua">Semua</option>
+            ${Array.from(kategoriSet)
+                .sort((a, b) => a.localeCompare(b, 'id'))
+                .map(k => `<option value="${k}">${k}</option>`)
+                .join('')}
+        `;
     }
 
     function jalankanFilterKasir() {
@@ -615,11 +629,15 @@ tr:last-child td { border-bottom: none; }
         document.querySelectorAll('.kasir-item-card').forEach(card => {
             const nama = card.querySelector('h4').innerText.toLowerCase();
             const kat  = card.dataset.kategori || 'Umum';
-            const ok   = nama.includes(kataKunci) &&
-                         (kategoriTerpilih === 'Semua' || kat === kategoriTerpilih);
+            const ok = nama.includes(kataKunci) &&
+               (
+                   kategoriTerpilih === 'Semua' ||
+                   kat.trim().toLowerCase() === kategoriTerpilih.trim().toLowerCase()
+               );
             card.style.display = ok ? 'block' : 'none';
         });
     }
+  
     document.getElementById('searchMenuKasir').addEventListener('input', jalankanFilterKasir);
     document.getElementById('filterKategoriKasir').addEventListener('change', jalankanFilterKasir);
 
