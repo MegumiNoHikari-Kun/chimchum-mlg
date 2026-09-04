@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,7 +38,6 @@
 </head>
 <body class="bg-[#fff5f0] text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- Navbar -->
     <nav class="bg-white sticky top-0 z-40 shadow-sm border-b border-slate-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div class="flex items-center space-x-3">
@@ -68,8 +69,8 @@
         <div class="absolute -right-10 -bottom-10 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
             <div class="max-w-xl text-center md:text-left">
-                <span class="bg-brand-500/20 text-brand-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block border border-brand-500/30">🔥 Freshly Made </span>
-                                <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">Premium Taste Chicken Dimsum </h2>
+                <span class="bg-brand-500/20 text-brand-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block border border-brand-500/30">🔥 Freshly Made</span>
+                <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">Premium Taste Chicken Dimsum</h2>
                 <p class="text-slate-300 text-sm sm:text-base mb-6">Melengkapi momen sukacita bersama teman dan keluarga | Pesan langsung secara online, atau nikmati kenyamanan pesan antar melalui aplikasi favoritmu!</p>
                 <div class="flex flex-wrap justify-center md:justify-start gap-4">
                     <a href="#menu-section" class="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-3.5 rounded-xl shadow-lg shadow-brand-500/25 transition">Pesan Sekarang</a>
@@ -83,8 +84,6 @@
                     <h3 class="font-bold text-lg">Halal</h3>
                     <p class="text-xs text-slate-400">Resmi & Terverifikasi</p>
                 </div>
-            
-                <!-- Kotak 2: Premium Quality -->
                 <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 backdrop-blur text-center flex flex-col items-center justify-center">
                     <div class="w-12 h-12 mb-2 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm border border-amber-200">
                         <i class="fa-solid fa-award text-lg"></i>
@@ -102,7 +101,7 @@
                 <h3 class="text-2xl font-bold text-slate-900 tracking-tight">Katalog Menu Kami</h3>
                 <p class="text-slate-500 text-sm">Pilih menu favoritmu dan nikmati selagi hangat.</p>
             </div>
-            <!-- 1. The category buttons container is now rendered dynamically by JavaScript -->
+            <!-- Dynamic Category Buttons Container -->
             <div id="category-buttons-container" class="flex items-center space-x-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
                 <button onclick="filterCategory('all')" id="cat-all" class="category-btn bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Semua</button>
             </div>
@@ -198,7 +197,7 @@
                 </div>
 
                 <div class="lg:col-span-2 h-[480px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
-                    <iframe width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" <iframe <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d667.2785204619356!2d112.65659704074243!3d-7.978526642993528!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd629aa6b6f81c7%3A0x2719c4c43ee2f41c!2sChimChum%20Malang!5e0!3m2!1sid!2sid!4v1788452703570!5m2!1sid!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d667.2785204619356!2d112.65659704074243!3d-7.978526642993528!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd629aa6b6f81c7%3A0x2719c4c43ee2f41c!2sChimChum%20Malang!5e0!3m2!1sid!2sid!4v1788452703570!5m2!1sid!2sid" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
                 </div>
             </div>
         </div>
@@ -234,10 +233,6 @@
                         <span>Subtotal</span>
                         <span id="cart-subtotal">Rp 0</span>
                     </div>
-                    <!-- <div class="flex justify-between text-[11px] text-slate-500">
-                        <span>Biaya Antar</span>
-                        <span>Rp 5.000</span>
-                    </div> -->
                     <div class="flex justify-between text-xs font-bold text-slate-900 pt-1 border-t border-slate-200">
                         <span>Total Pembayaran</span>
                         <span id="cart-total" class="text-brand-600">Rp 0</span>
@@ -255,21 +250,16 @@
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">Metode Pembayaran</label>
                     <div class="grid grid-cols-3 gap-1.5">
-                        <!-- Opsi Cash (Disabled & Abu-abu) -->
                         <label class="border bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none opacity-60 border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium flex flex-col items-center justify-center transition">
                             <input type="radio" name="payment_method" value="Cash" class="hidden">
                             <i class="fa-solid fa-money-bill-wave mb-0.5 text-xs"></i>
                             Cash / COD
                         </label>
-                        
-                        <!-- Opsi QRIS (Aktif & Bisa Diklik, Default Checked) -->
                         <label class="border border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium cursor-pointer hover:border-brand-500 flex flex-col items-center justify-center transition bg-white has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
                             <input type="radio" name="payment_method" value="QRIS" checked class="hidden">
                             <i class="fa-solid fa-qrcode mb-0.5 text-xs"></i>
                             QRIS
                         </label>
-                        
-                        <!-- Opsi Transfer (Tetap Aktif) -->
                         <label class="border border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium cursor-pointer hover:border-brand-500 flex flex-col items-center justify-center transition bg-white has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
                             <input type="radio" name="payment_method" value="Transfer" class="hidden">
                             <i class="fa-solid fa-building-columns mb-0.5 text-xs"></i>
@@ -301,13 +291,6 @@
                     <!-- Dynamic payment instructions -->
                 </div>
 
-                <!-- <div class="space-y-1.5 text-left">
-                    <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
-                    <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
-                    <p class="text-[10px] text-slate-400">Pastikan bukti pembayaran yang diupload sesuai</p>
-                </div> -->
-
-                <!-- Tambahkan id="payment-proof-container" di sini -->
                 <div id="payment-proof-container" class="space-y-1.5 text-left">
                     <label class="block text-xs font-bold text-slate-700">Upload Bukti Pembayaran / Transfer</label>
                     <input type="file" id="payment-proof-file" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white">
@@ -345,31 +328,6 @@
         </div>
     </div>
 
-    <div id="config-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-database text-brand-500 text-xl"></i>
-                    <h3 class="font-bold text-lg text-slate-900">Koneksi Supabase</h3>
-                </div>
-            </div>
-            <div class="p-6 space-y-4">
-                <p class="text-xs text-slate-500">Hubungkan project Supabase Anda agar pesanan langsung masuk ke database backend secara seamless.</p>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Supabase URL</label>
-                    <input type="text" id="supabase-url" placeholder="https://xxxx.supabase.co" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Anon Key</label>
-                    <input type="password" id="supabase-key" placeholder="eyJhbGciOi..." class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                </div>
-                <button onclick="saveSupabaseConfig()" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/25 transition">
-                    Simpan & Sambungkan
-                </button>
-            </div>
-        </div>
-    </div>
-
     <div id="notification-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden p-6 text-center space-y-4">
             <div id="notification-icon" class="w-16 h-16 bg-brand-50 text-brand-500 rounded-full flex items-center justify-center text-2xl mx-auto">
@@ -380,7 +338,7 @@
             <button onclick="closeNotification()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl text-sm transition">Tutup</button>
         </div>
     </div>
-    <!-- 2. The JavaScript function buildDynamicCategories() automatically creates category buttons based on Supabase product data -->
+
     <script>
         function buildDynamicCategories() {
             const container = document.getElementById('category-buttons-container');
@@ -412,37 +370,15 @@
             { id: 6, name: 'Lemon Tea Dingin', category: 'drink', price: 8000, desc: 'Perpaduan teh segar dan perasan buah lemon asli.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop&q=60' }
         ];
 
-        let products = [];
+        window.products = [];
         let cart = [];
         let currentFilter = 'all';
         let pendingOrderData = null;
         const WA_TARGET_NUMBER = '6285723785380';
 
         window.addEventListener('DOMContentLoaded', async () => {
-            initSupabaseFromStorage();
             await loadProductsFromSupabase();
         });
-
-        function initSupabaseFromStorage() {
-            const url = localStorage.getItem('sb_url');
-            const key = localStorage.getItem('sb_key');
-            if (url && key) {
-                document.getElementById('db-status-dot').className = 'absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white';
-            }
-        }
-
-        window.saveSupabaseConfig = function() {
-            const url = document.getElementById('supabase-url').value.trim();
-            const key = document.getElementById('supabase-key').value.trim();
-            if (!url || !key) {
-                showNotification('Peringatan', 'URL dan Key wajib diisi dengan benar.', 'warning');
-                return;
-            }
-            localStorage.setItem('sb_url', url);
-            localStorage.setItem('sb_key', key);
-            initSupabaseFromStorage();
-            showNotification('Berhasil', 'Koneksi Supabase tersimpan!', 'success');
-        };
 
         async function loadProductsFromSupabase() {
             await authReady;
@@ -450,7 +386,7 @@
                 const { data, error } = await supabase.from('products').select('*');
                 if (error) throw error;
                 if (data && data.length > 0) {
-                    products = data.map(p => ({
+                    window.products = data.map(p => ({
                         id: p.id,
                         name: p.nama || p.name,
                         category: (p.kategori || p.category || 'umum').toLowerCase(),
@@ -459,13 +395,14 @@
                         image: p.foto || p.image || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500'
                     }));
                 } else {
-                    products = sampleProducts;
+                    window.products = sampleProducts;
                 }
             } catch (e) {
                 console.warn('Fallback to sample products:', e);
-                products = sampleProducts;
+                window.products = sampleProducts;
             }
-            renderProducts(products);
+            buildDynamicCategories();
+            renderProducts(window.products);
         }
 
         function renderProducts(items) {
@@ -506,14 +443,14 @@
                 activeBtn.className = 'category-btn bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap';
             }
             if (category === 'all') {
-                renderProducts(products);
+                renderProducts(window.products);
             } else {
-                renderProducts(products.filter(p => p.category === category));
+                renderProducts(window.products.filter(p => p.category === category));
             }
         };
 
         window.addToCart = function(productId) {
-            const product = products.find(p => String(p.id) === String(productId));
+            const product = window.products.find(p => String(p.id) === String(productId));
             if (!product) return;
             const existing = cart.find(item => String(item.id) === String(productId));
             if (existing) {
@@ -522,7 +459,6 @@
                 cart.push({ ...product, qty: 1 });
             }
             updateCartUI();
-            // showNotification('Keranjang', `${product.name} ditambahkan.`, 'success');
         };
 
         window.updateCartQty = function(productId, change) {
@@ -588,7 +524,7 @@
             const name = document.getElementById('customer-name').value.trim();
             const phone = document.getElementById('customer-phone').value.trim();
             const address = document.getElementById('customer-address').value.trim();
-            const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'Cash';
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'QRIS';
 
             if (!name || !phone || !address) {
                 showNotification('Perhatian', 'Harap lengkapi nama, nomor telepon, dan alamat.', 'warning');
@@ -599,9 +535,8 @@
             const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
             const grandTotal = subtotal + 5000;
 
-            // Format current date explicitly to Jakarta GMT+7 ISO string
             const now = new Date();
-            const jakartaOffset = 7 * 60; // WIB is UTC+7
+            const jakartaOffset = 7 * 60;
             const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOffset) * 60000);
             const jakartaISOString = localTime.toISOString().replace('Z', '+07:00');
 
@@ -618,8 +553,6 @@
             };
 
             const instructionBox = document.getElementById('payment-instruction-box');
-             // Ambil elemen container upload bukti pembayaran
-            // Ambil elemen container upload bukti pembayaran
             const proofContainer = document.getElementById('payment-proof-container');
 
             if (paymentMethod === 'QRIS') {
@@ -628,7 +561,7 @@
                     <p class="font-bold text-slate-900 mb-1">Scan QRIS untuk Pembayaran:</p>
                     <p class="text-slate-600 mb-2">Total: <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
                     <div class="bg-white p-3 rounded-xl border border-slate-200 text-center">
-                        <img src="/assets/ChimChum-QRISSHOPEE.png" alt="QRIS Code" class="mx-auto w-32 h-32 object-contain">
+                        <img src="./assets/ChimChum-QRISSHOPEE.png" alt="QRIS Code" class="mx-auto w-32 h-32 object-contain" onerror="this.src='https://placehold.co/150?text=QRIS+ChimChum'">
                     </div>
                 `;
             } else if (paymentMethod === 'Transfer') {
@@ -649,7 +582,6 @@
                     <p class="text-slate-600 mt-1">Total Tagihan : <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
                 `;
             } else {
-                // Jika Cash / COD, sembunyikan kotak upload foto bukti pembayaran
                 if (proofContainer) proofContainer.style.display = 'none';
                 instructionBox.innerHTML = `
                     <p class="font-bold text-slate-900 mb-1">Pembayaran Cash / COD:</p>
@@ -675,7 +607,6 @@
             }
 
             let proofReference = 'Pending / Cash';
-            let shortProofLink = 'Pending / Cash';
 
             try {
                 await authReady;
@@ -717,23 +648,9 @@
 
             pendingOrderData.payment_proof = proofReference;
 
-            // Generate a mobile-friendly short link indicator or direct view helper for WhatsApp
-            if (proofReference.startsWith('http')) {
-                // If it's a valid Supabase public storage URL, use it directly or shorten representation for WA
-                shortProofLink = proofReference;
-            } else if (proofReference.startsWith('data:image')) {
-                // For base64 data, provide a clean mobile-friendly label instead of raw 50,000 character string
-                shortProofLink = `[Bukti Gambar Diunggah & Tersimpan di Database Web (ID: ${pendingOrderData.order_id})]`;
-            } else {
-                shortProofLink = proofReference;
-            }
-
             try {
                 await authReady;
-                const { error: insertError } = await supabase.from('orders').insert([pendingOrderData]);
-                if (insertError) {
-                    console.error('Supabase order insert error:', insertError);
-                }
+                await supabase.from('orders').insert([pendingOrderData]);
             } catch (dbErr) {
                 console.error('Database exception:', dbErr);
             }
@@ -743,7 +660,6 @@
             localStorage.setItem('local_orders', JSON.stringify(localOrders));
 
             const itemsListStr = pendingOrderData.items.map(i => `• ${i.name} (${i.qty}x) - Rp ${(i.price * i.qty).toLocaleString('id-ID')}`).join('\n');
-            // Format tracking link for WhatsApp message
             const trackingLink = `https://chimchum-mlg.vercel.app/lacak.html/${pendingOrderData.order_id}`;
             const waText = encodeURIComponent(
 `*INVOICE PEMESANAN CHIMCHUM MALANG*
