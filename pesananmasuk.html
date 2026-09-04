@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesanan Masuk - ChimChum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>body { font-family: 'Poppins', sans-serif; }</style>
+</head>
+<body class="bg-white p-6 overflow-y-auto">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-receipt text-orange-500 mr-2"></i> Riwayat Pesanan Masuk</h2>
+                <p class="text-xs text-slate-500">Kelola status pesanan online dan offline secara real-time.</p>
+            </div>
+            <button onclick="loadOrders()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                <i class="fa-solid fa-rotate-right"></i> Refresh Data
+            </button>
+        </div>
+
+        <div id="orderSummary" class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6"></div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-orange-50 text-slate-700 text-xs font-semibold">
+                        <th class="p-3.5">Waktu</th>
+                        <th class="p-3.5">Pelanggan</th>
+                        <th class="p-3.5">WhatsApp</th>
+                        <th class="p-3.5">Tipe / Bayar</th>
+                        <th class="p-3.5">Status</th>
+                        <th class="p-3.5">Item Pesanan</th>
+                        <th class="p-3.5">Total</th>
+                        <th class="p-3.5">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersBody" class="divide-y divide-slate-100 text-xs">
+                    <tr><td colspan="8" class="text-center py-10 text-slate-400">Memuat pesanan...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase, authReady } from './js/supabase.js';
+        let cachedOrders = [];
+        let currentFilter = 'all';
+
+        function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+
+        window.loadOrders = async function() {
+            await authReady;
+            let orders = [];
+            try {
+                const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+                if (data) orders = data;
+            } catch (e) { console.warn(e); }
+            if (orders.length === 0) {
+                orders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+            }
+            cachedOrders = orders;
+            renderSummary(cachedOrders);
+            renderTable();
+        };
+
+        function renderSummary(orders) {
+            const counts = { all: orders.length, new: 0, disiapkan: 0, dikirim: 0, selesai: 0, cancel: 0 };
+            orders.forEach(o => {
+                const st = (o.status || 'new').toLowerCase();
+                if (st === 'disiapkan' || st === 'sedang diproses') counts.disiapkan++;
+                else if (counts[st] !== undefined) counts[st]++;
+            });
+
+            const cards = [
+                { key: 'all', title: 'Total', count: counts.all, color: 'text-slate-700 border-slate-200' },
+                { key: 'new', title: 'Baru', count: counts.new, color: 'text-amber-600 border-amber-200 bg-amber-50/50' },
+                { key: 'disiapkan', title: 'Diproses', count: counts.disiapkan, color: 'text-blue-600 border-blue-200 bg-blue-50/50' },
+                { key: 'dikirim', title: 'Dikirim', count: counts.dikirim, color: 'text-purple-600 border-purple-200 bg-purple-50/50' },
+                { key: 'selesai', title: 'Selesai', count: counts.selesai, color: 'text-emerald-600 border-emerald-200 bg-emerald-50/50' },
+                { key: 'cancel', title: 'Batal', count: counts.cancel, color: 'text-rose-600 border-rose-200 bg-rose-50/50' }
+            ];
+
+            document.getElementById('orderSummary').innerHTML = cards.map(c => `
+                <div onclick="filterStatus('${c.key}')" class="border rounded-xl p-3 cursor-pointer transition hover:shadow-sm ${c.color}">
+                    <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
+                    <div class="text-lg font-bold mt-1">${c.count}</div>
+                </div>
+            `).join('');
+        }
+
+        window.filterStatus = function(status) {
+            currentFilter = status;
+            renderTable();
+        };
+
+        function renderTable() {
+            const tbody = document.getElementById('ordersBody');
+            let filtered = [...cachedOrders];
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(o => {
+                    const st = (o.status || 'new').toLowerCase();
+                    if (currentFilter === 'disiapkan') return st === 'disiapkan' || st === 'sedang diproses';
+                    return st === currentFilter;
+                });
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400">Tidak ada pesanan.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(o => {
+                const tgl = o.created_at ? new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : '-';
+                const items = Array.isArray(o.items) ? o.items.map(i => `${i.nama || i.name} (${i.qty}x)`).join(', ') : '-';
+                const status = (o.status || 'new').toLowerCase();
+                const key = o.id || o.order_id;
+
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="p-3 text-slate-500">${tgl}</td>
+                        <td class="p-3 font-semibold text-slate-800">${o.customer_name || '-'}<br><span class="font-normal text-[10px] text-slate-400">ID: ${o.order_id || '-'}</span></td>
+                        <td class="p-3 text-slate-600">${o.phone || '-'}</td>
+                        <td class="p-3 font-medium text-slate-700">${o.payment_method || 'Cash'}<br><span class="font-normal text-[11px] text-slate-400">${o.address || '-'}</span></td>
+                        <td class="p-3">
+                            <select onchange="updateStatus('${key}', this.value)" class="bg-slate-100 border border-slate-200 rounded-lg p-1.5 text-xs font-semibold cursor-pointer outline-none">
+                                <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
+                                <option value="disiapkan" ${status === 'disiapkan' || status === 'sedang diproses' ? 'selected' : ''}>Disiapkan</option>
+                                <option value="dikirim" ${status === 'dikirim' ? 'selected' : ''}>Dikirim</option>
+                                <option value="selesai" ${status === 'selesai' ? 'selected' : ''}>Selesai</option>
+                                <option value="cancel" ${status === 'cancel' ? 'selected' : ''}>Cancel</option>
+                            </select>
+                        </td>
+                        <td class="p-3 max-w-xs text-slate-600">${items}</td>
+                        <td class="p-3 font-bold text-emerald-600">${rupiah(o.grand_total || 0)}</td>
+                        <td class="p-3">
+                            <button onclick="deleteOrder('${key}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.updateStatus = async function(key, val) {
+            await authReady;
+            try {
+                let q = supabase.from('orders').update({ status: val });
+                if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) q = q.eq('id', key);
+                else q = q.eq('order_id', key);
+                await q;
+            } catch(e) { console.warn(e); }
+            cachedOrders = cachedOrders.map(o => {
+                if (String(o.id) === String(key) || String(o.order_id) === String(key)) o.status = val;
+                return o;
+            });
+            let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+            localOrders = localOrders.map(o => {
+                if (String(o.id) === String(key) || String(o.order_id) === String(key)) o.status = val;
+                return o;
+            });
+            localStorage.setItem('local_orders', JSON.stringify(localOrders));
+            renderSummary(cachedOrders);
+            renderTable();
+        };
+
+        window.deleteOrder = async function(key) {
+            if (!confirm("Hapus pesanan ini?")) return;
+            await authReady;
+            try {
+                let q = supabase.from('orders').delete();
+                if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) q = q.eq('id', key);
+                else q = q.eq('order_id', key);
+                await q;
+            } catch(e) { console.warn(e); }
+            cachedOrders = cachedOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
+            let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+            localOrders = localOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
+            localStorage.setItem('local_orders', JSON.stringify(localOrders));
+            renderSummary(cachedOrders);
+            renderTable();
+        };
+
+        loadOrders();
+    </script>
+</body>
+</html>
