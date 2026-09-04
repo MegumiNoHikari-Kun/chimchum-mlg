@@ -582,32 +582,50 @@ tr:last-child td { border-bottom: none; }
 
     window.loadProducts = async () => {
         await authReady;
+    
         try {
-            const { data, error } = await supabase.from("products").select("*");
+            const { data, error } = await supabase
+                .from("products")
+                .select("*");
+    
             if (error) throw error;
+    
+            // PENTING: masukkan hasil Supabase ke cache
+            cachedProducts = data || [];
+    
+            console.log("Produk dari Supabase:", cachedProducts);
+    
+            // Buat kategori unik, abaikan perbedaan huruf besar/kecil
             const kategoriMap = new Map();
+    
             cachedProducts.forEach(p => {
                 const kategori = (p.category || p.kategori || '').trim();
-            
+    
                 if (kategori) {
                     const key = kategori.toLowerCase();
-            
-                    // Simpan satu versi saja
+    
                     if (!kategoriMap.has(key)) {
                         kategoriMap.set(key, kategori);
                     }
                 }
             });
-            
+    
             updateKasirKategoriDropdown(new Set(kategoriMap.values()));
+    
+            // Tampilkan produk
             renderKasirMenu();
+    
         } catch (err) {
             console.error("Error load produk:", err);
-            cachedProducts = [
-                { id: 1, name: 'Dimsum Mentai Mix', category: 'dimsum', price: 22000, stok: 30, image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500' },
-                { id: 2, name: 'Ayam Krispy Spesial', category: 'chicken', price: 25000, stok: 40, image: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500' }
-            ];
-            renderKasirMenu();
+    
+            cachedProducts = [];
+    
+            document.getElementById('kasirMenuList').innerHTML =
+                `<p style="color:#dc2626; padding:20px;">
+                    Gagal mengambil produk dari database.
+                    <br>
+                    <small>${err.message || err}</small>
+                </p>`;
         }
     };
 
