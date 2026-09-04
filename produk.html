@@ -69,7 +69,13 @@
             try {
                 const { data, error } = await supabase.from('products').select('*').order('nama', { ascending: true });
                 if (error) throw error;
-                if (data) products = data;
+                if (data && data.length > 0) {
+                    products = data;
+                } else {
+                    // Try fallback ordering by name if nama fails
+                    const { data: data2, error: error2 } = await supabase.from('products').select('*');
+                    if (!error2 && data2) products = data2;
+                }
             } catch(e) { 
                 console.warn("Supabase fetch error, fallback to local storage:", e);
                 products = JSON.parse(localStorage.getItem('local_products') || '[]');
@@ -80,24 +86,33 @@
         function renderTable(dataList) {
             const tbody = document.getElementById('prodTable');
             if (!tbody) return;
-            if (dataList.length === 0) {
+            if (!dataList || dataList.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400">Belum ada produk.</td></tr>`;
                 return;
             }
-            tbody.innerHTML = dataList.map(p => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-3"><img src="${p.foto || p.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg shadow-sm" onerror="this.src='https://placehold.co/40'"></td>
-                    <td class="p-3 font-semibold text-slate-800">${p.nama || p.name}</td>
-                    <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-medium">${p.kategori || p.category || '-'}</span></td>
-                    <td class="p-3 font-bold text-orange-600">${rupiah(p.harga || p.price)}</td>
-                    <td class="p-3">${rupiah(p.hpp || 0)}</td>
-                    <td class="p-3 font-bold">${p.stok || p.stock || 0}</td>
-                    <td class="p-3 flex gap-1">
-                        <button onclick="editProduct('${p.id}')" class="bg-sky-50 text-sky-600 hover:bg-sky-100 p-2 rounded-lg transition" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="delProduct('${p.id}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = dataList.map(p => {
+                const nameVal = p.nama || p.name || '-';
+                const catVal = p.kategori || p.category || '-';
+                const priceVal = Number(p.harga || p.price || 0);
+                const hppVal = Number(p.hpp || 0);
+                const stockVal = Number(p.stok ?? p.stock ?? 0);
+                const imgVal = p.foto || p.image || 'https://placehold.co/40';
+
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3"><img src="${imgVal}" class="w-10 h-10 object-cover rounded-lg shadow-sm" onerror="this.src='https://placehold.co/40'"></td>
+                        <td class="p-3 font-semibold text-slate-800">${nameVal}</td>
+                        <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-medium">${catVal}</span></td>
+                        <td class="p-3 font-bold text-orange-600">${rupiah(priceVal)}</td>
+                        <td class="p-3">${rupiah(hppVal)}</td>
+                        <td class="p-3 font-bold">${stockVal}</td>
+                        <td class="p-3 flex gap-1">
+                            <button onclick="editProduct('${p.id}')" class="bg-sky-50 text-sky-600 hover:bg-sky-100 p-2 rounded-lg transition" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="delProduct('${p.id}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         window.filterTable = function() {
@@ -111,7 +126,7 @@
         };
 
         window.saveProduct = async function() {
-            const id = document.getElementById('p-id').value;
+            const id = document.getElementById('p-id').value.trim();
             const nama = document.getElementById('p-nama').value.trim();
             const kategori = document.getElementById('p-kategori').value.trim().toLowerCase();
             const harga = Number(document.getElementById('p-harga').value);
@@ -126,39 +141,54 @@
             }
 
             await authReady;
-            const productPayload = {
+            
+            // Send dual-column mapping payload to support both schema conventions (nama/name, harga/price, stok/stock)
+            const payload = {
                 nama,
+                name: nama,
                 kategori,
+                category: kategori,
                 harga,
+                price: harga,
                 hpp,
                 stok,
+                stock: stok,
                 foto,
-                deskripsi
+                image: foto,
+                deskripsi,
+                desc: deskripsi
             };
 
             let success = false;
             try {
                 if (id) {
-                    const { error } = await supabase.from('products').update(productPayload).eq('id', id);
+                    const { data, error } = await supabase.from('products').update(payload).eq('id', id).select();
                     if (error) throw error;
+                    if (!data || data.length === 0) {
+                        // Try updating with numeric ID if string ID fails or vice versa
+                        const { error: err2 } = await supabase.from('products').update(payload).eq('id', Number(id));
+                        if (err2) throw err2;
+                    }
                     alert('Produk berhasil diperbarui di Supabase!');
                 } else {
-                    const { error } = await supabase.from('products').insert([productPayload]);
+                    // Remove id field for clean auto-increment or uuid generation
+                    delete payload.id;
+                    const { data, error } = await supabase.from('products').insert([payload]).select();
                     if (error) throw error;
                     alert('Produk baru berhasil disimpan ke Supabase!');
                 }
                 success = true;
             } catch(e) {
-                console.warn("Supabase database operation failed, falling back to localStorage:", e);
+                console.warn("Supabase operation failed, saving to localStorage fallback:", e);
                 let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
                 if (id) {
-                    localProducts = localProducts.map(p => String(p.id) === String(id) ? { ...p, ...productPayload, id } : p);
+                    localProducts = localProducts.map(p => String(p.id) === String(id) ? { ...p, ...payload, id } : p);
                 } else {
-                    productPayload.id = 'prod-' + Date.now();
-                    localProducts.push(productPayload);
+                    payload.id = 'prod-' + Date.now();
+                    localProducts.push(payload);
                 }
                 localStorage.setItem('local_products', JSON.stringify(localProducts));
-                alert('Produk berhasil disimpan ke memori lokal (offline fallback)!');
+                alert('Tersimpan di offline cache (LocalStorage fallback) karena kendala koneksi database.');
                 success = true;
             }
 
@@ -200,7 +230,10 @@
             await authReady;
             try {
                 const { error } = await supabase.from('products').delete().eq('id', id);
-                if (error) throw error;
+                if (error) {
+                    const { error: err2 } = await supabase.from('products').delete().eq('id', Number(id));
+                    if (err2) throw err2;
+                }
                 alert('Produk berhasil dihapus dari Supabase.');
                 loadProducts();
             } catch(e) {
