@@ -587,49 +587,40 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     // LOGIN AUTHENTICATION CHECK AGAINST usersetup TABLE
     window.handleAdminLogin = async function(e) {
         e.preventDefault();
-        const usernameInput = document.getElementById('loginUsername').value.trim();
-        const passwordInput = document.getElementById('loginPassword').value.trim();
+    
+        const email = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
         const errorEl = document.getElementById('loginError');
+    
         errorEl.style.display = 'none';
-
-        await authReady;
+    
         try {
-            // Query table 'usersetup' for matching credentials
-            const { data, error } = await supabase
-                .from('usersetup')
-                .select('*')
-                .eq('username', usernameInput)
-                .maybeSingle();
-
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+    
             if (error) {
-                // If table doesn't exist or query fails, check hardcoded default admin
-                if (usernameInput === 'admin' && passwordInput === 'chimchum123') {
-                    sessionStorage.setItem('admin_logged_in', 'true');
-                    document.getElementById('loginOverlay').style.display = 'none';
-                    initAdminDashboard();
-                    return;
-                }
                 throw error;
             }
-
-            if (data && (data.password === passwordInput || data.pass === passwordInput)) {
-                sessionStorage.setItem('admin_logged_in', 'true');
-                document.getElementById('loginOverlay').style.display = 'none';
-                initAdminDashboard();
-            } else {
-                errorEl.innerText = 'Username atau password salah!';
-                errorEl.style.display = 'block';
+    
+            if (!data.session) {
+                throw new Error('Session login tidak ditemukan.');
             }
+    
+            sessionStorage.setItem('admin_logged_in', 'true');
+    
+            document.getElementById('loginOverlay').style.display = 'none';
+    
+            await initAdminDashboard();
+    
         } catch (err) {
-            console.warn('Login verification exception:', err);
-            if (usernameInput === 'admin' && passwordInput === 'chimchum123') {
-                sessionStorage.setItem('admin_logged_in', 'true');
-                document.getElementById('loginOverlay').style.display = 'none';
-                initAdminDashboard();
-            } else {
-                errorEl.innerText = 'Gagal melakukan verifikasi login.';
-                errorEl.style.display = 'block';
-            }
+            console.error('LOGIN ERROR:', err);
+    
+            errorEl.innerText =
+                'Login gagal: ' + (err.message || 'Username/password salah.');
+    
+            errorEl.style.display = 'block';
         }
     };
 
@@ -720,7 +711,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             const nama = p.nama || p.name || '';
             const harga = Number(p.harga || p.price || 0);
             const foto = p.foto || p.image || 'https://placehold.co/150';
-            const stok = Number(p.stok) || 50;
+            const stok = Number(p.stok ?? 0);
             const habis = stok <= 0;
 
             return `
@@ -1109,7 +1100,27 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
                 }
             }
 
-            const { error } = await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
+           const { data, error } = await supabase
+                .from('products')
+                .insert([{
+                    nama,
+                    kategori,
+                    harga,
+                    hpp,
+                    stok,
+                    foto,
+                    deskripsi
+                }])
+                .select()
+                .single();
+            
+            if (error) {
+                throw error;
+            }
+            
+            if (!data) {
+                throw new Error('Produk gagal dibuat.');
+            }
             if (error) throw error;
             alert('Produk berhasil disimpan!');
             document.getElementById('p-nama').value = '';
@@ -1130,36 +1141,103 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
 
     window.loadProductsList = async function() {
         await authReady;
-        let products = [];
+    
         try {
-            const { data } = await supabase.from('products').select('*');
-            if (data) products = data;
-        } catch (e) {
-            console.warn(e);
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .order('nama', { ascending: true });
+    
+            if (error) throw error;
+    
+            cachedProducts = data || [];
+    
+            const tbody = document.getElementById('productsTableBody');
+    
+            if (!tbody) return;
+    
+            if (cachedProducts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7"
+                            style="text-align:center;color:#aaa;padding:30px;">
+                            Belum ada produk.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+    
+            tbody.innerHTML = cachedProducts.map(p => `
+                <tr>
+                    <td>
+                        <img
+                            src="${p.foto || p.image || 'https://placehold.co/50'}"
+                            class="prod-img"
+                            onerror="this.src='https://placehold.co/50'"
+                        >
+                    </td>
+    
+                    <td>
+                        <b>${p.nama || p.name || '-'}</b>
+                    </td>
+    
+                    <td>
+                        ${p.kategori || p.category || '-'}
+                    </td>
+    
+                    <td style="color:var(--primary);font-weight:600;">
+                        ${rupiah(p.harga || p.price || 0)}
+                    </td>
+    
+                    <td>
+                        ${rupiah(p.hpp || 0)}
+                    </td>
+    
+                    <td>
+                        <b>${Number(p.stok) || 0}</b>
+                    </td>
+    
+                    <td>
+                        <div style="display:flex;gap:6px;">
+    
+                            <button
+                                onclick="window.openEditModal('${p.id}')"
+                                style="padding:6px 10px;font-size:11px;background:#e0f2fe;color:#0284c7;"
+                                title="Edit">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+    
+                            <button
+                                onclick="window.deleteProduct('${p.id}')"
+                                class="btn-delete"
+                                style="padding:6px 10px;font-size:11px;"
+                                title="Hapus">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+    
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+    
+        } catch (error) {
+            console.error('LOAD PRODUCTS ERROR:', error);
+    
+            const tbody = document.getElementById('productsTableBody');
+    
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7"
+                            style="text-align:center;color:#dc2626;padding:30px;">
+                            Gagal mengambil produk:<br>
+                            ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
         }
-        cachedProducts = products;
-        const tbody = document.getElementById('productsTableBody');
-        if (!tbody) return;
-        if (products.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#aaa; padding:30px;">Belum ada produk.</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = products.map(p => `
-            <tr>
-                <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
-                <td><b>${p.nama || p.name}</b></td>
-                <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:11px;">${p.kategori || p.category || '-'}</span></td>
-                <td style="color:var(--primary); font-weight:600;">${rupiah(p.harga || p.price)}</td>
-                <td>${rupiah(p.hpp || 0)}</td>
-                <td><b>${p.stok || 0}</b></td>
-                <td>
-                    <div style="display:flex; gap:6px;">
-                        <button onclick="openEditModal('${p.id}')" style="padding:6px 10px; font-size:11px; background:#e0f2fe; color:#0284c7;" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteProduct('${p.id}')" class="btn-delete" style="padding:6px 10px; font-size:11px;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
     };
 
     window.openEditModal = function(id) {
@@ -1335,20 +1413,59 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     };
 
     window.updateStock = async function(id, newStok) {
-        if (newStok < 0) newStok = 0;
+
+        newStok = Number(newStok);
+    
+        if (!Number.isFinite(newStok) || newStok < 0) {
+            newStok = 0;
+        }
+    
         await authReady;
+    
         try {
-            const { error } = await supabase.from('products').update({ stok: newStok }).eq('id', id);
-            if (error) throw error;
+    
+            const { data, error } = await supabase
+                .from('products')
+                .update({
+                    stok: newStok
+                })
+                .eq('id', id)
+                .select()
+                .single();
+    
+            if (error) {
+                throw error;
+            }
+    
+            if (!data) {
+                throw new Error(
+                    'Produk tidak ditemukan atau update ditolak oleh RLS.'
+                );
+            }
+    
+            // Update cache
             cachedProducts = cachedProducts.map(p => {
-                if (String(p.id) === String(id)) p.stok = newStok;
+                if (String(p.id) === String(id)) {
+                    return {
+                        ...p,
+                        stok: newStok
+                    };
+                }
+    
                 return p;
             });
+    
             renderStokSummary();
             renderStokTable();
-        } catch (e) {
-            console.error(e);
-            alert('Gagal mengupdate stok: ' + e.message);
+    
+        } catch (error) {
+    
+            console.error('UPDATE STOCK ERROR:', error);
+    
+            alert(
+                'Gagal mengupdate stok:\n\n' +
+                error.message
+            );
         }
     };
 
@@ -1470,31 +1587,92 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     };
 
     window.submitEditProduct = async function() {
+
         const id = document.getElementById('edit-p-id').value;
-        const nama = document.getElementById('edit-p-nama').value.trim();
-        const kategori = document.getElementById('edit-p-kategori').value.trim().toLowerCase();
-        const harga = Number(document.getElementById('edit-p-harga').value);
-        const hpp = Number(document.getElementById('edit-p-hpp').value) || 0;
-        const stok = Number(document.getElementById('edit-p-stok').value) || 0;
-        const foto = document.getElementById('edit-p-foto').value.trim();
-        const deskripsi = document.getElementById('edit-p-deskripsi').value.trim();
-
-        if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
-
+    
+        const nama =
+            document.getElementById('edit-p-nama').value.trim();
+    
+        const kategori =
+            document.getElementById('edit-p-kategori').value
+            .trim()
+            .toLowerCase();
+    
+        const harga =
+            Number(document.getElementById('edit-p-harga').value);
+    
+        const hpp =
+            Number(document.getElementById('edit-p-hpp').value) || 0;
+    
+        const stok =
+            Number(document.getElementById('edit-p-stok').value) || 0;
+    
+        const foto =
+            document.getElementById('edit-p-foto').value.trim();
+    
+        const deskripsi =
+            document.getElementById('edit-p-deskripsi').value.trim();
+    
+        if (!id) {
+            alert('ID produk tidak ditemukan.');
+            return;
+        }
+    
+        if (!nama) {
+            alert('Nama produk wajib diisi.');
+            return;
+        }
+    
+        if (!harga || harga <= 0) {
+            alert('Harga jual harus lebih dari 0.');
+            return;
+        }
+    
         await authReady;
+    
         try {
-            const { error } = await supabase.from('products').update({
-                nama, kategori, harga, hpp, stok, foto, deskripsi
-            }).eq('id', id);
-
-            if (error) throw error;
+    
+            const { data, error } = await supabase
+                .from('products')
+                .update({
+                    nama: nama,
+                    kategori: kategori,
+                    harga: harga,
+                    hpp: hpp,
+                    stok: Math.max(0, stok),
+                    foto: foto,
+                    deskripsi: deskripsi
+                })
+                .eq('id', id)
+                .select()
+                .single();
+    
+            if (error) {
+                throw error;
+            }
+    
+            if (!data) {
+                throw new Error(
+                    'Tidak ada data yang diperbarui. Periksa RLS dan ID produk.'
+                );
+            }
+    
             alert('Produk berhasil diperbarui!');
+    
             window.closeEditModal();
-            loadProductsList();
-            loadKasirMenu();
-            loadStokMonitor();
-        } catch (err) {
-            alert('Gagal memperbarui produk: ' + err.message);
+    
+            await loadProductsList();
+            await loadKasirMenu();
+            await loadStokMonitor();
+    
+        } catch (error) {
+    
+            console.error('EDIT PRODUCT ERROR:', error);
+    
+            alert(
+                'Gagal memperbarui produk:\n\n' +
+                error.message
+            );
         }
     };
 
