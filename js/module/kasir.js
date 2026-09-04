@@ -533,27 +533,28 @@ cetakStrukThermal(order.customer_name, order.phone, order.items, order.grand_tot
 };
 
 window.deleteOrder = async (key) => {
-if (!confirm("Hapus pesanan ini?")) return;
-try {
-    await authReady;
-    let query = supabase.from("orders").delete();
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) {
-        query = query.eq("id", key);
-    } else {
-        query = query.eq("order_id", key);
+    if (!confirm("Hapus pesanan ini?")) return;
+    try {
+        await authReady;
+        let query = supabase.from("orders").delete();
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) {
+            query = query.eq("id", key);
+        } else {
+            query = query.eq("order_id", key);
+        }
+        const { error } = await query;
+        if (error) throw error;
+    
+        cachedOrders = cachedOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
+        let localOrders = JSON.parse(localStorage.getItem("local_orders") || "[]");
+        localOrders = localOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
+        localStorage.setItem("local_orders", JSON.stringify(localOrders));
+    
+        renderOrderSummary(cachedOrders);
+        renderOrdersTable();
+        alert("Pesanan berhasil dihapus.");
+    } catch (error) {
+        console.error("DELETE ORDER ERROR:", error);
+        alert("Gagal menghapus pesanan.\n\n" + (error.message || "Unknown error"));
     }
-    const { error } = await query;
-    if (error) throw error;
-
-    cachedOrders = cachedOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
-    let localOrders = JSON.parse(localStorage.getItem("local_orders") || "[]");
-    localOrders = localOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
-    localStorage.setItem("local_orders", JSON.stringify(localOrders));
-
-    renderOrderSummary(cachedOrders);
-    renderOrdersTable();
-    alert("Pesanan berhasil dihapus.");
-} catch (error) {
-    console.error("DELETE ORDER ERROR:", error);
-    alert("Gagal menghapus pesanan.\n\n" + (error.message || "Unknown error"));
-}
+};
