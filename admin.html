@@ -435,7 +435,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
       </div>
       <label style="font-size:13px; font-weight:500;">Deskripsi Singkat</label>
       <textarea id="p-deskripsi" placeholder="Deskripsi produk..." rows="2"></textarea>
-      <button class="btn-primary" onclick="saveNewProduct()"><i class="fa-solid fa-plus"></i> Simpan Produk</button>
+      <button class="btn-primary" onclick="window.saveNewProduct()"><i class="fa-solid fa-plus"></i> Simpan Produk</button>
     </div>
 
     <div style="overflow-x: auto;">
@@ -459,11 +459,11 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
   </div>
 
   <!-- EDIT PRODUCT MODAL -->
-  <div id="edit-product-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4" style="position:fixed; inset:0; background:rgba(30,41,59,0.7); z-index:9999; display:none; align-items:center; justify-content:center;">
+  <div id="edit-product-modal" style="position:fixed; inset:0; background:rgba(30,41,59,0.7); z-index:9999; display:none; align-items:center; justify-content:center; padding:15px;">
     <div class="card" style="background:white; width:100%; max-width:500px; margin:0; max-height:90vh; overflow-y:auto;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h3>Edit Produk</h3>
-        <button onclick="closeEditModal()" style="background:none; border:none; font-size:16px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        <h3 style="margin:0;">Edit Produk</h3>
+        <button onclick="window.closeEditModal()" style="background:none; border:none; font-size:16px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <input type="hidden" id="edit-p-id">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -479,8 +479,8 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         <textarea id="edit-p-deskripsi" rows="2"></textarea>
       </div>
       <div style="display:flex; gap:10px; margin-top:15px;">
-        <button class="btn-primary" style="flex:1;" onclick="submitEditProduct()">Simpan Perubahan</button>
-        <button onclick="closeEditModal()" style="background:#e2e8f0; color:#334155; flex:1;">Batal</button>
+        <button class="btn-primary" style="flex:1;" onclick="window.submitEditProduct()">Simpan Perubahan</button>
+        <button onclick="window.closeEditModal()" style="background:#e2e8f0; color:#334155; flex:1; border:none; padding:10px; border-radius:8px; font-weight:600; cursor:pointer;">Batal</button>
       </div>
     </div>
   </div>
@@ -937,7 +937,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
     function renderOrderSummary(orders) {
         const summary = document.getElementById('orderSummary');
         if (!summary) return;
-        const counts = { all: orders.length, new: 0, disiapkan: 0, selesai: 0, cancel: 0 };
+        const counts = { all: orders.length, new: 0, disiapkan: 0, dikirim: 0, selesai: 0, cancel: 0 };
         orders.forEach(o => {
             const st = (o.status || 'new').toLowerCase();
             if (st === 'disiapkan' || st === 'sedang diproses') counts.disiapkan++;
@@ -948,6 +948,7 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
             { key: 'all', title: 'Total Pesanan', count: counts.all, color: '#475569' },
             { key: 'new', title: 'Pesanan Baru', count: counts.new, color: '#f59e0b' },
             { key: 'disiapkan', title: 'Sedang Diproses', count: counts.disiapkan, color: '#3b82f6' },
+            { key: 'dikirim', title: 'Sedang Dikirim', count: counts.dikirim, color: '#8b5cf6' },
             { key: 'selesai', title: 'Pesanan Selesai', count: counts.selesai, color: '#10b981' },
             { key: 'cancel', title: 'Dibatalkan', count: counts.cancel, color: '#ef4444' }
         ];
@@ -976,6 +977,9 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
                 const st = (o.status || 'new').toLowerCase();
                 if (currentOrderFilter === 'disiapkan') {
                     return st === 'disiapkan' || st === 'sedang diproses';
+                }
+                if (currentOrderFilter === 'dikirim') {
+                    return st === 'dikirim';
                 }
                 return st === currentOrderFilter;
             });
@@ -1320,9 +1324,9 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
                     <td>${statusBadge}</td>
                     <td>
                         <div style="display:flex; gap:6px; align-items:center;">
-                            <button onclick="updateStock('${p.id}', ${st - 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">-</button>
-                            <input type="number" id="stok-input-${p.id}" value="${st}" style="width:60px; text-align:center; margin:0; padding:4px;" onchange="updateStockInput('${p.id}')">
-                            <button onclick="updateStock('${p.id}', ${st + 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">+</button>
+                            <button onclick="window.updateStock('${p.id}', ${st - 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">-</button>
+                            <input type="number" id="stok-input-${p.id}" value="${st}" style="width:60px; text-align:center; margin:0; padding:4px;" onchange="window.updateStockInput('${p.id}')">
+                            <button onclick="window.updateStock('${p.id}', ${st + 1})" style="background:#f1f2f6; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">+</button>
                         </div>
                     </td>
                 </tr>
@@ -1345,6 +1349,167 @@ img.prod-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
         } catch (e) {
             console.error(e);
             alert('Gagal mengupdate stok: ' + e.message);
+        }
+    };
+
+    window.updateStockInput = async function(id) {
+        const inputEl = document.getElementById(`stok-input-${id}`);
+        if (!inputEl) return;
+        const val = Number(inputEl.value);
+        await window.updateStock(id, val >= 0 ? val : 0);
+    };
+
+    window.saveNewProduct = async function() {
+        const nama = document.getElementById('p-nama').value.trim();
+        const kategori = document.getElementById('p-kategori').value.trim().toLowerCase();
+        const harga = Number(document.getElementById('p-harga').value);
+        const hpp = Number(document.getElementById('p-hpp').value) || 0;
+        const stok = Number(document.getElementById('p-stok').value) || 50;
+        let foto = document.getElementById('p-foto').value.trim();
+        const fileInput = document.getElementById('p-foto-file');
+        const deskripsi = document.getElementById('p-deskripsi').value.trim();
+
+        if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
+
+        await authReady;
+        try {
+            if (fileInput.files && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const fileName = `prod_${Date.now()}.${fileExt}`;
+                
+                const { error: uploadError } = await supabase.storage
+                    .from('product-images')
+                    .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+                if (!uploadError) {
+                    const { data: publicUrlData } = supabase.storage
+                        .from('product-images')
+                        .getPublicUrl(fileName);
+                    if (publicUrlData && publicUrlData.publicUrl) {
+                        foto = publicUrlData.publicUrl;
+                    }
+                } else {
+                    foto = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(file);
+                    });
+                }
+            }
+
+            const { error } = await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
+            if (error) throw error;
+            alert('Produk berhasil disimpan!');
+            document.getElementById('p-nama').value = '';
+            document.getElementById('p-kategori').value = '';
+            document.getElementById('p-harga').value = '';
+            document.getElementById('p-hpp').value = '';
+            document.getElementById('p-stok').value = '';
+            document.getElementById('p-foto').value = '';
+            document.getElementById('p-foto-file').value = '';
+            document.getElementById('p-deskripsi').value = '';
+            loadProductsList();
+            loadKasirMenu();
+            loadStokMonitor();
+        } catch (err) {
+            alert('Gagal menyimpan produk: ' + err.message);
+        }
+    };
+
+    window.loadProductsList = async function() {
+        await authReady;
+        let products = [];
+        try {
+            const { data } = await supabase.from('products').select('*');
+            if (data) products = data;
+        } catch (e) {
+            console.warn(e);
+        }
+        cachedProducts = products;
+        const tbody = document.getElementById('productsTableBody');
+        if (!tbody) return;
+        if (products.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#aaa; padding:30px;">Belum ada produk.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = products.map(p => `
+            <tr>
+                <td><img src="${p.foto || p.image || 'https://placehold.co/50'}" class="prod-img" onerror="this.src='https://placehold.co/50'"></td>
+                <td><b>${p.nama || p.name}</b></td>
+                <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:11px;">${p.kategori || p.category || '-'}</span></td>
+                <td style="color:var(--primary); font-weight:600;">${rupiah(p.harga || p.price)}</td>
+                <td>${rupiah(p.hpp || 0)}</td>
+                <td><b>${p.stok || 0}</b></td>
+                <td>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="window.openEditModal('${p.id}')" style="padding:6px 10px; font-size:11px; background:#e0f2fe; color:#0284c7; border:none; border-radius:6px; cursor:pointer;" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="window.deleteProduct('${p.id}')" class="btn-delete" style="padding:6px 10px; font-size:11px;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    };
+
+    window.openEditModal = function(id) {
+        const prod = cachedProducts.find(p => String(p.id) === String(id));
+        if (!prod) return;
+        document.getElementById('edit-p-id').value = prod.id;
+        document.getElementById('edit-p-nama').value = prod.nama || prod.name || '';
+        document.getElementById('edit-p-kategori').value = prod.kategori || prod.category || '';
+        document.getElementById('edit-p-harga').value = prod.harga || prod.price || 0;
+        document.getElementById('edit-p-hpp').value = prod.hpp || 0;
+        document.getElementById('edit-p-stok').value = prod.stok || 0;
+        document.getElementById('edit-p-foto').value = prod.foto || prod.image || '';
+        document.getElementById('edit-p-deskripsi').value = prod.deskripsi || prod.desc || '';
+        document.getElementById('edit-product-modal').style.display = 'flex';
+    };
+
+    window.closeEditModal = function() {
+        document.getElementById('edit-product-modal').style.display = 'none';
+    };
+
+    window.submitEditProduct = async function() {
+        const id = document.getElementById('edit-p-id').value;
+        const nama = document.getElementById('edit-p-nama').value.trim();
+        const kategori = document.getElementById('edit-p-kategori').value.trim().toLowerCase();
+        const harga = Number(document.getElementById('edit-p-harga').value);
+        const hpp = Number(document.getElementById('edit-p-hpp').value) || 0;
+        const stok = Number(document.getElementById('edit-p-stok').value) || 0;
+        const foto = document.getElementById('edit-p-foto').value.trim();
+        const deskripsi = document.getElementById('edit-p-deskripsi').value.trim();
+
+        if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
+
+        await authReady;
+        try {
+            const { error } = await supabase.from('products').update({
+                nama, kategori, harga, hpp, stok, foto, deskripsi
+            }).eq('id', id);
+
+            if (error) throw error;
+            alert('Produk berhasil diperbarui!');
+            window.closeEditModal();
+            loadProductsList();
+            loadKasirMenu();
+            loadStokMonitor();
+        } catch (err) {
+            alert('Gagal memperbarui produk: ' + err.message);
+        }
+    };
+
+    window.deleteProduct = async function(id) {
+        if (!confirm("Hapus produk ini?")) return;
+        await authReady;
+        try {
+            const { error } = await supabase.from('products').delete().eq('id', id);
+            if (error) throw error;
+            loadProductsList();
+            loadKasirMenu();
+            loadStokMonitor();
+            alert('Produk berhasil dihapus.');
+        } catch (e) {
+            alert('Gagal menghapus produk: ' + e.message);
         }
     };
 
