@@ -475,7 +475,7 @@ supabase.auth.onAuthStateChange(
         console.log(
             'AUTH STATE:',
             event,
-            session
+            // session
         );
 
         if (session) {
