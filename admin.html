@@ -173,10 +173,7 @@
                             >
 
                         </div>
-
                     </div>
-
-
                     <!-- Password -->
                     <div>
 
@@ -186,9 +183,7 @@
                         >
                             Password
                         </label>
-
                         <div class="relative">
-
                             <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
 
                             <input
@@ -199,7 +194,6 @@
                                 placeholder="Masukkan password"
                                 class="w-full pl-11 pr-12 py-3.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
                             >
-
                             <button
                                 type="button"
                                 id="togglePassword"
@@ -208,50 +202,33 @@
                             >
                                 <i id="togglePasswordIcon" class="fa-solid fa-eye"></i>
                             </button>
-
                         </div>
-
                     </div>
-
-
                     <!-- Login Button -->
                     <button
                         id="loginButton"
                         type="submit"
                         class="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold py-3.5 rounded-xl transition flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20"
                     >
-
                         <span id="loginButtonText">
                             <i class="fa-solid fa-right-to-bracket mr-2"></i>
                             Masuk ke Admin
                         </span>
-
                         <span
                             id="loginSpinner"
                             class="spinner hidden-force"
                         ></span>
-
                     </button>
-
                 </form>
-
-
                 <div class="mt-6 pt-5 border-t border-slate-100 text-center">
-
                     <p class="text-xs text-slate-400">
                         <i class="fa-solid fa-shield-halved mr-1"></i>
                         Halaman ini dilindungi Supabase Authentication
                     </p>
-
                 </div>
-
             </div>
-
         </div>
-
     </section>
-
-
     <!-- =========================================================
          ADMIN APPLICATION
          HIDDEN UNTIL AUTHENTICATED
@@ -260,19 +237,15 @@
         id="adminApp"
         class="hidden-force h-screen flex flex-col overflow-hidden"
     >
-
         <!-- HEADER -->
         <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex justify-between items-center shadow-sm shrink-0 z-20">
-
             <div class="flex items-center gap-3">
-
                 <img
                     src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
                     alt="Logo"
                     class="h-10 w-10 object-cover rounded-lg"
                     onerror="this.src='https://placehold.co/40?text=CC'"
                 >
-
                 <div>
                     <h1 class="font-bold text-base text-orange-600 tracking-tight">
                         ChimChum Malang
@@ -282,23 +255,20 @@
                         Admin Management System
                     </p>
                 </div>
-
+                <button
+                    id="sidebarToggle"
+                    type="button"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl
+                           bg-slate-100 hover:bg-orange-100 hover:text-orange-600
+                           text-slate-600 transition"
+                    title="Buka/tutup sidebar"
+                >
+                    <i id="sidebarToggleIcon" class="fa-solid fa-bars"></i>
+                </button>
             </div>
-            <button
-                id="sidebarToggle"
-                type="button"
-                class="w-10 h-10 flex items-center justify-center rounded-xl
-                       bg-slate-100 hover:bg-orange-100 hover:text-orange-600
-                       text-slate-600 transition"
-                title="Buka/tutup sidebar"
-            >
-                <i id="sidebarToggleIcon" class="fa-solid fa-bars"></i>
-            </button>
-
 
             <!-- HEADER RIGHT -->
             <div class="flex items-center gap-3">
-
                 <!-- User -->
                 <div
                     id="currentUser"
