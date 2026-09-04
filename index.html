@@ -724,7 +724,7 @@
             localStorage.setItem('local_orders', JSON.stringify(localOrders));
 
             const itemsListStr = pendingOrderData.items.map(i => `• ${i.name} (${i.qty}x) - Rp ${(i.price * i.qty).toLocaleString('id-ID')}`).join('\n');
-            const trackingLink = `https://chimchum-mlg.vercel.app/lacak.html/${pendingOrderData.order_id}`;
+            const trackingLink = `https://chimchummlg.vercel.app/lacak.html/${pendingOrderData.order_id}`;
             const waText = encodeURIComponent(
 `*INVOICE PEMESANAN CHIMCHUM MALANG*
 ID Pesanan: ${pendingOrderData.order_id}
