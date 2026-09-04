@@ -12,18 +12,31 @@
 </head>
 <body class="bg-white p-6 overflow-y-auto">
     <div class="max-w-6xl mx-auto">
-        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm">
-            <h3 class="font-bold text-sm text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-orange-500"></i> Tambah Produk Baru</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-                <input id="p-nama" placeholder="Nama Produk" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
-                <input id="p-kategori" placeholder="Kategori (dimsum/drink)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
-                <input type="number" id="p-harga" placeholder="Harga Jual (Rp)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
-                <input type="number" id="p-hpp" placeholder="HPP (Rp)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
-                <input type="number" id="p-stok" placeholder="Stok Porsi" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
-                <input id="p-foto" placeholder="URL Foto (Opsional)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+        <div class="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
+            <div>
+                <h3 class="font-bold text-base text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-orange-500"></i> Tambah / Edit Produk</h3>
+                <p class="text-xs text-slate-500">Kelola katalog menu makanan &amp; minuman ChimChum Malang.</p>
             </div>
-            <textarea id="p-deskripsi" placeholder="Deskripsi produk singkat..." rows="2" class="w-full bg-white border rounded-xl p-2.5 text-xs outline-none mb-3"></textarea>
-            <button onclick="saveProduct()" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition"><i class="fa-solid fa-plus mr-1"></i> Simpan Produk</button>
+            <div class="w-full sm:w-72">
+                <input type="text" id="p-search" placeholder="🔍 Cari nama produk..." class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500 w-full" oninput="filterTable()">
+            </div>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm">
+            <input type="hidden" id="p-id">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                <input id="p-nama" placeholder="Nama Produk *" class="bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500">
+                <input id="p-kategori" placeholder="Kategori (contoh: dimsum)" class="bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500">
+                <input type="number" id="p-harga" placeholder="Harga Jual (Rp) *" class="bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500">
+                <input type="number" id="p-hpp" placeholder="HPP (Rp)" class="bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500">
+                <input type="number" id="p-stok" placeholder="Stok Porsi" class="bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500">
+                <input id="p-foto" placeholder="URL Foto Produk" class="bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500">
+            </div>
+            <textarea id="p-deskripsi" placeholder="Deskripsi produk singkat..." rows="2" class="w-full bg-white border rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 mb-3"></textarea>
+            <div class="flex gap-2">
+                <button onclick="saveProduct()" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-sm"><i class="fa-solid fa-plus mr-1"></i> Simpan Produk</button>
+                <button id="btnCancelEdit" onclick="resetForm()" style="display:none;" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition">Batal Edit</button>
+            </div>
         </div>
 
         <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
@@ -54,31 +67,50 @@
         window.loadProducts = async function() {
             await authReady;
             try {
-                const { data } = await supabase.from('products').select('*').order('nama');
+                const { data, error } = await supabase.from('products').select('*').order('nama', { ascending: true });
+                if (error) throw error;
                 if (data) products = data;
-            } catch(e) { console.warn(e); }
-            
+            } catch(e) { 
+                console.warn("Supabase fetch error, fallback to local storage:", e);
+                products = JSON.parse(localStorage.getItem('local_products') || '[]');
+            }
+            renderTable(products);
+        };
+
+        function renderTable(dataList) {
             const tbody = document.getElementById('prodTable');
-            if (products.length === 0) {
+            if (dataList.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400">Belum ada produk.</td></tr>`;
                 return;
             }
-            tbody.innerHTML = products.map(p => `
+            tbody.innerHTML = dataList.map(p => `
                 <tr class="hover:bg-slate-50">
-                    <td class="p-3"><img src="${p.foto || p.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg"></td>
+                    <td class="p-3"><img src="${p.foto || p.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg shadow-sm" onerror="this.src='https://placehold.co/40'"></td>
                     <td class="p-3 font-semibold text-slate-800">${p.nama || p.name}</td>
-                    <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-[10px]">${p.kategori || p.category || '-'}</span></td>
+                    <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-medium">${p.kategori || p.category || '-'}</span></td>
                     <td class="p-3 font-bold text-orange-600">${rupiah(p.harga || p.price)}</td>
                     <td class="p-3">${rupiah(p.hpp || 0)}</td>
-                    <td class="p-3 font-bold">${p.stok || 0}</td>
-                    <td class="p-3">
-                        <button onclick="delProduct('${p.id}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition"><i class="fa-solid fa-trash"></i></button>
+                    <td class="p-3 font-bold">${p.stok || p.stock || 0}</td>
+                    <td class="p-3 flex gap-1">
+                        <button onclick="editProduct('${p.id}')" class="bg-sky-50 text-sky-600 hover:bg-sky-100 p-2 rounded-lg transition" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="delProduct('${p.id}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        window.filterTable = function() {
+            const keyword = document.getElementById('p-search').value.toLowerCase().trim();
+            const filtered = products.filter(p => {
+                const nama = (p.nama || p.name || '').toLowerCase();
+                const kat = (p.kategori || p.category || '').toLowerCase();
+                return nama.includes(keyword) || kat.includes(keyword);
+            });
+            renderTable(filtered);
         };
 
         window.saveProduct = async function() {
+            const id = document.getElementById('p-id').value;
             const nama = document.getElementById('p-nama').value.trim();
             const kategori = document.getElementById('p-kategori').value.trim().toLowerCase();
             const harga = Number(document.getElementById('p-harga').value);
@@ -87,29 +119,95 @@
             const foto = document.getElementById('p-foto').value.trim();
             const deskripsi = document.getElementById('p-deskripsi').value.trim();
 
-            if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
+            if (!nama || !harga) { alert('Nama dan Harga Jual wajib diisi!'); return; }
+
             await authReady;
+            const productPayload = {
+                nama,
+                name: nama,
+                kategori,
+                category: kategori,
+                harga,
+                price: harga,
+                hpp,
+                stok,
+                stock: stok,
+                foto,
+                image: foto,
+                deskripsi,
+                desc: deskripsi
+            };
+
             try {
-                await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
-                alert('Produk berhasil disimpan!');
-                document.getElementById('p-nama').value = '';
-                document.getElementById('p-kategori').value = '';
-                document.getElementById('p-harga').value = '';
-                document.getElementById('p-hpp').value = '';
-                document.getElementById('p-stok').value = '';
-                document.getElementById('p-foto').value = '';
-                document.getElementById('p-deskripsi').value = '';
+                if (id) {
+                    const { error } = await supabase.from('products').update(productPayload).eq('id', id);
+                    if (error) throw error;
+                    alert('Produk berhasil diperbarui!');
+                } else {
+                    const { error } = await supabase.from('products').insert([productPayload]);
+                    if (error) throw error;
+                    alert('Produk baru berhasil disimpan!');
+                }
+
+                resetForm();
                 loadProducts();
-            } catch(e) { alert('Gagal menyimpan: ' + e.message); }
+            } catch(e) {
+                console.warn("Supabase save error, fallback to localStorage:", e);
+                let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
+                if (id) {
+                    localProducts = localProducts.map(p => String(p.id) === String(id) ? { ...p, ...productPayload, id } : p);
+                } else {
+                    productPayload.id = 'prod-' + Date.now();
+                    localProducts.push(productPayload);
+                }
+                localStorage.setItem('local_products', JSON.stringify(localProducts));
+                alert('Produk berhasil disimpan ke memori lokal!');
+                resetForm();
+                loadProducts();
+            }
+        };
+
+        window.editProduct = function(id) {
+            const p = products.find(item => String(item.id) === String(id));
+            if (!p) return;
+            document.getElementById('p-id').value = p.id;
+            document.getElementById('p-nama').value = p.nama || p.name || '';
+            document.getElementById('p-kategori').value = p.kategori || p.category || '';
+            document.getElementById('p-harga').value = p.harga || p.price || 0;
+            document.getElementById('p-hpp').value = p.hpp || 0;
+            document.getElementById('p-stok').value = p.stok ?? p.stock ?? 30;
+            document.getElementById('p-foto').value = p.foto || p.image || '';
+            document.getElementById('p-deskripsi').value = p.deskripsi || p.desc || '';
+            document.getElementById('btnCancelEdit').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.resetForm = function() {
+            document.getElementById('p-id').value = '';
+            document.getElementById('p-nama').value = '';
+            document.getElementById('p-kategori').value = '';
+            document.getElementById('p-harga').value = '';
+            document.getElementById('p-hpp').value = '';
+            document.getElementById('p-stok').value = '';
+            document.getElementById('p-foto').value = '';
+            document.getElementById('p-deskripsi').value = '';
+            document.getElementById('btnCancelEdit').style.display = 'none';
         };
 
         window.delProduct = async function(id) {
             if (!confirm('Hapus produk ini?')) return;
             await authReady;
             try {
-                await supabase.from('products').delete().eq('id', id);
+                const { error } = await supabase.from('products').delete().eq('id', id);
+                if (error) throw error;
                 loadProducts();
-            } catch(e) { alert('Gagal menghapus: ' + e.message); }
+            } catch(e) {
+                console.warn("Supabase delete error, fallback to localStorage:", e);
+                let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
+                localProducts = localProducts.filter(p => String(p.id) !== String(id));
+                localStorage.setItem('local_products', JSON.stringify(localProducts));
+                loadProducts();
+            }
         };
 
         loadProducts();
