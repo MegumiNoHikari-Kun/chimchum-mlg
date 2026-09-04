@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Produk - ChimChum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>body { font-family: 'Poppins', sans-serif; }</style>
+</head>
+<body class="bg-white p-6 overflow-y-auto">
+    <div class="max-w-6xl mx-auto">
+        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm">
+            <h3 class="font-bold text-sm text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-orange-500"></i> Tambah Produk Baru</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                <input id="p-nama" placeholder="Nama Produk" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+                <input id="p-kategori" placeholder="Kategori (dimsum/drink)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+                <input type="number" id="p-harga" placeholder="Harga Jual (Rp)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+                <input type="number" id="p-hpp" placeholder="HPP (Rp)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+                <input type="number" id="p-stok" placeholder="Stok Porsi" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+                <input id="p-foto" placeholder="URL Foto (Opsional)" class="bg-white border rounded-xl p-2.5 text-xs outline-none">
+            </div>
+            <textarea id="p-deskripsi" placeholder="Deskripsi produk singkat..." rows="2" class="w-full bg-white border rounded-xl p-2.5 text-xs outline-none mb-3"></textarea>
+            <button onclick="saveProduct()" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition"><i class="fa-solid fa-plus mr-1"></i> Simpan Produk</button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-orange-50 text-slate-700 font-semibold">
+                        <th class="p-3.5">Foto</th>
+                        <th class="p-3.5">Nama</th>
+                        <th class="p-3.5">Kategori</th>
+                        <th class="p-3.5">Harga Jual</th>
+                        <th class="p-3.5">HPP</th>
+                        <th class="p-3.5">Stok</th>
+                        <th class="p-3.5">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="prodTable" class="divide-y divide-slate-100">
+                    <tr><td colspan="7" class="text-center py-10 text-slate-400">Memuat produk...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase, authReady } from './js/supabase.js';
+        let products = [];
+        function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+
+        window.loadProducts = async function() {
+            await authReady;
+            try {
+                const { data } = await supabase.from('products').select('*').order('nama');
+                if (data) products = data;
+            } catch(e) { console.warn(e); }
+            
+            const tbody = document.getElementById('prodTable');
+            if (products.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400">Belum ada produk.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = products.map(p => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3"><img src="${p.foto || p.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg"></td>
+                    <td class="p-3 font-semibold text-slate-800">${p.nama || p.name}</td>
+                    <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-[10px]">${p.kategori || p.category || '-'}</span></td>
+                    <td class="p-3 font-bold text-orange-600">${rupiah(p.harga || p.price)}</td>
+                    <td class="p-3">${rupiah(p.hpp || 0)}</td>
+                    <td class="p-3 font-bold">${p.stok || 0}</td>
+                    <td class="p-3">
+                        <button onclick="delProduct('${p.id}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        window.saveProduct = async function() {
+            const nama = document.getElementById('p-nama').value.trim();
+            const kategori = document.getElementById('p-kategori').value.trim().toLowerCase();
+            const harga = Number(document.getElementById('p-harga').value);
+            const hpp = Number(document.getElementById('p-hpp').value) || 0;
+            const stok = Number(document.getElementById('p-stok').value) || 30;
+            const foto = document.getElementById('p-foto').value.trim();
+            const deskripsi = document.getElementById('p-deskripsi').value.trim();
+
+            if (!nama || !harga) { alert('Nama dan Harga wajib diisi!'); return; }
+            await authReady;
+            try {
+                await supabase.from('products').insert([{ nama, kategori, harga, hpp, stok, foto, deskripsi }]);
+                alert('Produk berhasil disimpan!');
+                document.getElementById('p-nama').value = '';
+                document.getElementById('p-kategori').value = '';
+                document.getElementById('p-harga').value = '';
+                document.getElementById('p-hpp').value = '';
+                document.getElementById('p-stok').value = '';
+                document.getElementById('p-foto').value = '';
+                document.getElementById('p-deskripsi').value = '';
+                loadProducts();
+            } catch(e) { alert('Gagal menyimpan: ' + e.message); }
+        };
+
+        window.delProduct = async function(id) {
+            if (!confirm('Hapus produk ini?')) return;
+            await authReady;
+            try {
+                await supabase.from('products').delete().eq('id', id);
+                loadProducts();
+            } catch(e) { alert('Gagal menghapus: ' + e.message); }
+        };
+
+        loadProducts();
+    </script>
+</body>
+</html>
