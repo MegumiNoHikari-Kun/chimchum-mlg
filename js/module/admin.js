@@ -202,7 +202,7 @@ function showAdmin(session) {
     currentUserEmail.textContent =
         session?.user?.email || 'Admin';
 
-    console.log('Supabase session aktif:', session);
+    // console.log('Supabase session aktif:', session);
 
     // HANYA setelah login berhasil
     // iframe baru dimuat
@@ -339,7 +339,7 @@ loginForm.addEventListener(
 
             console.log(
                 'LOGIN BERHASIL:',
-                data.session
+                // data.session
             );
 
             loginPassword.value = '';
@@ -612,10 +612,10 @@ window.loadModule = function(
     const target =
         moduleName + '.html';
 
-    console.log(
-        'Loading module:',
-        target
-    );
+    // console.log(
+    //     'Loading module:',
+    //     target
+    // );
 
     moduleFrame.src = target;
 
