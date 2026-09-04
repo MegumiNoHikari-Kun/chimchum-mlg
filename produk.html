@@ -680,41 +680,30 @@
     // =========================================================
 
     async function ensureAuth() {
-
         try {
-
             await authReady;
-
+    
             const {
                 data,
                 error
             } = await supabase.auth.getSession();
-
+    
             if (error) {
-                throw error;
+                console.warn('Supabase getSession error:', error);
+                return null;
             }
-
-            if (!data?.session) {
-
-                throw new Error(
-                    'Sesi login tidak ditemukan. Silakan login kembali.'
-                );
-
-            }
-
-            return data.session;
-
+    
+            return data?.session || null;
+    
         } catch (error) {
-
-            console.error(
-                'Auth error:',
+    
+            console.warn(
+                'Auth check gagal, tetapi operasi Supabase tetap dilanjutkan:',
                 error
             );
-
-            throw error;
-
+    
+            return null;
         }
-
     }
 
 
