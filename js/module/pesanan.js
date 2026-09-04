@@ -1,5 +1,5 @@
 <script type="module">
-        import { supabase, authReady } from './js/supabase.js';
+        import { supabase, authReady } from '../supabase.js';
         let cachedOrders = [];
         let currentFilter = 'all';
 
