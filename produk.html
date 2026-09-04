@@ -67,7 +67,6 @@
         window.loadProducts = async function() {
             await authReady;
             try {
-                // Fetch directly without ordering to avoid column mismatch errors
                 const { data, error } = await supabase.from('products').select('*');
                 if (error) throw error;
                 if (data) {
@@ -139,32 +138,24 @@
 
             await authReady;
             
-            // Clean payload matching standard Supabase columns (nama, kategori, harga, hpp, stok, foto, deskripsi)
             const payload = {
                 nama,
-                name: nama,
                 kategori,
-                category: kategori,
                 harga,
-                price: harga,
                 hpp,
                 stok,
-                stock: stok,
                 foto,
-                image: foto,
-                deskripsi,
-                desc: deskripsi
+                deskripsi
             };
 
             try {
                 if (id) {
-                    // Try updating by primary key (UUID or integer ID)
+                    // Update existing record by ID
                     const { error } = await supabase.from('products').update(payload).eq('id', id);
                     if (error) throw error;
                     alert('Produk berhasil diperbarui di Supabase!');
                 } else {
-                    // Remove id so Supabase autoincrements or generates UUID correctly
-                    delete payload.id;
+                    // Insert new record without id field
                     const { error } = await supabase.from('products').insert([payload]);
                     if (error) throw error;
                     alert('Produk baru berhasil disimpan ke Supabase!');
