@@ -257,16 +257,21 @@
                 <div>
                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">Metode Pembayaran</label>
                     <div class="grid grid-cols-3 gap-1.5">
-                        <label class="border bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none opacity-60 border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium hover:border-brand-500 flex flex-col items-center justify-center transition bg-white has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
-                            <input type="radio" name="payment_method" value="Cash" checked class="hidden">
+                        <!-- Opsi Cash (Disabled & Abu-abu) -->
+                        <label class="border bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none opacity-60 border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium flex flex-col items-center justify-center transition">
+                            <input type="radio" name="payment_method" value="Cash" class="hidden">
                             <i class="fa-solid fa-money-bill-wave mb-0.5 text-xs"></i>
                             Cash / COD
                         </label>
-                        <label class="border border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium cursor-pointer hover:border-brand-500 flex flex-col items-center cursor-pointer justify-center transition bg-white has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
-                            <input type="radio" name="payment_method" value="QRIS" class="hidden">
+                        
+                        <!-- Opsi QRIS (Aktif & Bisa Diklik, Default Checked) -->
+                        <label class="border border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium cursor-pointer hover:border-brand-500 flex flex-col items-center justify-center transition bg-white has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+                            <input type="radio" name="payment_method" value="QRIS" checked class="hidden">
                             <i class="fa-solid fa-qrcode mb-0.5 text-xs"></i>
                             QRIS
                         </label>
+                        
+                        <!-- Opsi Transfer (Tetap Aktif) -->
                         <label class="border border-slate-200 rounded-lg p-1.5 text-center text-[11px] font-medium cursor-pointer hover:border-brand-500 flex flex-col items-center justify-center transition bg-white has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
                             <input type="radio" name="payment_method" value="Transfer" class="hidden">
                             <i class="fa-solid fa-building-columns mb-0.5 text-xs"></i>
