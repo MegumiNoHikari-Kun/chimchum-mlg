@@ -67,14 +67,11 @@
         window.loadProducts = async function() {
             await authReady;
             try {
-                const { data, error } = await supabase.from('products').select('*').order('nama', { ascending: true });
+                // Fetch directly without ordering to avoid column mismatch errors
+                const { data, error } = await supabase.from('products').select('*');
                 if (error) throw error;
-                if (data && data.length > 0) {
+                if (data) {
                     products = data;
-                } else {
-                    // Try fallback ordering by name if nama fails
-                    const { data: data2, error: error2 } = await supabase.from('products').select('*');
-                    if (!error2 && data2) products = data2;
                 }
             } catch(e) { 
                 console.warn("Supabase fetch error, fallback to local storage:", e);
@@ -142,7 +139,7 @@
 
             await authReady;
             
-            // Send dual-column mapping payload to support both schema conventions (nama/name, harga/price, stok/stock)
+            // Clean payload matching standard Supabase columns (nama, kategori, harga, hpp, stok, foto, deskripsi)
             const payload = {
                 nama,
                 name: nama,
@@ -159,42 +156,24 @@
                 desc: deskripsi
             };
 
-            let success = false;
             try {
                 if (id) {
-                    const { data, error } = await supabase.from('products').update(payload).eq('id', id).select();
+                    // Try updating by primary key (UUID or integer ID)
+                    const { error } = await supabase.from('products').update(payload).eq('id', id);
                     if (error) throw error;
-                    if (!data || data.length === 0) {
-                        // Try updating with numeric ID if string ID fails or vice versa
-                        const { error: err2 } = await supabase.from('products').update(payload).eq('id', Number(id));
-                        if (err2) throw err2;
-                    }
                     alert('Produk berhasil diperbarui di Supabase!');
                 } else {
-                    // Remove id field for clean auto-increment or uuid generation
+                    // Remove id so Supabase autoincrements or generates UUID correctly
                     delete payload.id;
-                    const { data, error } = await supabase.from('products').insert([payload]).select();
+                    const { error } = await supabase.from('products').insert([payload]);
                     if (error) throw error;
                     alert('Produk baru berhasil disimpan ke Supabase!');
                 }
-                success = true;
-            } catch(e) {
-                console.warn("Supabase operation failed, saving to localStorage fallback:", e);
-                let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
-                if (id) {
-                    localProducts = localProducts.map(p => String(p.id) === String(id) ? { ...p, ...payload, id } : p);
-                } else {
-                    payload.id = 'prod-' + Date.now();
-                    localProducts.push(payload);
-                }
-                localStorage.setItem('local_products', JSON.stringify(localProducts));
-                alert('Tersimpan di offline cache (LocalStorage fallback) karena kendala koneksi database.');
-                success = true;
-            }
-
-            if (success) {
                 resetForm();
                 loadProducts();
+            } catch(e) {
+                console.error("Supabase operation error:", e);
+                alert('Gagal menyimpan ke database Supabase: ' + (e.message || JSON.stringify(e)));
             }
         };
 
@@ -230,19 +209,12 @@
             await authReady;
             try {
                 const { error } = await supabase.from('products').delete().eq('id', id);
-                if (error) {
-                    const { error: err2 } = await supabase.from('products').delete().eq('id', Number(id));
-                    if (err2) throw err2;
-                }
+                if (error) throw error;
                 alert('Produk berhasil dihapus dari Supabase.');
                 loadProducts();
             } catch(e) {
-                console.warn("Supabase delete error, fallback to localStorage:", e);
-                let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
-                localProducts = localProducts.filter(p => String(p.id) !== String(id));
-                localStorage.setItem('local_products', JSON.stringify(localProducts));
-                alert('Produk berhasil dihapus dari memori lokal.');
-                loadProducts();
+                console.error("Supabase delete error:", e);
+                alert('Gagal menghapus produk dari Supabase: ' + (e.message || JSON.stringify(e)));
             }
         };
 
