@@ -634,10 +634,10 @@ moduleFrame.addEventListener(
             'opacity-0'
         );
 
-        console.log(
-            'Module loaded:',
-            moduleFrame.src
-        );
+        // console.log(
+        //     'Module loaded:',
+        //     moduleFrame.src
+        // );
 
     }
 );
