@@ -3,82 +3,1041 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChimChum Malang - Multi-File Modular Admin Suite</title>
-    <link rel="icon" type="image/jpeg" href="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg" onerror="this.src='https://placehold.co/50?text=CC'">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <title>ChimChum Malang - Admin</title>
+
+    <link
+        rel="icon"
+        type="image/jpeg"
+        href="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
+        onerror="this.src='https://placehold.co/50?text=CC'"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-        body { font-family: 'Poppins', sans-serif; }
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .hidden-force {
+            display: none !important;
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255,255,255,.35);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+
+        .spinner-dark {
+            width: 28px;
+            height: 28px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #f97316;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden">
 
-    <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex justify-between items-center shadow-sm shrink-0 z-20">
-        <div class="flex items-center gap-3">
-            <img src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg" alt="Logo" class="h-10 w-auto object-contain rounded-lg" onerror="this.src='https://placehold.co/40?text=CC'">
-            <div>
-                <h1 class="font-bold text-base text-orange-600 tracking-tight">ChimChum Malang</h1>
-                <p class="text-xs text-slate-500">Modular Architecture with IFrame Router</p>
-            </div>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <!-- =========================================================
+         AUTH LOADING SCREEN
+    ========================================================== -->
+    <div
+        id="authLoading"
+        class="fixed inset-0 z-[9999] bg-slate-100 flex items-center justify-center"
+    >
+        <div class="text-center">
+            <div class="spinner-dark mx-auto mb-4"></div>
+
+            <h2 class="font-semibold text-slate-700">
+                Memeriksa sesi login...
+            </h2>
+
+            <p class="text-sm text-slate-500 mt-1">
+                Mohon tunggu sebentar
+            </p>
         </div>
-        <div class="flex items-center gap-3">
-            <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                <i class="fa-solid fa-shield-halved"></i> Multi-File Engine Active
-            </span>
-        </div>
-    </header>
-
-    <div class="flex-1 flex overflow-hidden">
-        <!-- Sidebar Navigation -->
-        <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
-            <div class="p-4 border-b border-slate-100 bg-slate-50/50">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Pilih Modul Sistem</span>
-            </div>
-            <nav class="p-3 space-y-1.5 overflow-y-auto flex-1">
-                <button onclick="loadModule('pesanan', this)" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left active bg-orange-500 text-white shadow-sm shadow-orange-500/20">
-                    <i class="fa-solid fa-receipt w-5 text-center"></i> Pesanan Masuk
-                </button>
-                <button onclick="loadModule('kasir', this)" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left">
-                    <i class="fa-solid fa-cash-register w-5 text-center"></i> Kasir Dine-In
-                </button>
-                <button onclick="loadModule('produk', this)" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left">
-                    <i class="fa-solid fa-box w-5 text-center"></i> Kelola Produk
-                </button>
-                <button onclick="loadModule('stok', this)" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left">
-                    <i class="fa-solid fa-warehouse w-5 text-center"></i> Monitoring Stok
-                </button>
-                <button onclick="loadModule('laporan', this)" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left">
-                    <i class="fa-solid fa-chart-line w-5 text-center"></i> Laporan Keuangan
-                </button>
-            </nav>
-            <div class="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-400 text-center">
-                Modular Split Architecture v2.6
-            </div>
-        </aside>
-
-        <!-- Dynamic IFrame Workspace -->
-        <main class="flex-1 bg-slate-100 p-4 overflow-hidden flex flex-col">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-hidden relative">
-                <iframe id="moduleFrame" src="pesanan.html" class="w-full h-full border-0"></iframe>
-            </div>
-        </main>
     </div>
 
-    <script>
-        function loadModule(moduleName, btnElement) {
-            // Update active styling on sidebar buttons
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('bg-orange-500', 'text-white', 'shadow-sm', 'shadow-orange-500/20');
-                btn.classList.add('text-slate-600', 'hover:bg-orange-50', 'hover:text-orange-600');
-            });
-            btnElement.classList.remove('text-slate-600', 'hover:bg-orange-50', 'hover:text-orange-600');
-            btnElement.classList.add('bg-orange-500', 'text-white', 'shadow-sm', 'shadow-orange-500/20');
 
-            // Set iframe source file
-            const iframe = document.getElementById('moduleFrame');
-            iframe.src = moduleName + '.html';
+    <!-- =========================================================
+         LOGIN PAGE
+    ========================================================== -->
+    <section
+        id="loginScreen"
+        class="hidden-force min-h-screen flex items-center justify-center p-6"
+    >
+
+        <div class="w-full max-w-md">
+
+            <!-- Logo -->
+            <div class="text-center mb-8">
+
+                <img
+                    src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
+                    alt="ChimChum"
+                    class="h-24 w-24 object-cover rounded-3xl mx-auto shadow-lg"
+                    onerror="this.src='https://placehold.co/100?text=CC'"
+                >
+
+                <h1 class="text-2xl font-bold text-orange-600 mt-5">
+                    ChimChum Malang
+                </h1>
+
+                <p class="text-sm text-slate-500 mt-1">
+                    Admin Management System
+                </p>
+
+            </div>
+
+
+            <!-- Login Card -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-7">
+
+                <div class="mb-6">
+
+                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-lock text-xl"></i>
+                    </div>
+
+                    <h2 class="text-xl font-bold text-slate-800">
+                        Login Admin
+                    </h2>
+
+                    <p class="text-sm text-slate-500 mt-1">
+                        Masuk menggunakan akun admin ChimChum.
+                    </p>
+
+                </div>
+
+
+                <!-- Login Error -->
+                <div
+                    id="loginError"
+                    class="hidden mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm"
+                >
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                        <span id="loginErrorText"></span>
+                    </div>
+                </div>
+
+
+                <!-- Login Form -->
+                <form id="loginForm" class="space-y-5">
+
+                    <!-- Email -->
+                    <div>
+
+                        <label
+                            for="loginEmail"
+                            class="block text-sm font-semibold text-slate-700 mb-2"
+                        >
+                            Email
+                        </label>
+
+                        <div class="relative">
+
+                            <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+                            <input
+                                id="loginEmail"
+                                type="email"
+                                autocomplete="email"
+                                required
+                                placeholder="admin@email.com"
+                                class="w-full pl-11 pr-4 py-3.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Password -->
+                    <div>
+
+                        <label
+                            for="loginPassword"
+                            class="block text-sm font-semibold text-slate-700 mb-2"
+                        >
+                            Password
+                        </label>
+
+                        <div class="relative">
+
+                            <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+                            <input
+                                id="loginPassword"
+                                type="password"
+                                autocomplete="current-password"
+                                required
+                                placeholder="Masukkan password"
+                                class="w-full pl-11 pr-12 py-3.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
+                            >
+
+                            <button
+                                type="button"
+                                id="togglePassword"
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-600"
+                                title="Tampilkan password"
+                            >
+                                <i id="togglePasswordIcon" class="fa-solid fa-eye"></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Login Button -->
+                    <button
+                        id="loginButton"
+                        type="submit"
+                        class="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold py-3.5 rounded-xl transition flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20"
+                    >
+
+                        <span id="loginButtonText">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i>
+                            Masuk ke Admin
+                        </span>
+
+                        <span
+                            id="loginSpinner"
+                            class="spinner hidden-force"
+                        ></span>
+
+                    </button>
+
+                </form>
+
+
+                <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+
+                    <p class="text-xs text-slate-400">
+                        <i class="fa-solid fa-shield-halved mr-1"></i>
+                        Halaman ini dilindungi Supabase Authentication
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================================================
+         ADMIN APPLICATION
+         HIDDEN UNTIL AUTHENTICATED
+    ========================================================== -->
+    <div
+        id="adminApp"
+        class="hidden-force h-screen flex flex-col overflow-hidden"
+    >
+
+        <!-- HEADER -->
+        <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex justify-between items-center shadow-sm shrink-0 z-20">
+
+            <div class="flex items-center gap-3">
+
+                <img
+                    src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
+                    alt="Logo"
+                    class="h-10 w-10 object-cover rounded-lg"
+                    onerror="this.src='https://placehold.co/40?text=CC'"
+                >
+
+                <div>
+                    <h1 class="font-bold text-base text-orange-600 tracking-tight">
+                        ChimChum Malang
+                    </h1>
+
+                    <p class="text-xs text-slate-500">
+                        Admin Management System
+                    </p>
+                </div>
+
+            </div>
+
+
+            <!-- HEADER RIGHT -->
+            <div class="flex items-center gap-3">
+
+                <!-- User -->
+                <div
+                    id="currentUser"
+                    class="hidden md:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl"
+                >
+                    <i class="fa-solid fa-user text-orange-500"></i>
+
+                    <span id="currentUserEmail">
+                        -
+                    </span>
+                </div>
+
+
+                <!-- Status -->
+                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Terautentikasi
+                </span>
+
+
+                <!-- Logout -->
+                <button
+                    id="logoutButton"
+                    type="button"
+                    class="text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-2 rounded-xl transition"
+                    title="Logout"
+                >
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i>
+                    Logout
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- MAIN -->
+        <div class="flex-1 flex overflow-hidden">
+
+            <!-- SIDEBAR -->
+            <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
+
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Pilih Modul Sistem
+                    </span>
+
+                </div>
+
+
+                <nav class="p-3 space-y-1.5 overflow-y-auto flex-1">
+
+                    <!-- Pesanan -->
+                    <button
+                        onclick="loadModule('pesanan', this)"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-white bg-orange-500 shadow-sm shadow-orange-500/20 transition text-left"
+                    >
+                        <i class="fa-solid fa-receipt w-5 text-center"></i>
+                        Pesanan Masuk
+                    </button>
+
+
+                    <!-- Kasir -->
+                    <button
+                        onclick="loadModule('kasir', this)"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left"
+                    >
+                        <i class="fa-solid fa-cash-register w-5 text-center"></i>
+                        Kasir Dine-In
+                    </button>
+
+
+                    <!-- Produk -->
+                    <button
+                        onclick="loadModule('produk', this)"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left"
+                    >
+                        <i class="fa-solid fa-box w-5 text-center"></i>
+                        Kelola Produk
+                    </button>
+
+
+                    <!-- Stok -->
+                    <button
+                        onclick="loadModule('stok', this)"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left"
+                    >
+                        <i class="fa-solid fa-warehouse w-5 text-center"></i>
+                        Monitoring Stok
+                    </button>
+
+
+                    <!-- Laporan -->
+                    <button
+                        onclick="loadModule('laporan', this)"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition text-left"
+                    >
+                        <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                        Laporan Keuangan
+                    </button>
+
+                </nav>
+
+
+                <div class="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-400 text-center">
+                    Modular Split Architecture v2.6
+                </div>
+
+            </aside>
+
+
+            <!-- WORKSPACE -->
+            <main class="flex-1 bg-slate-100 p-4 overflow-hidden flex flex-col">
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-hidden relative">
+
+                    <!-- Loading iframe -->
+                    <div
+                        id="moduleLoading"
+                        class="absolute inset-0 z-10 bg-white flex items-center justify-center pointer-events-none opacity-0 transition-opacity"
+                    >
+                        <div class="text-center">
+
+                            <div class="spinner-dark mx-auto mb-3"></div>
+
+                            <p class="text-sm text-slate-500">
+                                Memuat modul...
+                            </p>
+
+                        </div>
+                    </div>
+
+
+                    <iframe
+                        id="moduleFrame"
+                        src="about:blank"
+                        class="w-full h-full border-0"
+                        title="Admin Module"
+                    ></iframe>
+
+                </div>
+
+            </main>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         SUPABASE AUTH
+    ========================================================== -->
+    <script type="module">
+
+        import { supabase } from './js/supabase.js';
+
+
+        // =====================================================
+        // ELEMENTS
+        // =====================================================
+
+        const authLoading = document.getElementById('authLoading');
+
+        const loginScreen = document.getElementById('loginScreen');
+
+        const adminApp = document.getElementById('adminApp');
+
+        const loginForm = document.getElementById('loginForm');
+
+        const loginEmail = document.getElementById('loginEmail');
+
+        const loginPassword = document.getElementById('loginPassword');
+
+        const loginButton = document.getElementById('loginButton');
+
+        const loginButtonText = document.getElementById('loginButtonText');
+
+        const loginSpinner = document.getElementById('loginSpinner');
+
+        const loginError = document.getElementById('loginError');
+
+        const loginErrorText = document.getElementById('loginErrorText');
+
+        const togglePassword = document.getElementById('togglePassword');
+
+        const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+        const logoutButton = document.getElementById('logoutButton');
+
+        const currentUserEmail = document.getElementById('currentUserEmail');
+
+        const moduleFrame = document.getElementById('moduleFrame');
+
+        const moduleLoading = document.getElementById('moduleLoading');
+
+
+        // =====================================================
+        // STATE
+        // =====================================================
+
+        let isAuthenticated = false;
+
+        let currentSession = null;
+
+
+        // =====================================================
+        // HELPER
+        // =====================================================
+
+        function showLoginError(message) {
+
+            loginErrorText.textContent = message;
+
+            loginError.classList.remove('hidden');
+
         }
+
+
+        function hideLoginError() {
+
+            loginError.classList.add('hidden');
+
+            loginErrorText.textContent = '';
+
+        }
+
+
+        function setLoginLoading(loading) {
+
+            loginButton.disabled = loading;
+
+            loginButton.classList.toggle('opacity-70', loading);
+
+            loginButton.classList.toggle('cursor-not-allowed', loading);
+
+            if (loading) {
+
+                loginButtonText.classList.add('hidden-force');
+
+                loginSpinner.classList.remove('hidden-force');
+
+            } else {
+
+                loginButtonText.classList.remove('hidden-force');
+
+                loginSpinner.classList.add('hidden-force');
+
+            }
+
+        }
+
+
+        // =====================================================
+        // SHOW LOGIN
+        // =====================================================
+
+        function showLogin() {
+
+            isAuthenticated = false;
+
+            currentSession = null;
+
+            adminApp.classList.add('hidden-force');
+
+            loginScreen.classList.remove('hidden-force');
+
+            authLoading.classList.add('hidden-force');
+
+            currentUserEmail.textContent = '-';
+
+            // Jangan biarkan iframe tetap menjalankan modul admin
+            moduleFrame.src = 'about:blank';
+
+        }
+
+
+        // =====================================================
+        // SHOW ADMIN
+        // =====================================================
+
+        function showAdmin(session) {
+
+            isAuthenticated = true;
+
+            currentSession = session;
+
+            loginScreen.classList.add('hidden-force');
+
+            authLoading.classList.add('hidden-force');
+
+            adminApp.classList.remove('hidden-force');
+
+            currentUserEmail.textContent =
+                session?.user?.email || 'Admin';
+
+            console.log('Supabase session aktif:', session);
+
+            // HANYA setelah login berhasil
+            // iframe baru dimuat
+            if (
+                !moduleFrame.src ||
+                moduleFrame.src.endsWith('about:blank')
+            ) {
+
+                loadModule('pesanan');
+
+            }
+
+        }
+
+
+        // =====================================================
+        // CHECK SESSION
+        // =====================================================
+
+        async function checkSession() {
+
+            try {
+
+                console.log('Memeriksa Supabase session...');
+
+                const {
+                    data,
+                    error
+                } = await supabase.auth.getSession();
+
+                if (error) {
+
+                    console.error(
+                        'getSession error:',
+                        error
+                    );
+
+                    showLogin();
+
+                    return;
+
+                }
+
+                const session = data?.session || null;
+
+                console.log(
+                    'Supabase session:',
+                    session
+                );
+
+                if (session) {
+
+                    showAdmin(session);
+
+                } else {
+
+                    showLogin();
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'SESSION CHECK ERROR:',
+                    error
+                );
+
+                showLogin();
+
+            }
+
+        }
+
+
+        // =====================================================
+        // LOGIN
+        // =====================================================
+
+        loginForm.addEventListener(
+            'submit',
+            async function(event) {
+
+                event.preventDefault();
+
+                hideLoginError();
+
+                const email =
+                    loginEmail.value.trim();
+
+                const password =
+                    loginPassword.value;
+
+                if (!email || !password) {
+
+                    showLoginError(
+                        'Email dan password wajib diisi.'
+                    );
+
+                    return;
+
+                }
+
+                setLoginLoading(true);
+
+                try {
+
+                    console.log(
+                        'Mencoba login:',
+                        email
+                    );
+
+                    const {
+                        data,
+                        error
+                    } =
+                        await supabase.auth.signInWithPassword({
+                            email: email,
+                            password: password
+                        });
+
+                    if (error) {
+
+                        console.error(
+                            'LOGIN ERROR:',
+                            error
+                        );
+
+                        throw error;
+
+                    }
+
+                    if (!data?.session) {
+
+                        throw new Error(
+                            'Login berhasil tetapi session Supabase tidak ditemukan.'
+                        );
+
+                    }
+
+                    console.log(
+                        'LOGIN BERHASIL:',
+                        data.session
+                    );
+
+                    loginPassword.value = '';
+
+                    showAdmin(data.session);
+
+                } catch (error) {
+
+                    console.error(
+                        'LOGIN FAILED:',
+                        error
+                    );
+
+                    let message =
+                        error?.message ||
+                        'Login gagal.';
+
+                    if (
+                        message
+                            .toLowerCase()
+                            .includes('invalid login credentials')
+                    ) {
+
+                        message =
+                            'Email atau password salah.';
+
+                    }
+
+                    showLoginError(message);
+
+                } finally {
+
+                    setLoginLoading(false);
+
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // LOGOUT
+        // =====================================================
+
+        logoutButton.addEventListener(
+            'click',
+            async function() {
+
+                const confirmed =
+                    confirm(
+                        'Apakah Anda yakin ingin logout?'
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+
+                    logoutButton.disabled = true;
+
+                    const {
+                        error
+                    } =
+                        await supabase.auth.signOut();
+
+                    if (error) {
+
+                        throw error;
+
+                    }
+
+                    console.log(
+                        'Logout berhasil.'
+                    );
+
+                    showLogin();
+
+                } catch (error) {
+
+                    console.error(
+                        'LOGOUT ERROR:',
+                        error
+                    );
+
+                    alert(
+                        'Gagal logout: ' +
+                        (error?.message || error)
+                    );
+
+                } finally {
+
+                    logoutButton.disabled = false;
+
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // TOGGLE PASSWORD
+        // =====================================================
+
+        togglePassword.addEventListener(
+            'click',
+            function() {
+
+                const isPassword =
+                    loginPassword.type === 'password';
+
+                loginPassword.type =
+                    isPassword
+                        ? 'text'
+                        : 'password';
+
+                togglePasswordIcon.className =
+                    isPassword
+                        ? 'fa-solid fa-eye-slash'
+                        : 'fa-solid fa-eye';
+
+            }
+        );
+
+
+        // =====================================================
+        // AUTH STATE CHANGE
+        // =====================================================
+
+        supabase.auth.onAuthStateChange(
+            function(event, session) {
+
+                console.log(
+                    'AUTH STATE:',
+                    event,
+                    session
+                );
+
+                if (session) {
+
+                    // Hindari memanggil showAdmin berulang
+                    if (!isAuthenticated) {
+
+                        showAdmin(session);
+
+                    } else {
+
+                        currentSession =
+                            session;
+
+                        currentUserEmail.textContent =
+                            session?.user?.email ||
+                            'Admin';
+
+                    }
+
+                } else {
+
+                    if (isAuthenticated) {
+
+                        showLogin();
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // MODULE ROUTER
+        // =====================================================
+
+        window.loadModule = function(
+            moduleName,
+            btnElement = null
+        ) {
+
+            // Jangan izinkan module dibuka
+            // kalau belum login
+            if (!isAuthenticated) {
+
+                console.warn(
+                    'Module diblokir karena user belum login.'
+                );
+
+                showLogin();
+
+                return;
+
+            }
+
+
+            // Update active button
+            document
+                .querySelectorAll('.nav-btn')
+                .forEach(function(btn) {
+
+                    btn.classList.remove(
+                        'bg-orange-500',
+                        'text-white',
+                        'shadow-sm',
+                        'shadow-orange-500/20'
+                    );
+
+                    btn.classList.add(
+                        'text-slate-600',
+                        'hover:bg-orange-50',
+                        'hover:text-orange-600'
+                    );
+
+                });
+
+
+            // Kalau dipanggil programmatically,
+            // cari tombol berdasarkan moduleName
+            if (!btnElement) {
+
+                const buttons =
+                    document.querySelectorAll(
+                        '.nav-btn'
+                    );
+
+                buttons.forEach(function(btn) {
+
+                    const onclick =
+                        btn.getAttribute('onclick') || '';
+
+                    if (
+                        onclick.includes(
+                            "'" + moduleName + "'"
+                        )
+                    ) {
+
+                        btnElement = btn;
+
+                    }
+
+                });
+
+            }
+
+
+            if (btnElement) {
+
+                btnElement.classList.remove(
+                    'text-slate-600',
+                    'hover:bg-orange-50',
+                    'hover:text-orange-600'
+                );
+
+                btnElement.classList.add(
+                    'bg-orange-500',
+                    'text-white',
+                    'shadow-sm',
+                    'shadow-orange-500/20'
+                );
+
+            }
+
+
+            // Loading
+            moduleLoading.classList.remove(
+                'opacity-0'
+            );
+
+
+            // Set iframe
+            const target =
+                moduleName + '.html';
+
+            console.log(
+                'Loading module:',
+                target
+            );
+
+            moduleFrame.src = target;
+
+        };
+
+
+        // =====================================================
+        // IFRAME LOAD
+        // =====================================================
+
+        moduleFrame.addEventListener(
+            'load',
+            function() {
+
+                moduleLoading.classList.add(
+                    'opacity-0'
+                );
+
+                console.log(
+                    'Module loaded:',
+                    moduleFrame.src
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+
+        checkSession();
+
     </script>
+
 </body>
 </html>
