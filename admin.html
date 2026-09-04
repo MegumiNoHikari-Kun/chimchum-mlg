@@ -284,6 +284,16 @@
                 </div>
 
             </div>
+            <button
+                id="sidebarToggle"
+                type="button"
+                class="w-10 h-10 flex items-center justify-center rounded-xl
+                       bg-slate-100 hover:bg-orange-100 hover:text-orange-600
+                       text-slate-600 transition"
+                title="Buka/tutup sidebar"
+            >
+                <i id="sidebarToggleIcon" class="fa-solid fa-bars"></i>
+            </button>
 
 
             <!-- HEADER RIGHT -->
@@ -329,7 +339,11 @@
         <div class="flex-1 flex overflow-hidden">
 
             <!-- SIDEBAR -->
-            <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
+            <aside
+                id="adminSidebar"
+                class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0
+                       transition-all duration-300 overflow-hidden"
+            >
 
                 <div class="p-4 border-b border-slate-100 bg-slate-50/50">
 
@@ -443,6 +457,72 @@
          SUPABASE AUTH
     ========================================================== -->
     <script type="module">
+
+        // =====================================================
+        // SIDEBAR TOGGLE
+        // =====================================================
+        
+        const sidebarToggle =
+            document.getElementById('sidebarToggle');
+        
+        const sidebarToggleIcon =
+            document.getElementById('sidebarToggleIcon');
+        
+        const adminSidebar =
+            document.getElementById('adminSidebar');
+        
+        let sidebarOpen = true;
+        
+        
+        function updateSidebar() {
+        
+            if (sidebarOpen) {
+        
+                // Buka sidebar
+                adminSidebar.classList.remove(
+                    'w-0',
+                    'border-r-0'
+                );
+        
+                adminSidebar.classList.add(
+                    'w-72',
+                    'border-r'
+                );
+        
+                sidebarToggleIcon.className =
+                    'fa-solid fa-bars';
+        
+            } else {
+        
+                // Tutup sidebar
+                adminSidebar.classList.remove(
+                    'w-72',
+                    'border-r'
+                );
+        
+                adminSidebar.classList.add(
+                    'w-0',
+                    'border-r-0'
+                );
+        
+                sidebarToggleIcon.className =
+                    'fa-solid fa-bars-staggered';
+        
+            }
+        
+        }
+        
+        
+        sidebarToggle.addEventListener(
+            'click',
+            function () {
+        
+                sidebarOpen = !sidebarOpen;
+        
+                updateSidebar();
+        
+            }
+        );
 
         import { supabase } from './js/supabase.js';
 
@@ -630,11 +710,6 @@
                 }
 
                 const session = data?.session || null;
-
-                console.log(
-                    'Supabase session:',
-                    session
-                );
 
                 if (session) {
 
