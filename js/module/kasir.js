@@ -103,7 +103,7 @@ try {
     // PENTING: masukkan hasil Supabase ke cache
     cachedProducts = data || [];
 
-    console.log("Produk dari Supabase:", cachedProducts);
+    // console.log("Produk dari Supabase:", cachedProducts);
 
     // Buat kategori unik, abaikan perbedaan huruf besar/kecil
     const kategoriMap = new Map();
