@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Kelola Produk - ChimChum</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -44,10 +45,14 @@
 
 <div class="max-w-6xl mx-auto">
 
-    <!-- HEADER -->
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
     <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6 border-b pb-4">
 
         <div>
+
             <h3
                 id="formTitle"
                 class="font-bold text-base text-slate-800 flex items-center gap-2"
@@ -59,10 +64,14 @@
             <p class="text-xs text-slate-500 mt-1">
                 Kelola katalog menu makanan & minuman ChimChum.
             </p>
+
         </div>
 
+
         <div class="w-full lg:w-80">
+
             <div class="relative">
+
                 <i
                     class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"
                 ></i>
@@ -74,29 +83,45 @@
                     autocomplete="off"
                     class="bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
+
         </div>
+
     </div>
 
 
-    <!-- STATUS -->
+    <!-- =====================================================
+         STATUS
+    ====================================================== -->
+
     <div
         id="statusBox"
         class="hidden mb-5 rounded-xl px-4 py-3 text-xs"
     ></div>
 
 
-    <!-- FORM -->
+    <!-- =====================================================
+         FORM PRODUK
+    ====================================================== -->
+
     <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 sm:p-5 mb-6 shadow-sm">
 
-        <input type="hidden" id="p-id">
+        <input
+            type="hidden"
+            id="p-id"
+        >
+
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-3">
 
             <!-- NAMA -->
+
             <div>
+
                 <label class="block text-[11px] font-medium text-slate-600 mb-1">
-                    Nama Produk <span class="text-red-500">*</span>
+                    Nama Produk
+                    <span class="text-red-500">*</span>
                 </label>
 
                 <input
@@ -106,11 +131,14 @@
                     placeholder="Contoh: Dimsum Ayam"
                     class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
 
 
             <!-- KATEGORI -->
+
             <div>
+
                 <label class="block text-[11px] font-medium text-slate-600 mb-1">
                     Kategori
                 </label>
@@ -122,13 +150,17 @@
                     placeholder="Contoh: dimsum"
                     class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
 
 
             <!-- HARGA -->
+
             <div>
+
                 <label class="block text-[11px] font-medium text-slate-600 mb-1">
-                    Harga Jual (Rp) <span class="text-red-500">*</span>
+                    Harga Jual (Rp)
+                    <span class="text-red-500">*</span>
                 </label>
 
                 <input
@@ -139,11 +171,14 @@
                     placeholder="25000"
                     class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
 
 
             <!-- HPP -->
+
             <div>
+
                 <label class="block text-[11px] font-medium text-slate-600 mb-1">
                     HPP (Rp)
                 </label>
@@ -156,11 +191,14 @@
                     placeholder="10000"
                     class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
 
 
             <!-- STOK -->
+
             <div>
+
                 <label class="block text-[11px] font-medium text-slate-600 mb-1">
                     Stok Porsi
                 </label>
@@ -173,11 +211,14 @@
                     placeholder="30"
                     class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
 
 
             <!-- FOTO -->
+
             <div>
+
                 <label class="block text-[11px] font-medium text-slate-600 mb-1">
                     URL Foto Produk
                 </label>
@@ -189,13 +230,16 @@
                     placeholder="https://..."
                     class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
                 >
+
             </div>
 
         </div>
 
 
         <!-- DESKRIPSI -->
+
         <div class="mb-3">
+
             <label class="block text-[11px] font-medium text-slate-600 mb-1">
                 Deskripsi
             </label>
@@ -207,14 +251,17 @@
                 rows="3"
                 class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition resize-none"
             ></textarea>
+
         </div>
 
 
-        <!-- PHOTO PREVIEW -->
+        <!-- PREVIEW FOTO -->
+
         <div
             id="photoPreview"
             class="hidden mb-4 bg-white border border-slate-200 rounded-xl p-3"
         >
+
             <div class="flex items-center gap-3">
 
                 <img
@@ -225,20 +272,24 @@
                 >
 
                 <div>
+
                     <p class="text-xs font-semibold text-slate-700">
                         Preview Foto
                     </p>
 
                     <p class="text-[10px] text-slate-400 mt-1">
-                        Foto akan digunakan sebagai gambar produk.
+                        Preview gambar produk.
                     </p>
+
                 </div>
 
             </div>
+
         </div>
 
 
         <!-- BUTTON -->
+
         <div class="flex flex-wrap gap-2">
 
             <button
@@ -246,8 +297,13 @@
                 type="button"
                 class="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-sm"
             >
+
                 <i class="fa-solid fa-save mr-1"></i>
-                <span id="btnSaveText">Simpan Produk</span>
+
+                <span id="btnSaveText">
+                    Simpan Produk
+                </span>
+
             </button>
 
 
@@ -256,8 +312,11 @@
                 type="button"
                 class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition"
             >
+
                 <i class="fa-solid fa-xmark mr-1"></i>
+
                 Batal Edit
+
             </button>
 
 
@@ -266,8 +325,11 @@
                 type="button"
                 class="bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition"
             >
+
                 <i class="fa-solid fa-rotate mr-1"></i>
+
                 Refresh
+
             </button>
 
         </div>
@@ -275,10 +337,14 @@
     </div>
 
 
-    <!-- TABLE HEADER -->
+    <!-- =====================================================
+         TABLE HEADER
+    ====================================================== -->
+
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
 
         <div>
+
             <h4 class="font-bold text-sm text-slate-800">
                 Daftar Produk
             </h4>
@@ -289,25 +355,34 @@
             >
                 Memuat...
             </p>
+
         </div>
+
 
         <div
             id="connectionStatus"
             class="text-[10px] text-slate-400"
         >
+
             <i class="fa-solid fa-circle-notch loading-spinner mr-1"></i>
+
             Menghubungkan...
+
         </div>
 
     </div>
 
 
-    <!-- TABLE -->
+    <!-- =====================================================
+         TABLE
+    ====================================================== -->
+
     <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
 
         <table class="w-full text-left border-collapse text-xs">
 
             <thead>
+
                 <tr class="bg-orange-50 text-slate-700 font-semibold">
 
                     <th class="p-3.5 min-w-[70px]">
@@ -339,21 +414,30 @@
                     </th>
 
                 </tr>
+
             </thead>
+
 
             <tbody
                 id="prodTable"
                 class="divide-y divide-slate-100"
             >
+
                 <tr>
+
                     <td
                         colspan="7"
                         class="text-center py-10 text-slate-400"
                     >
+
                         <i class="fa-solid fa-circle-notch loading-spinner text-orange-500 mr-2"></i>
+
                         Memuat produk...
+
                     </td>
+
                 </tr>
+
             </tbody>
 
         </table>
@@ -365,670 +449,842 @@
 
 <script type="module">
 
-    import { supabase, authReady } from './js/supabase.js';
+import {
+    supabase,
+    authReady
+} from './js/supabase.js';
 
 
-    // =========================================================
-    // STATE
-    // =========================================================
+// =========================================================
+// STATE
+// =========================================================
 
-    let products = [];
-    let usingLocalStorage = false;
-    let isSaving = false;
-    let isDeleting = false;
+let products = [];
 
+let usingLocalStorage = false;
 
-    // =========================================================
-    // DOM
-    // =========================================================
+let isSaving = false;
 
-    const $ = (id) => document.getElementById(id);
+let isDeleting = false;
 
 
-    // =========================================================
-    // UTILITY
-    // =========================================================
+// =========================================================
+// DOM HELPER
+// =========================================================
 
-    function rupiah(value) {
+const $ = (id) => document.getElementById(id);
 
-        const number = Number(value || 0);
 
-        return 'Rp ' + number.toLocaleString('id-ID');
+// =========================================================
+// FORMAT RUPIAH
+// =========================================================
+
+function rupiah(value) {
+
+    const number = Number(value || 0);
+
+    return 'Rp ' +
+        number.toLocaleString('id-ID');
+
+}
+
+
+// =========================================================
+// ESCAPE HTML
+// =========================================================
+
+function escapeHtml(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return '';
+    }
+
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+}
+
+
+// =========================================================
+// GETTERS
+// =========================================================
+
+function getProductName(product) {
+
+    return String(
+        product?.nama ??
+        product?.name ??
+        ''
+    ).trim();
+
+}
+
+
+function getProductCategory(product) {
+
+    return String(
+        product?.kategori ??
+        product?.category ??
+        ''
+    ).trim();
+
+}
+
+
+function getProductPrice(product) {
+
+    return Number(
+        product?.harga ??
+        product?.price ??
+        0
+    );
+
+}
+
+
+function getProductHpp(product) {
+
+    return Number(
+        product?.hpp ??
+        0
+    );
+
+}
+
+
+function getProductStock(product) {
+
+    return Number(
+        product?.stok ??
+        product?.stock ??
+        0
+    );
+
+}
+
+
+function getProductImage(product) {
+
+    return String(
+        product?.foto ??
+        product?.image ??
+        ''
+    ).trim();
+
+}
+
+
+function getProductDescription(product) {
+
+    return String(
+        product?.deskripsi ??
+        product?.desc ??
+        ''
+    ).trim();
+
+}
+
+
+// =========================================================
+// URL IMAGE
+// =========================================================
+
+function validImageUrl(url) {
+
+    if (!url) {
+        return false;
+    }
+
+    try {
+
+        const parsed =
+            new URL(url);
+
+        return (
+            parsed.protocol === 'http:' ||
+            parsed.protocol === 'https:'
+        );
+
+    } catch {
+
+        return false;
 
     }
 
-
-    function escapeHtml(value) {
-
-        if (value === null || value === undefined) {
-            return '';
-        }
-
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-
-    }
+}
 
 
-    function escapeAttribute(value) {
+function fallbackImage() {
 
-        return escapeHtml(value);
+    return 'https://placehold.co/80x80?text=Produk';
 
-    }
-
-
-    function getProductName(product) {
-
-        return String(
-            product?.nama ??
-            product?.name ??
-            ''
-        ).trim();
-
-    }
+}
 
 
-    function getProductCategory(product) {
+// =========================================================
+// LOCAL STORAGE
+// =========================================================
 
-        return String(
-            product?.kategori ??
-            product?.category ??
-            ''
-        ).trim();
+function saveLocalProducts() {
 
-    }
+    try {
 
+        localStorage.setItem(
+            'local_products',
+            JSON.stringify(products)
+        );
 
-    function getProductPrice(product) {
+    } catch (error) {
 
-        return Number(
-            product?.harga ??
-            product?.price ??
-            0
+        console.warn(
+            'LocalStorage gagal:',
+            error
         );
 
     }
 
-
-    function getProductHpp(product) {
-
-        return Number(
-            product?.hpp ??
-            0
-        );
-
-    }
+}
 
 
-    function getProductStock(product) {
+// =========================================================
+// STATUS MESSAGE
+// =========================================================
 
-        return Number(
-            product?.stok ??
-            product?.stock ??
-            0
-        );
+function showStatus(
+    message,
+    type = 'success'
+) {
 
-    }
+    const box =
+        $('statusBox');
 
-
-    function getProductImage(product) {
-
-        return String(
-            product?.foto ??
-            product?.image ??
-            ''
-        ).trim();
-
-    }
+    if (!box) return;
 
 
-    function getProductDescription(product) {
-
-        return String(
-            product?.deskripsi ??
-            product?.desc ??
-            ''
-        ).trim();
-
-    }
+    box.className =
+        'mb-5 rounded-xl px-4 py-3 text-xs border';
 
 
-    function validImageUrl(url) {
+    if (type === 'success') {
 
-        if (!url) {
-            return false;
-        }
-
-        try {
-
-            const parsed = new URL(url);
-
-            return (
-                parsed.protocol === 'http:' ||
-                parsed.protocol === 'https:'
-            );
-
-        } catch {
-
-            return false;
-
-        }
-
-    }
-
-
-    function getFallbackImage() {
-
-        return 'https://placehold.co/80x80?text=Produk';
-
-    }
-
-
-    function saveLocalProducts() {
-
-        try {
-
-            localStorage.setItem(
-                'local_products',
-                JSON.stringify(products)
-            );
-
-        } catch (error) {
-
-            console.warn(
-                'Gagal menyimpan localStorage:',
-                error
-            );
-
-        }
-
-    }
-
-
-    // =========================================================
-    // STATUS
-    // =========================================================
-
-    function showStatus(message, type = 'success') {
-
-        const box = $('statusBox');
-
-        if (!box) return;
-
-        box.classList.remove(
-            'hidden',
+        box.classList.add(
             'bg-emerald-50',
             'text-emerald-700',
-            'border-emerald-200',
-            'bg-red-50',
-            'text-red-700',
-            'border-red-200',
+            'border-emerald-200'
+        );
+
+        box.innerHTML =
+            '<i class="fa-solid fa-circle-check mr-2"></i>' +
+            escapeHtml(message);
+
+    }
+
+    else if (type === 'warning') {
+
+        box.classList.add(
             'bg-amber-50',
             'text-amber-700',
             'border-amber-200'
         );
 
-        box.classList.add('border');
+        box.innerHTML =
+            '<i class="fa-solid fa-triangle-exclamation mr-2"></i>' +
+            escapeHtml(message);
 
-        if (type === 'success') {
+    }
 
-            box.classList.add(
-                'bg-emerald-50',
-                'text-emerald-700',
-                'border-emerald-200'
-            );
+    else {
 
-            box.innerHTML =
-                '<i class="fa-solid fa-circle-check mr-2"></i>' +
-                escapeHtml(message);
+        box.classList.add(
+            'bg-red-50',
+            'text-red-700',
+            'border-red-200'
+        );
 
-        } else if (type === 'warning') {
+        box.innerHTML =
+            '<i class="fa-solid fa-circle-exclamation mr-2"></i>' +
+            escapeHtml(message);
 
-            box.classList.add(
-                'bg-amber-50',
-                'text-amber-700',
-                'border-amber-200'
-            );
+    }
 
-            box.innerHTML =
-                '<i class="fa-solid fa-triangle-exclamation mr-2"></i>' +
-                escapeHtml(message);
+}
 
-        } else {
 
-            box.classList.add(
-                'bg-red-50',
-                'text-red-700',
-                'border-red-200'
-            );
+function hideStatus() {
 
-            box.innerHTML =
-                '<i class="fa-solid fa-circle-exclamation mr-2"></i>' +
-                escapeHtml(message);
+    $('statusBox')
+        ?.classList
+        .add('hidden');
 
-        }
+}
+
+
+// =========================================================
+// CONNECTION STATUS
+// =========================================================
+
+function setConnectionStatus(
+    connected,
+    localMode = false
+) {
+
+    const element =
+        $('connectionStatus');
+
+    if (!element) return;
+
+
+    if (localMode) {
+
+        element.className =
+            'text-[10px] text-amber-600';
+
+        element.innerHTML =
+            '<i class="fa-solid fa-hard-drive mr-1"></i>' +
+            'Mode Local Storage';
+
+        return;
 
     }
 
 
-    function hideStatus() {
+    if (connected) {
 
-        const box = $('statusBox');
+        element.className =
+            'text-[10px] text-emerald-600';
 
-        if (box) {
-            box.classList.add('hidden');
-        }
-
-    }
-
-
-    // =========================================================
-    // CONNECTION STATUS
-    // =========================================================
-
-    function setConnectionStatus(
-        connected,
-        localMode = false
-    ) {
-
-        const element = $('connectionStatus');
-
-        if (!element) return;
-
-        if (localMode) {
-
-            element.className =
-                'text-[10px] text-amber-600';
-
-            element.innerHTML =
-                '<i class="fa-solid fa-hard-drive mr-1"></i>' +
-                'Mode Local Storage';
-
-            return;
-
-        }
-
-        if (connected) {
-
-            element.className =
-                'text-[10px] text-emerald-600';
-
-            element.innerHTML =
-                '<i class="fa-solid fa-circle-check mr-1"></i>' +
-                'Terhubung ke Supabase';
-
-        } else {
-
-            element.className =
-                'text-[10px] text-red-600';
-
-            element.innerHTML =
-                '<i class="fa-solid fa-circle-xmark mr-1"></i>' +
-                'Supabase tidak terhubung';
-
-        }
+        element.innerHTML =
+            '<i class="fa-solid fa-circle-check mr-1"></i>' +
+            'Terhubung ke Supabase';
 
     }
 
+    else {
 
-    // =========================================================
-    // AUTH
-    // =========================================================
+        element.className =
+            'text-[10px] text-red-600';
 
-    async function ensureAuth() {
-        try {
-            await authReady;
-    
-            const {
-                data,
-                error
-            } = await supabase.auth.getSession();
-    
-            if (error) {
-                console.warn('Supabase getSession error:', error);
-                return null;
-            }
-    
-            return data?.session || null;
-    
-        } catch (error) {
-    
+        element.innerHTML =
+            '<i class="fa-solid fa-circle-xmark mr-1"></i>' +
+            'Supabase tidak terhubung';
+
+    }
+
+}
+
+
+// =========================================================
+// AUTH CHECK
+// =========================================================
+
+async function checkAuth() {
+
+    try {
+
+        await authReady;
+
+        const {
+            data,
+            error
+        } =
+            await supabase.auth.getSession();
+
+
+        if (error) {
+
             console.warn(
-                'Auth check gagal, tetapi operasi Supabase tetap dilanjutkan:',
+                'getSession error:',
                 error
             );
-    
+
             return null;
+
         }
+
+
+        const session =
+            data?.session || null;
+
+
+        console.log(
+            'Supabase session:',
+            session
+                ? {
+                    user_id:
+                        session.user?.id,
+                    email:
+                        session.user?.email
+                }
+                : null
+        );
+
+
+        return session;
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            'Auth check gagal:',
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+// =========================================================
+// LOAD PRODUCTS
+// =========================================================
+
+async function loadProducts() {
+
+    const tbody =
+        $('prodTable');
+
+
+    if (tbody) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="7"
+                    class="text-center py-10 text-slate-400"
+                >
+                    <i class="fa-solid fa-circle-notch loading-spinner text-orange-500 mr-2"></i>
+                    Memuat produk...
+                </td>
+            </tr>
+        `;
+
     }
 
 
-    // =========================================================
-    // LOAD PRODUCTS
-    // =========================================================
+    try {
 
-    async function loadProducts() {
+        await authReady;
 
-        const tbody = $('prodTable');
 
-        if (tbody) {
-
-            tbody.innerHTML = `
-                <tr>
-                    <td
-                        colspan="7"
-                        class="text-center py-10 text-slate-400"
-                    >
-                        <i class="fa-solid fa-circle-notch loading-spinner text-orange-500 mr-2"></i>
-                        Memuat produk...
-                    </td>
-                </tr>
-            `;
-
-        }
-
-        try {
-
-            await authReady;
-
-            const {
-                data,
-                error
-            } = await supabase
+        const {
+            data,
+            error
+        } =
+            await supabase
                 .from('products')
                 .select('*')
-                .order('nama', {
-                    ascending: true
-                });
+                .order(
+                    'nama',
+                    {
+                        ascending: true
+                    }
+                );
 
-            if (error) {
-                throw error;
-            }
 
-            products = Array.isArray(data)
+        if (error) {
+
+            throw error;
+
+        }
+
+
+        products =
+            Array.isArray(data)
                 ? data
                 : [];
 
-            usingLocalStorage = false;
 
-            setConnectionStatus(true, false);
+        usingLocalStorage =
+            false;
 
-            saveLocalProducts();
 
-            renderTable(products);
+        setConnectionStatus(
+            true,
+            false
+        );
 
-        } catch (error) {
 
-            console.error(
-                'Supabase fetch error:',
-                error
-            );
+        saveLocalProducts();
 
-            try {
 
-                const localData =
-                    localStorage.getItem(
-                        'local_products'
-                    );
+        renderTable(
+            products
+        );
 
-                products = localData
-                    ? JSON.parse(localData)
-                    : [];
 
-            } catch {
+        console.log(
+            'PRODUCTS LOADED:',
+            products
+        );
 
-                products = [];
-
-            }
-
-            usingLocalStorage = true;
-
-            setConnectionStatus(false, true);
-
-            renderTable(products);
-
-            showStatus(
-                'Supabase tidak dapat diakses. Data lokal digunakan sementara. Detail: ' +
-                (error?.message || 'Unknown error'),
-                'warning'
-            );
-
-        }
 
     }
 
+    catch (error) {
 
-    // =========================================================
-    // RENDER
-    // =========================================================
-
-    function renderTable(dataList) {
-
-        const tbody = $('prodTable');
-
-        if (!tbody) return;
+        console.error(
+            'Supabase load error:',
+            error
+        );
 
 
-        const list = Array.isArray(dataList)
+        let localData = [];
+
+
+        try {
+
+            const stored =
+                localStorage.getItem(
+                    'local_products'
+                );
+
+
+            localData =
+                stored
+                    ? JSON.parse(stored)
+                    : [];
+
+        }
+
+        catch {
+
+            localData = [];
+
+        }
+
+
+        products =
+            Array.isArray(localData)
+                ? localData
+                : [];
+
+
+        usingLocalStorage =
+            true;
+
+
+        setConnectionStatus(
+            false,
+            true
+        );
+
+
+        renderTable(
+            products
+        );
+
+
+        showStatus(
+            'Supabase gagal mengambil data. Mode Local Storage digunakan. ' +
+            getErrorMessage(error),
+            'warning'
+        );
+
+    }
+
+}
+
+
+// =========================================================
+// RENDER TABLE
+// =========================================================
+
+function renderTable(dataList) {
+
+    const tbody =
+        $('prodTable');
+
+
+    if (!tbody) {
+        return;
+    }
+
+
+    const list =
+        Array.isArray(dataList)
             ? dataList
             : [];
 
 
-        $('productCount').textContent =
-            `${list.length} produk ditampilkan`;
+    $('productCount').textContent =
+        `${list.length} produk ditampilkan`;
 
 
-        if (list.length === 0) {
+    if (list.length === 0) {
 
-            tbody.innerHTML = `
-                <tr>
-                    <td
-                        colspan="7"
-                        class="text-center py-12"
-                    >
-                        <div class="flex flex-col items-center">
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="7"
+                    class="text-center py-12"
+                >
 
-                            <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                <i class="fa-solid fa-box-open text-slate-400"></i>
-                            </div>
+                    <div class="flex flex-col items-center">
 
-                            <p class="text-xs font-semibold text-slate-500">
-                                Belum ada produk
-                            </p>
+                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
 
-                            <p class="text-[10px] text-slate-400 mt-1">
-                                Tambahkan produk menggunakan form di atas.
-                            </p>
-
-                        </div>
-                    </td>
-                </tr>
-            `;
-
-            return;
-
-        }
-
-
-        tbody.innerHTML = list.map(product => {
-
-            const id =
-                product?.id ??
-                '';
-
-            const name =
-                getProductName(product) ||
-                '-';
-
-            const category =
-                getProductCategory(product) ||
-                '-';
-
-            const price =
-                getProductPrice(product);
-
-            const hpp =
-                getProductHpp(product);
-
-            const stock =
-                getProductStock(product);
-
-            const image =
-                getProductImage(product);
-
-
-            const imageSrc =
-                validImageUrl(image)
-                    ? image
-                    : getFallbackImage();
-
-
-            const stockClass =
-                stock <= 0
-                    ? 'text-red-600'
-                    : stock <= 5
-                        ? 'text-amber-600'
-                        : 'text-emerald-600';
-
-
-            return `
-                <tr class="hover:bg-slate-50 transition">
-
-                    <td class="p-3">
-
-                        <img
-                            src="${escapeAttribute(imageSrc)}"
-                            alt="${escapeAttribute(name)}"
-                            loading="lazy"
-                            class="w-12 h-12 object-cover rounded-xl shadow-sm border border-slate-100"
-                            onerror="this.onerror=null;this.src='${getFallbackImage()}'"
-                        >
-
-                    </td>
-
-
-                    <td class="p-3">
-
-                        <div class="font-semibold text-slate-800">
-                            ${escapeHtml(name)}
-                        </div>
-
-                        ${
-                            getProductDescription(product)
-                                ? `
-                                    <div class="text-[10px] text-slate-400 mt-1 max-w-xs truncate">
-                                        ${escapeHtml(
-                                            getProductDescription(product)
-                                        )}
-                                    </div>
-                                `
-                                : ''
-                        }
-
-                    </td>
-
-
-                    <td class="p-3">
-
-                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg text-[10px] font-medium">
-                            ${escapeHtml(category)}
-                        </span>
-
-                    </td>
-
-
-                    <td class="p-3 font-bold text-orange-600">
-                        ${rupiah(price)}
-                    </td>
-
-
-                    <td class="p-3 text-slate-600">
-                        ${rupiah(hpp)}
-                    </td>
-
-
-                    <td class="p-3 font-bold ${stockClass}">
-                        ${stock}
-                    </td>
-
-
-                    <td class="p-3">
-
-                        <div class="flex gap-1">
-
-                            <button
-                                type="button"
-                                data-action="edit"
-                                data-id="${escapeAttribute(id)}"
-                                class="bg-sky-50 text-sky-600 hover:bg-sky-100 p-2 rounded-lg transition"
-                                title="Edit"
-                            >
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-
-
-                            <button
-                                type="button"
-                                data-action="delete"
-                                data-id="${escapeAttribute(id)}"
-                                class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition"
-                                title="Hapus"
-                            >
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <i class="fa-solid fa-box-open text-slate-400"></i>
 
                         </div>
 
-                    </td>
+                        <p class="text-xs font-semibold text-slate-500">
+                            Belum ada produk
+                        </p>
 
-                </tr>
-            `;
+                        <p class="text-[10px] text-slate-400 mt-1">
+                            Tambahkan produk menggunakan form di atas.
+                        </p>
 
-        }).join('');
+                    </div>
+
+                </td>
+            </tr>
+        `;
+
+        return;
 
     }
 
 
-    // =========================================================
-    // FILTER
-    // =========================================================
+    tbody.innerHTML =
+        list.map(
+            product => {
 
-    function filterTable() {
-
-        const keyword =
-            $('p-search')
-                .value
-                .toLowerCase()
-                .trim();
+                const id =
+                    product?.id ?? '';
 
 
-        if (!keyword) {
-
-            renderTable(products);
-
-            return;
-
-        }
+                const name =
+                    getProductName(product) ||
+                    '-';
 
 
-        const filtered =
-            products.filter(product => {
+                const category =
+                    getProductCategory(product) ||
+                    '-';
+
+
+                const price =
+                    getProductPrice(product);
+
+
+                const hpp =
+                    getProductHpp(product);
+
+
+                const stock =
+                    getProductStock(product);
+
+
+                const image =
+                    getProductImage(product);
+
+
+                const imageSrc =
+                    validImageUrl(image)
+                        ? image
+                        : fallbackImage();
+
+
+                let stockClass =
+                    'text-emerald-600';
+
+
+                if (stock <= 0) {
+
+                    stockClass =
+                        'text-red-600';
+
+                }
+
+                else if (stock <= 5) {
+
+                    stockClass =
+                        'text-amber-600';
+
+                }
+
+
+                return `
+
+                    <tr class="hover:bg-slate-50 transition">
+
+                        <!-- FOTO -->
+
+                        <td class="p-3">
+
+                            <img
+                                src="${escapeHtml(imageSrc)}"
+                                alt="${escapeHtml(name)}"
+                                loading="lazy"
+                                class="w-12 h-12 object-cover rounded-xl shadow-sm border border-slate-100"
+                                onerror="this.onerror=null;this.src='${fallbackImage()}'"
+                            >
+
+                        </td>
+
+
+                        <!-- NAMA -->
+
+                        <td class="p-3">
+
+                            <div class="font-semibold text-slate-800">
+                                ${escapeHtml(name)}
+                            </div>
+
+
+                            ${
+                                getProductDescription(product)
+                                    ? `
+                                        <div class="text-[10px] text-slate-400 mt-1 max-w-xs truncate">
+                                            ${escapeHtml(
+                                                getProductDescription(product)
+                                            )}
+                                        </div>
+                                    `
+                                    : ''
+                            }
+
+                        </td>
+
+
+                        <!-- KATEGORI -->
+
+                        <td class="p-3">
+
+                            <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg text-[10px] font-medium">
+
+                                ${escapeHtml(category)}
+
+                            </span>
+
+                        </td>
+
+
+                        <!-- HARGA -->
+
+                        <td class="p-3 font-bold text-orange-600">
+
+                            ${rupiah(price)}
+
+                        </td>
+
+
+                        <!-- HPP -->
+
+                        <td class="p-3 text-slate-600">
+
+                            ${rupiah(hpp)}
+
+                        </td>
+
+
+                        <!-- STOK -->
+
+                        <td class="p-3 font-bold ${stockClass}">
+
+                            ${stock}
+
+                        </td>
+
+
+                        <!-- ACTION -->
+
+                        <td class="p-3">
+
+                            <div class="flex gap-1">
+
+                                <button
+                                    type="button"
+                                    data-action="edit"
+                                    data-id="${escapeHtml(id)}"
+                                    class="bg-sky-50 text-sky-600 hover:bg-sky-100 p-2 rounded-lg transition"
+                                    title="Edit"
+                                >
+
+                                    <i class="fa-solid fa-pen"></i>
+
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    data-action="delete"
+                                    data-id="${escapeHtml(id)}"
+                                    class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition"
+                                    title="Hapus"
+                                >
+
+                                    <i class="fa-solid fa-trash"></i>
+
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        ).join('');
+
+}
+
+
+// =========================================================
+// FILTER
+// =========================================================
+
+function filterTable() {
+
+    const keyword =
+        $('p-search')
+            .value
+            .toLowerCase()
+            .trim();
+
+
+    if (!keyword) {
+
+        renderTable(
+            products
+        );
+
+        return;
+
+    }
+
+
+    const filtered =
+        products.filter(
+            product => {
 
                 const name =
                     getProductName(product)
                         .toLowerCase();
 
+
                 const category =
                     getProductCategory(product)
                         .toLowerCase();
 
+
                 const description =
                     getProductDescription(product)
                         .toLowerCase();
+
 
                 return (
                     name.includes(keyword) ||
@@ -1036,551 +1292,1272 @@
                     description.includes(keyword)
                 );
 
-            });
-
-
-        renderTable(filtered);
-
-    }
-
-
-    // =========================================================
-    // FORM
-    // =========================================================
-
-    function getFormData() {
-
-        const nama =
-            $('p-nama')
-                .value
-                .trim();
-
-        const kategori =
-            $('p-kategori')
-                .value
-                .trim()
-                .toLowerCase();
-
-        const hargaRaw =
-            $('p-harga')
-                .value
-                .trim();
-
-        const hppRaw =
-            $('p-hpp')
-                .value
-                .trim();
-
-        const stokRaw =
-            $('p-stok')
-                .value
-                .trim();
-
-        const foto =
-            $('p-foto')
-                .value
-                .trim();
-
-        const deskripsi =
-            $('p-deskripsi')
-                .value
-                .trim();
-
-
-        const harga =
-            Number(hargaRaw);
-
-        const hpp =
-            hppRaw === ''
-                ? 0
-                : Number(hppRaw);
-
-        const stok =
-            stokRaw === ''
-                ? 0
-                : Number(stokRaw);
-
-
-        if (!nama) {
-
-            throw new Error(
-                'Nama produk wajib diisi.'
-            );
-
-        }
-
-
-        if (
-            !Number.isFinite(harga) ||
-            harga <= 0
-        ) {
-
-            throw new Error(
-                'Harga jual harus lebih besar dari 0.'
-            );
-
-        }
-
-
-        if (
-            !Number.isFinite(hpp) ||
-            hpp < 0
-        ) {
-
-            throw new Error(
-                'HPP tidak boleh negatif.'
-            );
-
-        }
-
-
-        if (
-            !Number.isFinite(stok) ||
-            stok < 0 ||
-            !Number.isInteger(stok)
-        ) {
-
-            throw new Error(
-                'Stok harus berupa angka bulat 0 atau lebih.'
-            );
-
-        }
-
-
-        if (hpp > harga) {
-
-            const continueAnyway =
-                confirm(
-                    'HPP lebih besar daripada harga jual. Produk akan memiliki margin negatif. Lanjutkan?'
-                );
-
-            if (!continueAnyway) {
-
-                throw new Error(
-                    'Penyimpanan dibatalkan.'
-                );
-
             }
-
-        }
-
-
-        if (foto && !validImageUrl(foto)) {
-
-            throw new Error(
-                'URL foto tidak valid. Gunakan URL http:// atau https://.'
-            );
-
-        }
+        );
 
 
-        return {
-            nama,
-            kategori,
-            harga,
-            hpp,
-            stok,
-            foto,
-            deskripsi
-        };
+    renderTable(
+        filtered
+    );
+
+}
+
+
+// =========================================================
+// FORM DATA
+// =========================================================
+
+function getFormData() {
+
+    const nama =
+        $('p-nama')
+            .value
+            .trim();
+
+
+    const kategori =
+        $('p-kategori')
+            .value
+            .trim()
+            .toLowerCase();
+
+
+    const hargaRaw =
+        $('p-harga')
+            .value
+            .trim();
+
+
+    const hppRaw =
+        $('p-hpp')
+            .value
+            .trim();
+
+
+    const stokRaw =
+        $('p-stok')
+            .value
+            .trim();
+
+
+    const foto =
+        $('p-foto')
+            .value
+            .trim();
+
+
+    const deskripsi =
+        $('p-deskripsi')
+            .value
+            .trim();
+
+
+    const harga =
+        Number(hargaRaw);
+
+
+    const hpp =
+        hppRaw === ''
+            ? 0
+            : Number(hppRaw);
+
+
+    const stok =
+        stokRaw === ''
+            ? 0
+            : Number(stokRaw);
+
+
+    if (!nama) {
+
+        throw new Error(
+            'Nama produk wajib diisi.'
+        );
 
     }
 
 
-    function resetForm() {
+    if (
+        !Number.isFinite(harga) ||
+        harga <= 0
+    ) {
 
-        $('p-id').value = '';
-        $('p-nama').value = '';
-        $('p-kategori').value = '';
-        $('p-harga').value = '';
-        $('p-hpp').value = '';
-        $('p-stok').value = '';
-        $('p-foto').value = '';
-        $('p-deskripsi').value = '';
+        throw new Error(
+            'Harga jual harus lebih besar dari 0.'
+        );
 
-        $('btnCancelEdit')
-            .classList.add('hidden');
+    }
 
-        $('formTitle').innerHTML =
-            '<i class="fa-solid fa-plus-circle text-orange-500"></i>' +
-            ' Tambah Produk';
 
-        $('btnSaveText').textContent =
-            'Simpan Produk';
+    if (
+        !Number.isFinite(hpp) ||
+        hpp < 0
+    ) {
+
+        throw new Error(
+            'HPP tidak boleh negatif.'
+        );
+
+    }
+
+
+    if (
+        !Number.isFinite(stok) ||
+        stok < 0 ||
+        !Number.isInteger(stok)
+    ) {
+
+        throw new Error(
+            'Stok harus berupa angka bulat 0 atau lebih.'
+        );
+
+    }
+
+
+    if (
+        foto &&
+        !validImageUrl(foto)
+    ) {
+
+        throw new Error(
+            'URL foto tidak valid.'
+        );
+
+    }
+
+
+    return {
+        nama,
+        kategori,
+        harga,
+        hpp,
+        stok,
+        foto,
+        deskripsi
+    };
+
+}
+
+
+// =========================================================
+// RESET FORM
+// =========================================================
+
+function resetForm() {
+
+    $('p-id').value = '';
+
+    $('p-nama').value = '';
+
+    $('p-kategori').value = '';
+
+    $('p-harga').value = '';
+
+    $('p-hpp').value = '';
+
+    $('p-stok').value = '';
+
+    $('p-foto').value = '';
+
+    $('p-deskripsi').value = '';
+
+
+    $('btnCancelEdit')
+        .classList
+        .add('hidden');
+
+
+    $('formTitle').innerHTML =
+        '<i class="fa-solid fa-plus-circle text-orange-500"></i> Tambah Produk';
+
+
+    $('btnSaveText').textContent =
+        'Simpan Produk';
+
+
+    hidePhotoPreview();
+
+}
+
+
+// =========================================================
+// EDIT PRODUCT
+// =========================================================
+
+function editProduct(id) {
+
+    console.log(
+        'EDIT PRODUCT ID:',
+        id
+    );
+
+
+    const product =
+        products.find(
+            item =>
+                String(item?.id) ===
+                String(id)
+        );
+
+
+    if (!product) {
+
+        showStatus(
+            'Produk tidak ditemukan di data aplikasi.',
+            'error'
+        );
+
+        return;
+
+    }
+
+
+    console.log(
+        'PRODUCT YANG DIEDIT:',
+        product
+    );
+
+
+    $('p-id').value =
+        product.id ?? '';
+
+
+    $('p-nama').value =
+        getProductName(product);
+
+
+    $('p-kategori').value =
+        getProductCategory(product);
+
+
+    $('p-harga').value =
+        getProductPrice(product) || '';
+
+
+    $('p-hpp').value =
+        getProductHpp(product) || '';
+
+
+    $('p-stok').value =
+        getProductStock(product);
+
+
+    $('p-foto').value =
+        getProductImage(product);
+
+
+    $('p-deskripsi').value =
+        getProductDescription(product);
+
+
+    $('btnCancelEdit')
+        .classList
+        .remove('hidden');
+
+
+    $('formTitle').innerHTML =
+        '<i class="fa-solid fa-pen-to-square text-sky-500"></i> Edit Produk';
+
+
+    $('btnSaveText').textContent =
+        'Update Produk';
+
+
+    updatePhotoPreview();
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+
+
+    setTimeout(
+        () => {
+            $('p-nama').focus();
+        },
+        200
+    );
+
+}
+
+
+// =========================================================
+// PHOTO PREVIEW
+// =========================================================
+
+function hidePhotoPreview() {
+
+    $('photoPreview')
+        .classList
+        .add('hidden');
+
+
+    $('previewImage').src = '';
+
+}
+
+
+function updatePhotoPreview() {
+
+    const url =
+        $('p-foto')
+            .value
+            .trim();
+
+
+    if (
+        !url ||
+        !validImageUrl(url)
+    ) {
 
         hidePhotoPreview();
 
-        $('p-nama').focus();
+        return;
 
     }
 
 
-    function editProduct(id) {
-
-        const product =
-            products.find(
-                item =>
-                    String(item?.id) === String(id)
-            );
+    const image =
+        $('previewImage');
 
 
-        if (!product) {
+    image.onerror = () => {
 
-            showStatus(
-                'Produk tidak ditemukan.',
-                'error'
-            );
+        hidePhotoPreview();
 
-            return;
-
-        }
+    };
 
 
-        $('p-id').value =
-            product.id ?? '';
-
-        $('p-nama').value =
-            getProductName(product);
-
-        $('p-kategori').value =
-            getProductCategory(product);
-
-        $('p-harga').value =
-            getProductPrice(product) || '';
-
-        $('p-hpp').value =
-            getProductHpp(product) || '';
-
-        $('p-stok').value =
-            getProductStock(product);
-
-        $('p-foto').value =
-            getProductImage(product);
-
-        $('p-deskripsi').value =
-            getProductDescription(product);
-
-
-        $('btnCancelEdit')
-            .classList.remove('hidden');
-
-
-        $('formTitle').innerHTML =
-            '<i class="fa-solid fa-pen-to-square text-sky-500"></i>' +
-            ' Edit Produk';
-
-
-        $('btnSaveText').textContent =
-            'Update Produk';
-
-
-        updatePhotoPreview();
-
-
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-
-
-        setTimeout(() => {
-            $('p-nama').focus();
-        }, 300);
-
-    }
-
-
-    // =========================================================
-    // PHOTO PREVIEW
-    // =========================================================
-
-    function hidePhotoPreview() {
+    image.onload = () => {
 
         $('photoPreview')
-            .classList.add('hidden');
+            .classList
+            .remove('hidden');
 
-        $('previewImage').src = '';
+    };
 
+
+    image.src = url;
+
+}
+
+
+// =========================================================
+// SAVE PRODUCT
+// =========================================================
+
+async function saveProduct() {
+
+    if (isSaving) {
+        return;
     }
 
 
-    function updatePhotoPreview() {
+    isSaving = true;
 
-        const url =
-            $('p-foto')
+
+    const button =
+        $('btnSave');
+
+
+    const buttonText =
+        $('btnSaveText');
+
+
+    button.disabled = true;
+
+    buttonText.textContent =
+        'Menyimpan...';
+
+
+    try {
+
+        const id =
+            $('p-id')
                 .value
                 .trim();
 
 
-        if (!url || !validImageUrl(url)) {
-
-            hidePhotoPreview();
-
-            return;
-
-        }
+        const payload =
+            getFormData();
 
 
-        $('previewImage').src = url;
+        console.log(
+            '================================'
+        );
 
-        $('previewImage').onerror = () => {
+        console.log(
+            'SAVE PRODUCT'
+        );
 
-            hidePhotoPreview();
+        console.log(
+            'ID:',
+            id
+        );
 
-        };
+        console.log(
+            'PAYLOAD:',
+            payload
+        );
 
+        console.log(
+            'LOCAL MODE:',
+            usingLocalStorage
+        );
 
-        $('previewImage').onload = () => {
-
-            $('photoPreview')
-                .classList.remove('hidden');
-
-        };
-
-    }
-
-
-    // =========================================================
-    // SAVE PRODUCT
-    // =========================================================
-
-    async function saveProduct() {
-
-        if (isSaving) return;
-
-        isSaving = true;
-
-        const button =
-            $('btnSave');
-
-        button.disabled = true;
-
-        $('btnSaveText').textContent =
-            'Menyimpan...';
+        console.log(
+            '================================'
+        );
 
 
-        try {
+        // =====================================================
+        // LOCAL STORAGE
+        // =====================================================
 
-            const id =
-                $('p-id')
-                    .value
-                    .trim();
-
-
-            const payload =
-                getFormData();
-
-
-            /*
-             * LOCAL STORAGE MODE
-             *
-             * Digunakan jika Supabase sedang tidak
-             * tersedia atau user belum login.
-             */
-
-            if (usingLocalStorage) {
-
-                if (id) {
-
-                    const index =
-                        products.findIndex(
-                            item =>
-                                String(item.id) ===
-                                String(id)
-                        );
-
-
-                    if (index === -1) {
-
-                        throw new Error(
-                            'Produk yang ingin diedit tidak ditemukan.'
-                        );
-
-                    }
-
-
-                    products[index] = {
-                        ...products[index],
-                        ...payload
-                    };
-
-                } else {
-
-                    const localProduct = {
-
-                        id:
-                            crypto.randomUUID
-                            ? crypto.randomUUID()
-                            : Date.now().toString(),
-
-                        ...payload,
-
-                        created_at:
-                            new Date().toISOString()
-
-                    };
-
-
-                    products.unshift(
-                        localProduct
-                    );
-
-                }
-
-
-                saveLocalProducts();
-
-                renderTable(products);
-
-                resetForm();
-
-                showStatus(
-                    id
-                        ? 'Produk berhasil diperbarui di Local Storage.'
-                        : 'Produk berhasil ditambahkan ke Local Storage.',
-                    'success'
-                );
-
-                return;
-
-            }
-
-
-            // SUPABASE
-
-            await ensureAuth();
-
+        if (usingLocalStorage) {
 
             if (id) {
 
-                const {
-                    error
-                } = await supabase
-                    .from('products')
-                    .update(payload)
-                    .eq('id', id);
-
-
-                if (error) {
-                    throw error;
-                }
-
-
-                showStatus(
-                    'Produk berhasil diperbarui di Supabase.',
-                    'success'
-                );
-
-            } else {
-
-                const {
-                    error
-                } = await supabase
-                    .from('products')
-                    .insert([payload]);
-
-
-                if (error) {
-                    throw error;
-                }
-
-
-                showStatus(
-                    'Produk baru berhasil disimpan ke Supabase.',
-                    'success'
-                );
-
-            }
-
-
-            resetForm();
-
-            await loadProducts();
-
-        } catch (error) {
-
-            console.error(
-                'Save product error:',
-                error
-            );
-
-
-            showStatus(
-                formatSupabaseError(error),
-                'error'
-            );
-
-        } finally {
-
-            isSaving = false;
-
-            button.disabled = false;
-
-            $('btnSaveText').textContent =
-                $('p-id').value
-                    ? 'Update Produk'
-                    : 'Simpan Produk';
-
-        }
-
-    }
-
-
-    // =========================================================
-    // DELETE
-    // =========================================================
-
-    async function deleteProduct(id) {
-
-        if (isDeleting) return;
-
-
-        const product =
-            products.find(
-                item =>
-                    String(item?.id) === String(id)
-            );
-
-
-        const productName =
-            product
-                ? getProductName(product)
-                : 'produk ini';
-
-
-        const confirmed =
-            confirm(
-                `Hapus "${productName}"?\n\nData yang sudah dihapus tidak dapat dikembalikan.`
-            );
-
-
-        if (!confirmed) {
-            return;
-        }
-
-
-        isDeleting = true;
-
-
-        try {
-
-            if (usingLocalStorage) {
-
-                products =
-                    products.filter(
+                const index =
+                    products.findIndex(
                         item =>
-                            String(item.id) !==
+                            String(item.id) ===
                             String(id)
                     );
 
 
-                saveLocalProducts();
+                if (index === -1) {
 
-                renderTable(products);
+                    throw new Error(
+                        'Produk tidak ditemukan di Local Storage.'
+                    );
+
+                }
+
+
+                products[index] = {
+                    ...products[index],
+                    ...payload
+                };
+
 
                 showStatus(
-                    'Produk berhasil dihapus dari Local Storage.',
+                    'Produk berhasil diperbarui di Local Storage.',
                     'success'
+                );
+
+            }
+
+            else {
+
+                const newId =
+                    (
+                        typeof crypto !== 'undefined' &&
+                        crypto.randomUUID
+                    )
+                        ? crypto.randomUUID()
+                        : String(Date.now());
+
+
+                products.unshift({
+                    id: newId,
+                    ...payload,
+                    created_at:
+                        new Date().toISOString()
+                });
+
+
+                showStatus(
+                    'Produk berhasil ditambahkan ke Local Storage.',
+                    'success'
+                );
+
+            }
+
+
+            saveLocalProducts();
+
+            renderTable(products);
+
+            resetForm();
+
+            return;
+
+        }
+
+
+        // =====================================================
+        // CHECK SESSION
+        // =====================================================
+
+        const session =
+            await checkAuth();
+
+
+        console.log(
+            'SESSION SAAT SAVE:',
+            session
+        );
+
+
+        /*
+         * Session tidak dipaksa ada di sini.
+         * Supabase sendiri akan menentukan apakah
+         * RLS mengizinkan operasi.
+         */
+
+
+        // =====================================================
+        // UPDATE
+        // =====================================================
+
+        if (id) {
+
+            console.log(
+                'UPDATE ID:',
+                id
+            );
+
+
+            /*
+             * .select() sangat penting.
+             *
+             * Kita meminta Supabase mengembalikan row
+             * yang benar-benar terkena UPDATE.
+             */
+
+            const {
+                data: updatedRows,
+                error: updateError
+            } =
+                await supabase
+                    .from('products')
+                    .update(payload)
+                    .eq('id', id)
+                    .select('*');
+
+
+            console.log(
+                'UPDATE RESPONSE:',
+                {
+                    updatedRows,
+                    updateError
+                }
+            );
+
+
+            if (updateError) {
+
+                throw updateError;
+
+            }
+
+
+            /*
+             * Jika array kosong, query tidak menemukan
+             * row yang bisa di-update.
+             */
+
+            if (
+                !Array.isArray(updatedRows) ||
+                updatedRows.length === 0
+            ) {
+
+                throw new Error(
+                    'UPDATE tidak mengubah row apa pun. ' +
+                    'ID produk tidak ditemukan atau RLS policy ' +
+                    'tidak mengizinkan row tersebut di-update.'
+                );
+
+            }
+
+
+            const updatedProduct =
+                updatedRows[0];
+
+
+            console.log(
+                'ROW SETELAH UPDATE:',
+                updatedProduct
+            );
+
+
+            // =================================================
+            // VERIFIKASI ULANG DARI DATABASE
+            // =================================================
+
+            const {
+                data: verifiedProduct,
+                error: verifyError
+            } =
+                await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('id', id)
+                    .maybeSingle();
+
+
+            console.log(
+                'DATABASE VERIFICATION:',
+                {
+                    verifiedProduct,
+                    verifyError
+                }
+            );
+
+
+            if (verifyError) {
+
+                throw verifyError;
+
+            }
+
+
+            if (!verifiedProduct) {
+
+                throw new Error(
+                    'UPDATE diklaim berhasil tetapi row tidak ditemukan ' +
+                    saat ' +
+                    'verifikasi ulang database.'
+                );
+
+            }
+
+
+            /*
+             * Pastikan nilai utama benar-benar sama dengan
+             * payload yang dikirim.
+             */
+
+            const verificationProblems = [];
+
+
+            if (
+                String(verifiedProduct.nama ?? '') !==
+                String(payload.nama ?? '')
+            ) {
+
+                verificationProblems.push(
+                    'nama'
+                );
+
+            }
+
+
+            if (
+                Number(verifiedProduct.harga ?? 0) !==
+                Number(payload.harga ?? 0)
+            ) {
+
+                verificationProblems.push(
+                    'harga'
+                );
+
+            }
+
+
+            if (
+                Number(verifiedProduct.hpp ?? 0) !==
+                Number(payload.hpp ?? 0)
+            ) {
+
+                verificationProblems.push(
+                    'hpp'
+                );
+
+            }
+
+
+            if (
+                Number(verifiedProduct.stok ?? 0) !==
+                Number(payload.stok ?? 0)
+            ) {
+
+                verificationProblems.push(
+                    'stok'
+                );
+
+            }
+
+
+            if (
+                String(verifiedProduct.kategori ?? '') !==
+                String(payload.kategori ?? '')
+            ) {
+
+                verificationProblems.push(
+                    'kategori'
+                );
+
+            }
+
+
+            if (
+                String(verifiedProduct.foto ?? '') !==
+                String(payload.foto ?? '')
+            ) {
+
+                verificationProblems.push(
+                    'foto'
+                );
+
+            }
+
+
+            if (
+                String(verifiedProduct.deskripsi ?? '') !==
+                String(payload.deskripsi ?? '')
+            ) {
+
+                verificationProblems.push(
+                    'deskripsi'
+                );
+
+            }
+
+
+            if (
+                verificationProblems.length > 0
+            ) {
+
+                console.error(
+                    'VERIFICATION FAILED:',
+                    verificationProblems
+                );
+
+
+                throw new Error(
+                    'Database tidak menyimpan nilai yang dikirim. ' +
+                    'Kolom bermasalah: ' +
+                    verificationProblems.join(', ')
+                );
+
+            }
+
+
+            showStatus(
+                'Produk berhasil diperbarui dan diverifikasi langsung dari database Supabase.',
+                'success'
+            );
+
+
+            resetForm();
+
+
+            /*
+             * Ambil ulang data dari Supabase.
+             */
+
+            await loadProducts();
+
+
+            return;
+
+        }
+
+
+        // =====================================================
+        // INSERT
+        // =====================================================
+
+        const {
+            data: insertedRows,
+            error: insertError
+        } =
+            await supabase
+                .from('products')
+                .insert([payload])
+                .select('*');
+
+
+        console.log(
+            'INSERT RESPONSE:',
+            {
+                insertedRows,
+                insertError
+            }
+        );
+
+
+        if (insertError) {
+
+            throw insertError;
+
+        }
+
+
+        if (
+            !Array.isArray(insertedRows) ||
+            insertedRows.length === 0
+        ) {
+
+            throw new Error(
+                'INSERT tidak menghasilkan row baru.'
+            );
+
+        }
+
+
+        const insertedProduct =
+            insertedRows[0];
+
+
+        console.log(
+            'INSERTED PRODUCT:',
+            insertedProduct
+        );
+
+
+        showStatus(
+            'Produk baru berhasil disimpan dan diverifikasi di Supabase.',
+            'success'
+        );
+
+
+        resetForm();
+
+
+        await loadProducts();
+
+    }
+
+
+    catch (error) {
+
+        console.error(
+            '================================'
+        );
+
+        console.error(
+            'SAVE PRODUCT ERROR:',
+            error
+        );
+
+        console.error(
+            '================================'
+        );
+
+
+        showStatus(
+            formatSupabaseError(error),
+            'error'
+        );
+
+    }
+
+
+    finally {
+
+        isSaving = false;
+
+        button.disabled = false;
+
+
+        buttonText.textContent =
+            $('p-id').value.trim()
+                ? 'Update Produk'
+                : 'Simpan Produk';
+
+    }
+
+}
+
+
+// =========================================================
+// DELETE PRODUCT
+// =========================================================
+
+async function deleteProduct(id) {
+
+    if (isDeleting) {
+        return;
+    }
+
+
+    const product =
+        products.find(
+            item =>
+                String(item?.id) ===
+                String(id)
+        );
+
+
+    const productName =
+        product
+            ? getProductName(product)
+            : 'produk ini';
+
+
+    const confirmed =
+        confirm(
+            `Hapus "${productName}"?\n\nData yang sudah dihapus tidak dapat dikembalikan.`
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    isDeleting = true;
+
+
+    try {
+
+        console.log(
+            'DELETE PRODUCT ID:',
+            id
+        );
+
+
+        // =====================================================
+        // LOCAL
+        // =====================================================
+
+        if (usingLocalStorage) {
+
+            const before =
+                products.length;
+
+
+            products =
+                products.filter(
+                    item =>
+                        String(item.id) !==
+                        String(id)
+                );
+
+
+            if (
+                products.length === before
+            ) {
+
+                throw new Error(
+                    'Produk tidak ditemukan.'
+                );
+
+            }
+
+
+            saveLocalProducts();
+
+            renderTable(products);
+
+
+            showStatus(
+                'Produk berhasil dihapus dari Local Storage.',
+                'success'
+            );
+
+
+            return;
+
+        }
+
+
+        // =====================================================
+        // SUPABASE DELETE
+        // =====================================================
+
+        const {
+            data: deletedRows,
+            error: deleteError
+        } =
+            await supabase
+                .from('products')
+                .delete()
+                .eq('id', id)
+                .select('*');
+
+
+        console.log(
+            'DELETE RESPONSE:',
+            {
+                deletedRows,
+                deleteError
+            }
+        );
+
+
+        if (deleteError) {
+
+            throw deleteError;
+
+        }
+
+
+        if (
+            !Array.isArray(deletedRows) ||
+            deletedRows.length === 0
+        ) {
+
+            throw new Error(
+                'DELETE tidak menghapus row apa pun. ' +
+                'ID tidak ditemukan atau RLS policy menolak operasi.'
+            );
+
+        }
+
+
+        // =====================================================
+        // VERIFY DELETE
+        // =====================================================
+
+        const {
+            data: remainingProduct,
+            error: verifyError
+        } =
+            await supabase
+                .from('products')
+                .select('id')
+                .eq('id', id)
+                .maybeSingle();
+
+
+        if (verifyError) {
+
+            throw verifyError;
+
+        }
+
+
+        if (remainingProduct) {
+
+            throw new Error(
+                'Produk masih ditemukan di database setelah DELETE.'
+            );
+
+        }
+
+
+        showStatus(
+            'Produk berhasil dihapus dan diverifikasi dari Supabase.',
+            'success'
+        );
+
+
+        await loadProducts();
+
+    }
+
+
+    catch (error) {
+
+        console.error(
+            'DELETE PRODUCT ERROR:',
+            error
+        );
+
+
+        showStatus(
+            formatSupabaseError(error),
+            'error'
+        );
+
+    }
+
+
+    finally {
+
+        isDeleting = false;
+
+    }
+
+}
+
+
+// =========================================================
+// ERROR FORMATTER
+// =========================================================
+
+function getErrorMessage(error) {
+
+    if (!error) {
+
+        return 'Unknown error';
+
+    }
+
+
+    return (
+        error.message ||
+        error.error_description ||
+        error.details ||
+        error.hint ||
+        String(error)
+    );
+
+}
+
+
+function formatSupabaseError(error) {
+
+    const message =
+        getErrorMessage(error);
+
+
+    const lower =
+        message.toLowerCase();
+
+
+    if (
+        lower.includes(
+            'row-level security'
+        ) ||
+        lower.includes(
+            'permission denied'
+        ) ||
+        lower.includes(
+            'rls'
+        )
+    ) {
+
+        return (
+            'Supabase menolak operasi karena RLS. ' +
+            'Periksa policy SELECT, INSERT, UPDATE, dan DELETE pada tabel products.'
+        );
+
+    }
+
+
+    if (
+        lower.includes('jwt') ||
+        lower.includes('invalid token') ||
+        lower.includes('token is expired')
+    ) {
+
+        return (
+            'Session Supabase tidak valid atau sudah expired. ' +
+            'Silakan login kembali.'
+        );
+
+    }
+
+
+    if (
+        lower.includes('duplicate') ||
+        lower.includes('unique')
+    ) {
+
+        return (
+            'Data duplikat. Nilai yang harus unik sudah digunakan.'
+        );
+
+    }
+
+
+    if (
+        lower.includes('column') &&
+        lower.includes('does not exist')
+    ) {
+
+        return (
+            'Kolom database tidak ditemukan. ' +
+            'Pastikan nama kolom products sesuai dengan kode.'
+        );
+
+    }
+
+
+    if (
+        lower.includes('relation') &&
+        lower.includes('does not exist')
+    ) {
+
+        return (
+            'Tabel products tidak ditemukan di Supabase.'
+        );
+
+    }
+
+
+    return (
+        'Operasi database gagal: ' +
+        message
+    );
+
+}
+
+
+// =========================================================
+// EVENTS
+// =========================================================
+
+$('btnSave')
+    .addEventListener(
+        'click',
+        saveProduct
+    );
+
+
+$('btnCancelEdit')
+    .addEventListener(
+        'click',
+        resetForm
+    );
+
+
+$('btnRefresh')
+    .addEventListener(
+        'click',
+        async () => {
+
+            hideStatus();
+
+            await loadProducts();
+
+        }
+    );
+
+
+$('p-search')
+    .addEventListener(
+        'input',
+        filterTable
+    );
+
+
+$('p-foto')
+    .addEventListener(
+        'input',
+        updatePhotoPreview
+    );
+
+
+/*
+ * EVENT DELEGATION
+ */
+
+$('prodTable')
+    .addEventListener(
+        'click',
+        event => {
+
+            const button =
+                event.target.closest(
+                    'button[data-action]'
+                );
+
+
+            if (!button) {
+                return;
+            }
+
+
+            const action =
+                button.dataset.action;
+
+
+            const id =
+                button.dataset.id;
+
+
+            if (!id) {
+
+                showStatus(
+                    'ID produk kosong. Periksa kolom id di database.',
+                    'error'
                 );
 
                 return;
@@ -1588,247 +2565,62 @@
             }
 
 
-            await ensureAuth();
+            if (
+                action === 'edit'
+            ) {
 
+                editProduct(id);
 
-            const {
-                error
-            } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', id);
-
-
-            if (error) {
-                throw error;
             }
 
 
-            showStatus(
-                'Produk berhasil dihapus dari Supabase.',
-                'success'
-            );
+            if (
+                action === 'delete'
+            ) {
 
+                deleteProduct(id);
 
-            await loadProducts();
-
-
-        } catch (error) {
-
-            console.error(
-                'Delete product error:',
-                error
-            );
-
-
-            showStatus(
-                formatSupabaseError(error),
-                'error'
-            );
-
-        } finally {
-
-            isDeleting = false;
+            }
 
         }
+    );
+
+
+// =========================================================
+// INITIALIZE
+// =========================================================
+
+(async function init() {
+
+    try {
+
+        await authReady;
+
+        await checkAuth();
+
+        await loadProducts();
 
     }
 
+    catch (error) {
 
-    // =========================================================
-    // ERROR FORMATTER
-    // =========================================================
-
-    function formatSupabaseError(error) {
-
-        if (!error) {
-
-            return 'Terjadi kesalahan yang tidak diketahui.';
-
-        }
+        console.error(
+            'INITIALIZATION ERROR:',
+            error
+        );
 
 
-        const message =
-            error.message ||
-            error.error_description ||
-            String(error);
-
-
-        const lower =
-            message.toLowerCase();
-
-
-        if (
-            lower.includes('row-level security') ||
-            lower.includes('permission denied') ||
-            lower.includes('rls')
-        ) {
-
-            return (
-                'Supabase menolak operasi karena Row Level Security (RLS). ' +
-                'Periksa policy INSERT, UPDATE, DELETE dan session user.'
-            );
-
-        }
-
-
-        if (
-            lower.includes('jwt') ||
-            lower.includes('auth') ||
-            lower.includes('session')
-        ) {
-
-            return (
-                'Sesi login bermasalah. Silakan login kembali.'
-            );
-
-        }
-
-
-        if (
-            lower.includes('duplicate') ||
-            lower.includes('unique')
-        ) {
-
-            return (
-                'Data yang sama sudah ada di database.'
-            );
-
-        }
-
-
-        if (
-            lower.includes('column') &&
-            lower.includes('does not exist')
-        ) {
-
-            return (
-                'Nama kolom pada database tidak sesuai dengan kode aplikasi. ' +
-                'Periksa struktur tabel products.'
-            );
-
-        }
-
-
-        if (
-            lower.includes('relation') &&
-            lower.includes('does not exist')
-        ) {
-
-            return (
-                'Tabel products tidak ditemukan di Supabase.'
-            );
-
-        }
-
-
-        return (
-            'Operasi database gagal: ' +
-            message
+        showStatus(
+            getErrorMessage(error),
+            'error'
         );
 
     }
 
-
-    // =========================================================
-    // EVENTS
-    // =========================================================
-
-    $('btnSave')
-        .addEventListener(
-            'click',
-            saveProduct
-        );
-
-
-    $('btnCancelEdit')
-        .addEventListener(
-            'click',
-            resetForm
-        );
-
-
-    $('btnRefresh')
-        .addEventListener(
-            'click',
-            async () => {
-
-                hideStatus();
-
-                await loadProducts();
-
-            }
-        );
-
-
-    $('p-search')
-        .addEventListener(
-            'input',
-            filterTable
-        );
-
-
-    $('p-foto')
-        .addEventListener(
-            'input',
-            updatePhotoPreview
-        );
-
-
-    /*
-     * EVENT DELEGATION
-     *
-     * Tidak menggunakan onclick="..."
-     * di setiap row.
-     */
-
-    $('prodTable')
-        .addEventListener(
-            'click',
-            event => {
-
-                const button =
-                    event.target.closest(
-                        'button[data-action]'
-                    );
-
-
-                if (!button) {
-                    return;
-                }
-
-
-                const action =
-                    button.dataset.action;
-
-                const id =
-                    button.dataset.id;
-
-
-                if (action === 'edit') {
-
-                    editProduct(id);
-
-                }
-
-
-                if (action === 'delete') {
-
-                    deleteProduct(id);
-
-                }
-
-            }
-        );
-
-
-    // =========================================================
-    // INITIAL LOAD
-    // =========================================================
-
-    loadProducts();
+})();
 
 </script>
 
 </body>
 </html>
+
