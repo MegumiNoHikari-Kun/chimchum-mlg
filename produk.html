@@ -15,10 +15,10 @@
         <div class="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
             <div>
                 <h3 class="font-bold text-base text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-orange-500"></i> Tambah / Edit Produk</h3>
-                <p class="text-xs text-slate-500">Kelola katalog menu makanan &amp; minuman ChimChum Malang.</p>
+                <p class="text-xs text-slate-500">Kelola katalog menu makanan &amp; minuman ChimChum Malang (Supabase Synchronized).</p>
             </div>
             <div class="w-full sm:w-72">
-                <input type="text" id="p-search" placeholder="🔍 Cari nama produk..." class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500 w-full" oninput="filterTable()">
+                <input type="text" id="p-search" placeholder="🔍 Cari nama produk atau kategori..." class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500 w-full" oninput="filterTable()">
             </div>
         </div>
 
@@ -79,6 +79,7 @@
 
         function renderTable(dataList) {
             const tbody = document.getElementById('prodTable');
+            if (!tbody) return;
             if (dataList.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400">Belum ada produk.</td></tr>`;
                 return;
@@ -119,10 +120,12 @@
             const foto = document.getElementById('p-foto').value.trim();
             const deskripsi = document.getElementById('p-deskripsi').value.trim();
 
-            if (!nama || !harga) { alert('Nama dan Harga Jual wajib diisi!'); return; }
+            if (!nama || isNaN(harga) || harga <= 0) { 
+                alert('Nama dan Harga Jual wajib diisi dengan benar!'); 
+                return; 
+            }
 
             await authReady;
-            // Clean payload matching standard table columns (avoiding schema mismatch issues)
             const productPayload = {
                 nama,
                 kategori,
@@ -133,21 +136,20 @@
                 deskripsi
             };
 
+            let success = false;
             try {
                 if (id) {
                     const { error } = await supabase.from('products').update(productPayload).eq('id', id);
                     if (error) throw error;
-                    alert('Produk berhasil diperbarui!');
+                    alert('Produk berhasil diperbarui di Supabase!');
                 } else {
                     const { error } = await supabase.from('products').insert([productPayload]);
                     if (error) throw error;
-                    alert('Produk baru berhasil disimpan!');
+                    alert('Produk baru berhasil disimpan ke Supabase!');
                 }
-
-                resetForm();
-                loadProducts();
+                success = true;
             } catch(e) {
-                console.warn("Supabase save error, fallback to localStorage:", e);
+                console.warn("Supabase database operation failed, falling back to localStorage:", e);
                 let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
                 if (id) {
                     localProducts = localProducts.map(p => String(p.id) === String(id) ? { ...p, ...productPayload, id } : p);
@@ -156,7 +158,11 @@
                     localProducts.push(productPayload);
                 }
                 localStorage.setItem('local_products', JSON.stringify(localProducts));
-                alert('Produk berhasil disimpan ke memori lokal!');
+                alert('Produk berhasil disimpan ke memori lokal (offline fallback)!');
+                success = true;
+            }
+
+            if (success) {
                 resetForm();
                 loadProducts();
             }
@@ -195,12 +201,14 @@
             try {
                 const { error } = await supabase.from('products').delete().eq('id', id);
                 if (error) throw error;
+                alert('Produk berhasil dihapus dari Supabase.');
                 loadProducts();
             } catch(e) {
                 console.warn("Supabase delete error, fallback to localStorage:", e);
                 let localProducts = JSON.parse(localStorage.getItem('local_products') || '[]');
                 localProducts = localProducts.filter(p => String(p.id) !== String(id));
                 localStorage.setItem('local_products', JSON.stringify(localProducts));
+                alert('Produk berhasil dihapus dari memori lokal.');
                 loadProducts();
             }
         };
