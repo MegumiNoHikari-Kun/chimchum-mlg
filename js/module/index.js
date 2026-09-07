@@ -312,12 +312,21 @@ window.closePaymentModal = function() {
 };
 
 window.confirmAndSubmitOrder = async function() {
+    const submitBtn = document.getElementById('confirm-btn');
     const fileInput = document.getElementById('payment-proof-file');
     const paymentMethod = pendingOrderData.payment_method;
 
+    // Validation check
     if (paymentMethod !== 'Cash' && (!fileInput.files || fileInput.files.length === 0)) {
         showNotification('Bukti Diperlukan', 'Harap upload bukti pembayaran terlebih dahulu.', 'warning');
         return;
+    }
+
+    // 1. Disable button & add loading state CSS
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i><span>Memproses Pesanan...</span>';
     }
 
     let proofReference = 'Pending / Cash';
@@ -369,18 +378,14 @@ window.confirmAndSubmitOrder = async function() {
         console.error('Database exception:', dbErr);
     }
 
-    // 1. Clean up or strip large base64 strings to save space
+    // Safe local storage handling
     let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-    
-    // If the proof is a massive base64 string, replace it with a placeholder for the local copy
     const orderToSave = { ...pendingOrderData };
     if (orderToSave.payment_proof && orderToSave.payment_proof.startsWith('data:image')) {
         orderToSave.payment_proof = '[Base64 Image Attached - Local Copy Truncated]';
     }
-
     localOrders.push(orderToSave);
 
-    // 2. Safely attempt to save with a fallback (keep only the last 10 orders if quota is hit)
     try {
         localStorage.setItem('local_orders', JSON.stringify(localOrders));
     } catch (e) {
@@ -390,10 +395,8 @@ window.confirmAndSubmitOrder = async function() {
             try {
                 localStorage.setItem('local_orders', JSON.stringify(trimmedOrders));
             } catch (innerErr) {
-                console.error('Critical: Failed to save to localStorage even after trimming.', innerErr);
+                console.error('Critical: Failed to save to localStorage.', innerErr);
             }
-        } else {
-            console.error('LocalStorage error:', e);
         }
     }
 
@@ -423,6 +426,13 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
     cart = [];
     updateCartUI();
     fileInput.value = '';
+
+    // Reset button state just in case user returns to page later
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Konfirmasi & Kirim Pesanan</span>';
+    }
 
     showNotification('Pesanan Berhasil Dibuat!', `ID Pesanan: ${pendingOrderData.order_id}. Mengalihkan ke WhatsApp...`, 'success');
     
