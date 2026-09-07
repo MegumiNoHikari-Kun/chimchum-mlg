@@ -249,7 +249,6 @@ window.proceedToPayment = function() {
     const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     const grandTotal = subtotal + 5000;
 
-    const now = new Date();
     const jakartaOffset = 7 * 60;
     const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOffset) * 60000);
     const jakartaISOString = localTime.toISOString().replace('Z', '+07:00');
