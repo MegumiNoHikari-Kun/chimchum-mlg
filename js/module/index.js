@@ -215,7 +215,7 @@ function updateCartUI() {
     });
 
     subtotalEl.innerText = `Rp ${subtotal.toLocaleString('id-ID')}`;
-    totalEl.innerText = `Rp ${(subtotal + 5000).toLocaleString('id-ID')}`;
+    totalEl.innerText = `Rp ${(subtotal).toLocaleString('id-ID')}`;
 }
 
 window.proceedToPayment = function() {
@@ -247,7 +247,8 @@ window.proceedToPayment = function() {
     
     const orderId = `ORD-${yy}${mm}${dd}${hh}${min}${ss}-${randomNum}`;
     const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    const grandTotal = subtotal + 5000;
+    // const grandTotal = subtotal + 5000; ongkir 5rb
+    const grandTotal = subtotal; //tanpa ongkir
 
     const jakartaOffset = 7 * 60;
     const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOffset) * 60000);
@@ -381,7 +382,7 @@ ID Pesanan: ${pendingOrderData.order_id}
 *Detail Item:*
 ${itemsListStr}
 ────────────────
-Subtotal: Rp ${(pendingOrderData.grand_total - 5000).toLocaleString('id-ID')}
+Subtotal: Rp ${(pendingOrderData.grand_total).toLocaleString('id-ID')}
 *Total: Rp ${pendingOrderData.grand_total.toLocaleString('id-ID')}*
 
 *Data Pemesan:*
