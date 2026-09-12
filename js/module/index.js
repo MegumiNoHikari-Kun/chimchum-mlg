@@ -304,7 +304,7 @@ window.proceedToPayment = function() {
             <p class="font-bold text-slate-900 mb-1">Scan QRIS untuk Pembayaran:</p>
             <p class="text-slate-600 mb-2">Total: <span class="font-bold text-brand-600">Rp ${grandTotal.toLocaleString('id-ID')}</span></p>
             <div class="bg-white p-3 rounded-xl border border-slate-200 text-center">
-                <img src="./assets/ChimChum-QRISSHOPEE.png" alt="QRIS Code" class="mx-auto w-32 h-32 object-contain" onerror="this.src='https://placehold.co/150?text=QRIS+ChimChum'">
+                <img src="./assets/ChimChum-QRISSHOPEE.png" alt="QRIS Code" class="mx-auto w-64 h-64 object-contain" onerror="this.src='https://placehold.co/150?text=QRIS+ChimChum'">
             </div>
         `;
     } else if (paymentMethod === 'Transfer') {
