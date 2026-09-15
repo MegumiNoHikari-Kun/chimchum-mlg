@@ -4,6 +4,7 @@ let ingredientsData = [];
 let productsData = [];
 let recipesData = [];
 let filterStatus = 'all';
+let mappingSearchQuery = '';
 let isDemoMode = false;
 let supabaseClient = null;
 
@@ -19,19 +20,19 @@ window.closeModal = function() {
 }
 
 window.switchTab = function(tabName) {
-    ['recipes', 'calculator', 'ingredients'].forEach(t => {
+    ['recipes', 'mapping', 'calculator', 'ingredients'].forEach(t => {
         const sec = document.getElementById(`section-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (sec) sec.classList.add('hidden');
         if (btn) btn.className = "px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition";
     });
-    
     const activeSec = document.getElementById(`section-${tabName}`);
     const activeBtn = document.getElementById(`tab-btn-${tabName}`);
     if (activeSec) activeSec.classList.remove('hidden');
     if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition";
-
+    
     if (tabName === 'calculator') updateCalcProductOptions();
+    if (tabName === 'mapping') renderMappingUI();
     if (tabName === 'ingredients') {
         renderProductsSummary();
         renderProductsTable();
@@ -84,23 +85,25 @@ async function loadDataFromSupabase() {
 
 function loadMockData() {
     ingredientsData = [
-        { id: 'ing1', name: 'Paha Fillet', stock: 5000, unit: 'gram' },
-        { id: 'ing2', name: 'Kulit Ayam', stock: 2000, unit: 'gram' },
-        { id: 'ing3', name: 'Tapioka', stock: 1500, unit: 'gram' },
+        { id: 'ing1', name: 'Ayam Fillet Dada', stock: 5000, unit: 'gram' },
+        { id: 'ing2', name: 'Udang Kupas', stock: 2000, unit: 'gram' },
+        { id: 'ing3', name: 'Tepung Tapioka', stock: 1500, unit: 'gram' },
         { id: 'ing4', name: 'Kulit Dimsum', stock: 300, unit: 'pcs' },
         { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml' }
     ];
     productsData = [
-        { id: 'prod_1', name: 'Dimsum Original', qty: 1, unit: 'pcs', stok: 15, foto: 'https://placehold.co/40', recipe_id: 'rec_1' },
-        { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 1, unit: 'pcs', stok: 0, foto: 'https://placehold.co/40', recipe_id: null }
+        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 4, unit: 'pcs', stok: 2, resep_id: 'rec_1', foto: 'https://placehold.co/40' },
+        { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stok: 0, resep_id: null, foto: 'https://placehold.co/40' },
+        { id: 'prod_3', name: 'Dimsum Ayam Original', qty: 1, unit: 'pcs', stok: 15, resep_id: 'rec_1', foto: 'https://placehold.co/40' }
     ];
     recipesData = [
         {
             id: 'rec_1',
-            name: 'Dimsum Original',
+            name: 'Standar Adonan Dasar Ayam',
             items: [
-                { ingredientId: 'ing1', amount: 30.3 },
-                { ingredientId: 'ing3', amount: 3.03 }
+                { ingredientId: 'ing1', amount: 1000 },
+                { ingredientId: 'ing3', amount: 150 },
+                { ingredientId: 'ing4', amount: 4 }
             ]
         }
     ];
@@ -115,18 +118,18 @@ function updateUI() {
     
     checkLowStockProducts();
     renderRecipes();
+    renderMappingUI();
     renderIngredientsTable();
     renderProductsSummary();
     renderProductsTable();
     updateCalcProductOptions();
-    populateRecipeProductSelect();
 }
 
 function checkLowStockProducts() {
     const banner = document.getElementById('lowStockAlertBanner');
     const listContainer = document.getElementById('lowStockProductsList');
     if (!banner || !listContainer) return;
-    
+
     const lowStockItems = productsData.filter(p => {
         const currentStock = p.stok !== undefined ? Number(p.stok) : (p.stock !== undefined ? Number(p.stock) : 0);
         return currentStock <= 5;
@@ -156,16 +159,15 @@ window.renderRecipes = function() {
     if (!tbody) return;
 
     const filtered = recipesData.filter(rec => rec.name.toLowerCase().includes(query));
-
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-400">Belum ada master resep atau produk yang cocok.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Belum ada master resep yang cocok.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = filtered.map(rec => {
-        // Cari produk apa saja yang menggunakan resep ini via products.recipe_id
-        const linkedProducts = productsData.filter(p => String(p.recipe_id || p.resep_id) === String(rec.id));
-
+        // Get linked products directly from productsData where product.resep_id === rec.id
+        const linkedProducts = productsData.filter(p => String(p.resep_id) === String(rec.id));
+        
         const linkedProductsHtml = linkedProducts.length > 0 ? linkedProducts.map(prod => {
             const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
             let stockBadge = '';
@@ -176,14 +178,8 @@ window.renderRecipes = function() {
             } else {
                 stockBadge = `<span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded font-semibold text-[9px]">Stok: ${stockVal}</span>`;
             }
-
             return `<div class="mb-1 flex items-center gap-1.5 flex-wrap"><strong class="text-slate-800">${escapeHtml(prod.name || prod.nama)}</strong> ${stockBadge}</div>`;
         }).join('') : '<span class="text-slate-400 italic">Belum ada menu yang menggunakan resep ini</span>';
-
-        const assignedProd = linkedProducts.length > 0 ? linkedProducts[0] : null;
-        const prodName = assignedProd ? escapeHtml(assignedProd.name || assignedProd.nama) : '<span class="text-amber-600 italic">Belum dipilih</span>';
-        const prodStock = assignedProd ? (assignedProd.stok !== undefined ? assignedProd.stok : assignedProd.stock) : '-';
-        const prodQty = assignedProd ? `${assignedProd.qty || 1} ${assignedProd.unit || 'pcs'}` : '-';
 
         const itemsList = (rec.items || []).map(item => {
             const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
@@ -192,11 +188,9 @@ window.renderRecipes = function() {
 
         return `
             <tr class="hover:bg-slate-50/70 transition">
-                <td class="p-3.5 font-semibold text-slate-800">${prodName}</td>
-                <td class="p-3.5 font-bold text-slate-700">${prodStock}</td>
-                <td class="p-3.5 text-slate-600">${prodQty}</td>
                 <td class="p-3.5 font-medium text-orange-600">${escapeHtml(rec.name)}</td>
                 <td class="p-3.5 text-slate-600 leading-relaxed">${itemsList || 'Tidak ada bahan'}</td>
+                <td class="p-3.5 space-y-1">${linkedProductsHtml}</td>
                 <td class="p-3.5 text-right space-x-2">
                     <button onclick="editRecipe('${rec.id}')" class="text-orange-600 hover:text-orange-800 font-semibold px-2.5 py-1 bg-orange-50 rounded-lg">Edit</button>
                     <button onclick="deleteRecipe('${rec.id}')" class="text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1 bg-rose-50 rounded-lg">Hapus</button>
@@ -206,25 +200,88 @@ window.renderRecipes = function() {
     }).join('');
 }
 
-function populateRecipeProductSelect() {
-    const select = document.getElementById('recipe-product-select');
-    if (!select) return;
-    let html = '<option value="">-- Pilih Produk --</option>';
-    productsData.forEach(p => {
-        html += `<option value="${p.id}">${escapeHtml(p.name || p.nama)}</option>`;
-    });
-    select.innerHTML = html;
+window.filterMappingList = function() {
+    const input = document.getElementById('mappingSearchInput');
+    mappingSearchQuery = input ? input.value.toLowerCase().trim() : '';
+    renderMappingUI();
 }
 
-window.onProductSelectChanged = function() {
-    const select = document.getElementById('recipe-product-select');
-    const recipeNameInput = document.getElementById('recipe-name');
-    if (!select || !recipeNameInput) return;
-    const prodId = select.value;
-    const prod = productsData.find(p => String(p.id) === String(prodId));
-    if (prod) {
-        recipeNameInput.value = prod.name || prod.nama || '';
+window.renderMappingUI = function() {
+    const container = document.getElementById('mapping-products-container');
+    if (!container) return;
+
+    if (productsData.length === 0) {
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Belum ada produk/menu di tabel products.</td></tr>`;
+        return;
     }
+
+    let filteredProducts = productsData;
+    if (mappingSearchQuery) {
+        filteredProducts = productsData.filter(p => (p.name || p.nama || '').toLowerCase().includes(mappingSearchQuery));
+    }
+
+    if (filteredProducts.length === 0) {
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Tidak ada menu yang sesuai dengan pencarian "${escapeHtml(mappingSearchQuery)}".</td></tr>`;
+        return;
+    }
+
+    container.innerHTML = filteredProducts.map(prod => {
+        const currentRecipeId = prod.resep_id || '';
+        const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
+        
+        let statusBadge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Aman (${stockVal})</span>`;
+        if (stockVal <= 0) statusBadge = `<span class="bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">Habis (0)</span>`;
+        else if (stockVal <= 5) statusBadge = `<span class="bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">Menipis (${stockVal})</span>`;
+
+        let selectOptions = '<option value="">-- Belum Dipilih --</option>';
+        recipesData.forEach(r => {
+            const isSel = String(r.id) === String(currentRecipeId) ? 'selected' : '';
+            selectOptions += `<option value="${r.id}" ${isSel}>${escapeHtml(r.name)}</option>`;
+        });
+
+        return `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-3.5"><img src="${prod.foto || prod.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='https://placehold.co/40'"></td>
+                <td class="p-3.5 font-semibold text-slate-800">${escapeHtml(prod.name || prod.nama)} (${prod.qty || 1} ${prod.unit || 'pcs'})</td>
+                <td class="p-3.5">${statusBadge}</td>
+                <td class="p-3.5">
+                    <div class="flex items-center gap-2">
+                        <select id="map-select-${prod.id}" onchange="updateMenuRecipeMapping('${prod.id}')" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            ${selectOptions}
+                        </select>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.updateMenuRecipeMapping = async function(productId) {
+    const selectEl = document.getElementById(`map-select-${productId}`);
+    if (!selectEl) return;
+    const recipeId = selectEl.value ? selectEl.value : null;
+
+    // Update local state immediately
+    productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
+
+    if (supabaseClient && !isDemoMode) {
+        try {
+            const { error } = await supabaseClient
+                .from('products')
+                .update({ resep_id: recipeId })
+                .eq('id', productId);
+
+            if (error) {
+                showModal("Gagal", "Gagal menyimpan resep ke Supabase: " + error.message, "❌");
+                return;
+            }
+        } catch (e) {
+            console.warn("Supabase mapping update error:", e);
+        }
+    }
+
+    renderRecipes();
+    showModal("Tersimpan", "Relasi menu dan resep berhasil disimpan ke Supabase!", "✅");
 }
 
 function updateCalcProductOptions() {
@@ -232,7 +289,6 @@ function updateCalcProductOptions() {
     if (!select) return;
     const currentVal = select.value;
     let html = '<option value="">-- Pilih Produk Dimsum --</option>';
-    
     productsData.forEach(prod => {
         const selected = String(prod.id) === String(currentVal) ? 'selected' : '';
         const stockVal = prod.stok !== undefined ? prod.stok : (prod.stock !== undefined ? prod.stock : 0);
@@ -260,17 +316,16 @@ window.updateCalcPreview = function() {
     }
 
     const prod = productsData.find(p => String(p.id) === String(productId));
-    const recipeId = prod ? (prod.recipe_id || prod.resep_id) : null;
-    const recipe = recipeId ? recipesData.find(r => String(r.id) === String(recipeId)) : null;
+    const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
 
     if (!recipe) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-600">Belum ada resep yang di-link ke produk ini. Silakan atur di tab <strong>Master Resep</strong>.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-600">Belum ada resep yang di-link ke produk ini. Silakan atur di tab <strong>Kawinkan Menu & Resep</strong>.</td></tr>`;
         if (labelTarget) labelTarget.innerText = "Resep belum diset";
         return;
     }
 
     const totalOutputPcs = batchMultiplier * (prod ? (prod.qty || 1) : 1);
-    if (labelTarget) labelTarget.innerText = `Target: ${batchMultiplier} Pcs (~${totalOutputPcs} Total)`;
+    if (labelTarget) labelTarget.innerText = `Target: ${batchMultiplier} Batch (~${totalOutputPcs} ${prod ? (prod.unit || 'pcs') : 'pcs'})`;
 
     tbody.innerHTML = (recipe.items || []).map(item => {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
@@ -304,23 +359,21 @@ window.exportShoppingList = function() {
     if (!selectEl) return;
     const productId = selectEl.value;
     const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 1) : 1;
-    
+
     if (!productId) {
         showModal("Perhatian", "Pilih produk terlebih dahulu untuk menyalin daftar belanja.", "⚠️");
         return;
     }
 
     const prod = productsData.find(p => String(p.id) === String(productId));
-    const recipeId = prod ? (prod.recipe_id || prod.resep_id) : null;
-    const recipe = recipeId ? recipesData.find(r => String(r.id) === String(recipeId)) : null;
+    const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
 
     if (!recipe) {
-        showModal("Perhatian", "Resep untuk produk ini belum diatur.", "⚠️");
+        showModal("Perhatian", "Resep untuk produk ini belum diatur di tab Kawinkan Menu & Resep.", "⚠️");
         return;
     }
 
-    let text = `📋 DAFTAR BELANJA & RESTOK DIMSUM\nMenu: ${prod ? (prod.name || prod.nama) : 'Produk'}\nJumlah: ${batchMultiplier} Pcs\n------------------------------------\n`;
-    
+    let text = `📋 DAFTAR BELANJA & RESTOK DIMSUM\nMenu: ${prod ? (prod.name || prod.nama) : 'Produk'}\nJumlah: ${batchMultiplier} Batch\n------------------------------------\n`;
     (recipe.items || []).forEach(item => {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
         const name = ing ? ing.name : 'Bahan';
@@ -328,10 +381,8 @@ window.exportShoppingList = function() {
         const totalNeeded = item.amount * batchMultiplier;
         const currentStock = ing ? ing.stock : 0;
         const shortage = Math.max(0, totalNeeded - currentStock);
-
         text += `- ${name}: Butuh ${totalNeeded.toFixed(1)} ${unit} (Kurang: ${shortage.toFixed(1)} ${unit})\n`;
     });
-
     text += `------------------------------------\nGenerated by ChimChum Dimsum Master`;
 
     const dummy = document.createElement("textarea");
@@ -340,8 +391,7 @@ window.exportShoppingList = function() {
     dummy.select();
     document.execCommand("copy");
     document.body.removeChild(dummy);
-
-    showModal("Berhasil Disalin!", "Daftar kebutuhan belanja telah disalin ke clipboard!", "📋");
+    showModal("Berhasil Disalin!", "Daftar kebutuhan belanja telah disalin ke clipboard.", "📋");
 }
 
 window.handleIngredientSubmit = async function(e) {
@@ -365,7 +415,6 @@ window.handleIngredientSubmit = async function(e) {
         else ingredientsData.push(payload);
         updateUI();
     }
-
     resetIngredientForm();
     showModal("Sukses", "Bahan baku berhasil disimpan!", "✅");
 }
@@ -376,7 +425,6 @@ window.renderIngredientsTable = function() {
     if (!tbody) return;
 
     const filtered = ingredientsData.filter(i => i.name.toLowerCase().includes(query));
-
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada data bahan baku.</td></tr>`;
         return;
@@ -436,7 +484,6 @@ function renderProductsSummary() {
         else if (st <= 10) menipis++;
         else aman++;
     });
-
     const summaryEl = document.getElementById('stokSummary');
     if (!summaryEl) return;
 
@@ -473,7 +520,6 @@ window.renderProductsTable = function() {
     if (!tbody) return;
 
     let filtered = productsData.filter(p => (p.nama || p.name || '').toLowerCase().includes(kw));
-
     if (filterStatus !== 'all') {
         filtered = filtered.filter(p => {
             const st = Number(p.stok !== undefined ? p.stok : p.stock) || 0;
@@ -494,17 +540,9 @@ window.renderProductsTable = function() {
         let badge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Aman</span>`;
         if (st <= 0) badge = `<span class="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Habis</span>`;
         else if (st <= 10) badge = `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Menipis</span>`;
-
+        
         const prodName = p.name || p.nama || 'Produk';
         const prodFoto = p.foto || p.image || 'https://placehold.co/40';
-
-        // Dropdown resep langsung di tabel produk
-        let selectOptions = '<option value="">-- Pilih Resep --</option>';
-        const currentRecipeId = p.recipe_id || p.resep_id || '';
-        recipesData.forEach(r => {
-            const isSel = String(r.id) === String(currentRecipeId) ? 'selected' : '';
-            selectOptions += `<option value="${r.id}" ${isSel}>${escapeHtml(r.name)}</option>`;
-        });
 
         return `
             <tr class="hover:bg-slate-50">
@@ -514,50 +552,16 @@ window.renderProductsTable = function() {
                 <td class="p-3 font-bold">${st}</td>
                 <td class="p-3">${badge}</td>
                 <td class="p-3">
-                    <select id="map-select-${p.id}" onchange="updateProductRecipeMapping('${p.id}')" class="border border-slate-200 rounded-xl px-2 py-1 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                        ${selectOptions}
-                    </select>
+                    <div class="flex items-center gap-1">
+                        <button onclick="modStock('${p.id}', ${st - 1})" class="bg-slate-100 px-2.5 py-1 rounded font-bold">-</button>
+                        <input type="number" value="${st}" id="stok-${p.id}" class="w-12 text-center bg-slate-50 border rounded p-1" onchange="inputStock('${p.id}')">
+                        <button onclick="modStock('${p.id}', ${st + 1})" class="bg-slate-100 px-2.5 py-1 rounded font-bold">+</button>
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 };
-
-window.updateProductRecipeMapping = async function(productId) {
-    const selectEl = document.getElementById(`map-select-${productId}`);
-    if (!selectEl) return;
-    const recipeId = selectEl.value || null;
-
-    // Update local productsData
-    productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, recipe_id: recipeId, resep_id: recipeId } : p);
-
-    if (supabaseClient && !isDemoMode) {
-        try {
-            const { error } = await supabaseClient
-                .from('products')
-                .update({ recipe_id: recipeId })
-                .eq('id', productId);
-            if (error) {
-                // Coba fallback ke kolom resep_id jika recipe_id belum ada di schema
-                const { error: err2 } = await supabaseClient
-                    .from('products')
-                    .update({ resep_id: recipeId })
-                    .eq('id', productId);
-                if (err2) {
-                    console.error("Gagal update mapping ke supabase:", err2);
-                    showModal("Gagal", err2.message, "❌");
-                    return;
-                }
-            }
-        } catch (e) {
-            console.error("Supabase mapping update error:", e);
-        }
-    }
-
-    renderRecipes();
-    renderProductsTable();
-    showModal("Tersimpan", "Relasi resep berhasil disimpan ke database produk!", "✅");
-}
 
 window.modStock = async function(id, val) {
     val = Math.max(0, Number(val) || 0);
@@ -587,7 +591,6 @@ window.addRecipeIngredientRow = function(selectedIngId = '', amountVal = '') {
     const container = document.getElementById('recipe-ingredients-container');
     if (!container) return;
     const rowId = 'row_' + Math.random().toString(36).substring(2, 9);
-    
     let optionsHtml = '<option value="">-- Pilih Bahan --</option>';
     ingredientsData.forEach(ing => {
         const selected = String(ing.id) === String(selectedIngId) ? 'selected' : '';
@@ -611,10 +614,9 @@ window.handleRecipeSubmit = async function(e) {
     e.preventDefault();
     const id = document.getElementById('recipe-edit-id').value || 'rec_' + Date.now();
     const name = document.getElementById('recipe-name').value;
-    const productId = document.getElementById('recipe-product-select').value;
-
     const itemRows = document.querySelectorAll('#recipe-ingredients-container > div');
     const items = [];
+
     itemRows.forEach(row => {
         const ingredientId = row.querySelector('.recipe-ing-select').value;
         const amount = parseFloat(row.querySelector('.recipe-ing-amount').value);
@@ -629,34 +631,21 @@ window.handleRecipeSubmit = async function(e) {
     }
 
     const payload = { id, name, description: name, items };
-
     if (supabaseClient && !isDemoMode) {
         const { error } = await supabaseClient.from('recipes').upsert([payload]);
         if (error) {
             showModal("Gagal", error.message, "❌");
             return;
         }
-
-        // Jika produk dipilih, langsung update recipe_id di tabel products
-        if (productId) {
-            await supabaseClient.from('products').update({ recipe_id: id }).eq('id', productId);
-            productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, recipe_id: id, resep_id: id } : p);
-        }
-
         loadDataFromSupabase();
     } else {
         const idx = recipesData.findIndex(r => String(r.id) === String(id));
         if (idx >= 0) recipesData[idx] = payload;
         else recipesData.push(payload);
-
-        if (productId) {
-            productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, recipe_id: id, resep_id: id } : p);
-        }
         updateUI();
     }
-
     closeRecipeModal();
-    showModal("Sukses", "Master resep dan relasi produk berhasil disimpan!", "✅");
+    showModal("Sukses", "Master resep berhasil disimpan!", "✅");
 }
 
 window.editRecipe = function(id) {
@@ -665,15 +654,6 @@ window.editRecipe = function(id) {
     document.getElementById('recipe-edit-id').value = rec.id;
     document.getElementById('recipe-name').value = rec.name;
     document.getElementById('modalTitle').innerText = "Edit Master Resep";
-
-    // Cari produk yang terikat resep ini
-    const linkedProd = productsData.find(p => String(p.recipe_id || p.resep_id) === String(id));
-    if (linkedProd) {
-        document.getElementById('recipe-product-select').value = linkedProd.id;
-    } else {
-        document.getElementById('recipe-product-select').value = '';
-    }
-
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
         container.innerHTML = '';
@@ -689,7 +669,6 @@ window.resetRecipeForm = function() {
     if (form) form.reset();
     document.getElementById('recipe-edit-id').value = '';
     document.getElementById('modalTitle').innerText = "Buat Master Resep";
-
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
         container.innerHTML = '';
@@ -698,9 +677,10 @@ window.resetRecipeForm = function() {
 }
 
 window.deleteRecipe = async function(id) {
-    if (!confirm("Hapus master resep ini? Menu yang terikat akan terlepas relasinya.")) return;
+    if (!confirm("Hapus master resep ini? Semua menu yang terikat akan terlepas.")) return;
     if (supabaseClient && !isDemoMode) {
-        await supabaseClient.from('products').update({ recipe_id: null }).eq('recipe_id', id);
+        // Hapus resep dan set resep_id = null pada produk yang terikat
+        await supabaseClient.from('products').update({ resep_id: null }).eq('resep_id', id);
         const { error } = await supabaseClient.from('recipes').delete().eq('id', id);
         if (error) {
             showModal("Gagal", error.message, "❌");
@@ -709,14 +689,14 @@ window.deleteRecipe = async function(id) {
         loadDataFromSupabase();
     } else {
         recipesData = recipesData.filter(r => String(r.id) !== String(id));
-        productsData = productsData.map(p => String(p.recipe_id || p.resep_id) === String(id) ? { ...p, recipe_id: null, resep_id: null } : p);
+        productsData = productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
         updateUI();
     }
     showModal("Terhapus", "Master resep berhasil dihapus.", "🗑️");
 }
 
 function escapeHtml(str) {
-    return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    return String(str || '').replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, "\"").replace(/'/g, "'");
 }
 
 window.onload = function() {
