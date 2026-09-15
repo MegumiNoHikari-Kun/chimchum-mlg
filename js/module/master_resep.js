@@ -99,7 +99,7 @@ function loadMockData() {
     recipesData = [
         {
             id: 'rec_1',
-            product_ids: ['prod_1', 'prod_3'], // Mendukung banyak produk sekaligus per resep
+            product_ids: ['prod_1', 'prod_3'],
             name: 'Standar Adonan Dasar Ayam',
             items: [
                 { ingredientId: 'ing1', amount: 1000 },
@@ -307,7 +307,7 @@ window.addProductToRecipe = async function(recipeId) {
     }
 
     recipe.product_ids = pIds;
-    recipe.product_id = pIds[0]; // fallback
+    recipe.product_id = pIds[0];
 
     if (supabaseClient && !isDemoMode) {
         const { error } = await supabaseClient.from('recipes').update({ product_ids: pIds, product_id: pIds[0] }).eq('id', recipeId);
