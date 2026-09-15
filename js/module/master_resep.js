@@ -69,10 +69,10 @@ async function loadDataFromSupabase() {
         const { data: ing } = await supabaseClient.from('ingredients').select('*');
         if (ing) ingredientsData = ing;
 
-        // Fetching from 'products' (or fallback to 'producs' if needed)
+        // Fetching from 'products' (or fallback to 'products' if needed)
         let prodResult = await supabaseClient.from('products').select('*');
         if (prodResult.error) {
-            prodResult = await supabaseClient.from('producs').select('*');
+            prodResult = await supabaseClient.from('products').select('*');
         }
         if (prodResult.data) productsData = prodResult.data;
 
@@ -398,10 +398,10 @@ window.modStock = async function(id, val) {
     val = Math.max(0, Number(val) || 0);
     try {
         if (supabaseClient && !isDemoMode) {
-            // Try updating 'products', fallback to 'producs'
+            // Try updating 'products', fallback to 'products'
             let updateRes = await supabaseClient.from('products').update({ stok: val }).eq('id', id);
             if (updateRes.error) {
-                await supabaseClient.from('producs').update({ stok: val }).eq('id', id);
+                await supabaseClient.from('products').update({ stok: val }).eq('id', id);
             }
         }
         productsData = productsData.map(p => String(p.id) === String(id) ? { ...p, stok: val, stock: val } : p);
