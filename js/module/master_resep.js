@@ -3,7 +3,6 @@ import { supabase, authReady } from '../supabase.js';
 let ingredientsData = [];
 let productsData = [];
 let recipesData = [];
-let mappingSearchQuery = '';
 let filterStatus = 'all';
 let isDemoMode = false;
 let supabaseClient = null;
@@ -103,7 +102,7 @@ function loadMockData() {
         { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml' }
     ];
     productsData = [
-        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 4, unit: 'pcs', stok: 2, resep_id: 'rec_1', foto: 'https://placehold.co/40' },
+        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 8, unit: 'pcs', stok: 10, resep_id: 'rec_1', foto: 'https://placehold.co/40' },
         { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stok: 0, resep_id: null, foto: 'https://placehold.co/40' },
         { id: 'prod_3', name: 'Dimsum Ayam Original', qty: 1, unit: 'pcs', stok: 15, resep_id: 'rec_1', foto: 'https://placehold.co/40' }
     ];
@@ -238,6 +237,8 @@ window.renderMappingUI = function() {
     container.innerHTML = filteredProducts.map(prod => {
         const currentRecipeId = prod.resep_id || '';
         const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
+        const prodQty = prod.qty !== undefined ? prod.qty : 1;
+        const prodUnit = prod.unit !== undefined ? prod.unit : 'pcs';
         
         let statusBadge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Aman (${stockVal})</span>`;
         if (stockVal <= 0) statusBadge = `<span class="bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">Habis (0)</span>`;
@@ -252,7 +253,7 @@ window.renderMappingUI = function() {
         return `
             <tr class="hover:bg-slate-50 transition">
                 <td class="p-3.5"><img src="${prod.foto || prod.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='https://placehold.co/40'"></td>
-                <td class="p-3.5 font-semibold text-slate-800">${escapeHtml(prod.name || prod.nama)} (${prod.qty || 1} ${prod.unit || 'pcs'})</td>
+                <td class="p-3.5 font-semibold text-slate-800">${escapeHtml(prod.name || prod.nama)} (${prodQty} ${prodUnit})</td>
                 <td class="p-3.5">${statusBadge}</td>
                 <td class="p-3.5">
                     <div class="flex items-center gap-2">
@@ -316,7 +317,9 @@ function updateCalcProductOptions() {
     productsData.forEach(prod => {
         const selected = String(prod.id) === String(currentVal) ? 'selected' : '';
         const stockVal = prod.stok !== undefined ? prod.stok : (prod.stock !== undefined ? prod.stock : 0);
-        const displayLabel = `${prod.name || prod.nama || 'Produk'} (Stok: ${stockVal} | Isi: ${prod.qty || 1} ${prod.unit || 'pcs'})`;
+        const prodQty = prod.qty !== undefined ? prod.qty : 1;
+        const prodUnit = prod.unit !== undefined ? prod.unit : 'pcs';
+        const displayLabel = `${prod.name || prod.nama || 'Produk'} (Stok: ${stockVal} | Isi: ${prodQty} ${prodUnit})`;
         html += `<option value="${prod.id}" ${selected}>${escapeHtml(displayLabel)}</option>`;
     });
     select.innerHTML = html;
@@ -695,7 +698,7 @@ window.resetRecipeForm = function() {
     document.getElementById('modalTitle').innerText = "Buat Master Resep";
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
-        container.innerHTML = '';
+        container.innerHTML = '',
         addRecipeIngredientRow();
     }
 }
