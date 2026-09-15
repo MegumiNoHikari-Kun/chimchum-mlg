@@ -26,17 +26,18 @@
         <div class="flex justify-between items-center flex-wrap gap-4 border-b pb-4">
             <div>
                 <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-book-open text-orange-500 mr-2"></i> Master Resep & Kalkulator Restok Dimsum</h2>
-                <p class="text-xs text-slate-500">Kelola komposisi resep, pantau stok gudang & produk, dan hitung kebutuhan belanja otomatis.</p>
+                <p class="text-xs text-slate-500">Kelola komposisi resep, kawinkan menu & resep, pantau stok gudang & produk, dan hitung kebutuhan belanja otomatis.</p>
             </div>
             
             <!-- Navigation Tabs -->
-            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl flex-wrap">
                 <button onclick="switchTab('recipes')" id="tab-btn-recipes" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition">Master Resep</button>
+                <button onclick="switchTab('mapping')" id="tab-btn-mapping" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition">Kawinkan Menu & Resep</button>
                 <button onclick="switchTab('calculator')" id="tab-btn-calculator" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition">Kalkulator Restok</button>
                 <button onclick="switchTab('ingredients')" id="tab-btn-ingredients" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition">Stok Gudang & Produk</button>
             </div>
         </div>
-
+    
         <!-- ================= NOTIFIKASI PRODUK STOK MENIPIS / HABIS ================= -->
         <div id="lowStockAlertBanner" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
             <div class="text-rose-600 text-lg mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -46,48 +47,70 @@
                 <div id="lowStockProductsList" class="flex flex-wrap gap-2 mt-2"></div>
             </div>
         </div>
-
+    
         <!-- ================= TAB 1: MASTER RESEP ================= -->
         <div id="section-recipes" class="space-y-6">
             <div class="flex justify-between items-center flex-wrap gap-3">
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
-                        <p class="text-[10px] font-semibold text-slate-400 uppercase">Total Produk</p>
-                        <h3 id="statTotalProducts" class="text-lg font-bold text-slate-800">0</h3>
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase">Total Resep</p>
+                        <h3 id="statTotalRecipes" class="text-lg font-bold text-slate-800">0</h3>
                     </div>
                     <div class="bg-orange-50/60 px-4 py-3 rounded-2xl border border-orange-100">
-                        <p class="text-[10px] font-semibold text-orange-600 uppercase">Resep Aktif</p>
-                        <h3 id="statTotalRecipes" class="text-lg font-bold text-orange-700">0</h3>
+                        <p class="text-[10px] font-semibold text-orange-600 uppercase">Total Produk/Menu</p>
+                        <h3 id="statTotalProducts" class="text-lg font-bold text-orange-700">0</h3>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <input type="text" id="recipeSearch" placeholder="Cari resep atau produk..." class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500 w-60" oninput="renderRecipes()">
+                    <input type="text" id="recipeSearch" placeholder="Cari resep..." class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500 w-60" oninput="renderRecipes()">
                     <button onclick="openRecipeModal()" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Atur Resep Baru
+                        <i class="fa-solid fa-plus"></i> Buat Resep Baru
                     </button>
                 </div>
             </div>
-
+    
             <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-orange-50 text-slate-700 font-semibold">
-                            <th class="p-3.5">Nama Produk (<code class="text-orange-600">products</code>)</th>
-                            <th class="p-3.5">Stok Produk</th>
-                            <th class="p-3.5">Porsi / Qty</th>
                             <th class="p-3.5">Judul Resep</th>
                             <th class="p-3.5">Komposisi Bahan Baku</th>
+                            <th class="p-3.5">Menu yang Menggunakan</th>
                             <th class="p-3.5 text-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="recipeTableBody" class="divide-y divide-slate-100">
-                        <tr><td colspan="6" class="text-center py-10 text-slate-400">Memuat master resep...</td></tr>
+                        <tr><td colspan="4" class="text-center py-10 text-slate-400">Memuat master resep...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <!-- ================= TAB 2: KALKULATOR RESTOK ================= -->
+    
+        <!-- ================= TAB 2: KAWINKAN MENU & RESEP ================= -->
+        <div id="section-mapping" class="space-y-6 hidden">
+            <div class="bg-orange-50 border border-orange-100 rounded-3xl p-6">
+                <h3 class="font-bold text-slate-800 text-base mb-1"><i class="fa-solid fa-link text-orange-500 mr-2"></i> Kawinkan Menu & Resep</h3>
+                <p class="text-xs text-slate-600">Pilih resep standar untuk masing-masing menu yang tersedia. Satu resep dapat digunakan oleh banyak menu sekaligus.</p>
+            </div>
+    
+            <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm bg-white">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
+                            <th class="p-4 w-16">Foto</th>
+                            <th class="p-4">Nama Menu / Produk (<code class="text-orange-600">products</code>)</th>
+                            <th class="p-4">Status Stok</th>
+                            <th class="p-4">Resep yang Digunakan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-products-container" class="divide-y divide-slate-100">
+                        <tr><td colspan="4" class="text-center py-10 text-slate-400">Memuat daftar menu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    
+        <!-- ================= TAB 3: KALKULATOR RESTOK ================= -->
         <div id="section-calculator" class="space-y-6 hidden">
             <div class="bg-gradient-to-r from-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg">
                 <h2 class="text-2xl font-bold mb-2">Kalkulator Order & Kebutuhan Produksi</h2>
@@ -111,7 +134,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <!-- Hasil Tabel Kalkulasi -->
             <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -135,8 +158,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- ================= TAB 3: STOK GUDANG & PRODUK ================= -->
+    
+        <!-- ================= TAB 4: STOK GUDANG & PRODUK ================= -->
         <div id="section-ingredients" class="space-y-6 hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Form Tambah Bahan -->
@@ -172,7 +195,7 @@
                         </div>
                     </form>
                 </div>
-
+    
                 <!-- Tabel Inventaris Gudang & Monitoring Produk -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Stok Gudang (Ingredients) -->
@@ -197,17 +220,17 @@
                             </table>
                         </div>
                     </div>
-
-                    <!-- Monitoring Produk Siap Jual (Products) Menggunakan Referensi stok.js -->
+    
+                    <!-- Monitoring Produk Siap Jual (Products) -->
                     <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <h3 class="font-bold text-slate-800 text-base">Monitoring Stok Produk Siap Jual (<code class="text-orange-600">products</code>)</h3>
                             <input type="text" id="stokSearch" placeholder="Cari produk..." class="bg-slate-50 border rounded-xl px-3 py-1.5 text-xs outline-none w-48" oninput="renderProductsTable()">
                         </div>
-
+    
                         <!-- Summary Cards Filter -->
                         <div id="stokSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
-
+    
                         <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
                             <table class="w-full text-left border-collapse text-xs">
                                 <thead>
@@ -230,30 +253,23 @@
             </div>
         </div>
     </div>
-
-    <!-- Recipe Modal -->
+    
+    <!-- Recipe Modal (Tanpa Checkbox Produk Lagi) -->
     <div id="recipeModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 id="modalTitle" class="font-bold text-slate-800 text-base">Atur Resep ke Produk</h3>
+                <h3 id="modalTitle" class="font-bold text-slate-800 text-base">Buat Master Resep</h3>
                 <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
             </div>
-
+    
             <form id="recipeForm" onsubmit="handleRecipeSubmit(event)" class="space-y-4">
                 <input type="hidden" id="recipe-edit-id">
-                
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Produk dari Tabel <code class="text-orange-600">products</code></label>
-                    <select id="recipe-product-select" required onchange="onProductSelectChanged()" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
-                        <option value="">-- Pilih Produk --</option>
-                    </select>
-                </div>
-
+    
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Resep / Keterangan Batch</label>
-                    <input type="text" id="recipe-name" required placeholder="Cth: Standar Resep Adonan Utama" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500">
+                    <input type="text" id="recipe-name" required placeholder="Cth: Standar Adonan Dasar Ayam" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500">
                 </div>
-
+    
                 <div class="border-t border-slate-100 pt-3">
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Komposisi Bahan Baku</label>
@@ -261,15 +277,15 @@
                     </div>
                     <div id="recipe-ingredients-container" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
                 </div>
-
+    
                 <div class="flex gap-2 pt-3 border-t">
-                    <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-sm">Simpan Relasi Resep</button>
+                    <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-sm">Simpan Master Resep</button>
                     <button type="button" onclick="closeRecipeModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-xl text-xs transition">Batal</button>
                 </div>
             </form>
         </div>
     </div>
-
+    
     <!-- Notification Modal -->
     <div id="notification-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-3">
@@ -279,7 +295,8 @@
             <button onclick="closeModal()" class="w-full bg-orange-500 text-white font-medium py-2 rounded-xl text-xs hover:bg-orange-600 transition">Mengerti</button>
         </div>
     </div>
-
+    
     <script type="module" src="./js/module/master_resep.js"></script>
+
 </body>
 </html>
