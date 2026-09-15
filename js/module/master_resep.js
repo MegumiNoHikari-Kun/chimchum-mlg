@@ -53,13 +53,15 @@ async function initApp() {
         await authReady;
         if (supabase) {
             supabaseClient = supabase;
+            console.log("🔍 [DB DEBUG] Supabase client initialized. Loading data...");
             await loadDataFromSupabase();
         } else {
+            console.log("⚠️ [DB DEBUG] Supabase not found. Running in Demo Mode.");
             isDemoMode = true;
             loadMockData();
         }
     } catch (err) {
-        console.warn("Init error, falling back to demo:", err);
+        console.warn("⚠️ [DB DEBUG] Init error, falling back to demo:", err);
         isDemoMode = true;
         loadMockData();
     }
@@ -67,18 +69,24 @@ async function initApp() {
 
 async function loadDataFromSupabase() {
     try {
-        const { data: ing } = await supabaseClient.from('ingredients').select('*');
+        console.log("🔍 [DB DEBUG] Fetching ingredients, products, and recipes from Supabase...");
+        
+        const { data: ing, error: ingErr } = await supabaseClient.from('ingredients').select('*');
+        if (ingErr) console.error("❌ [DB DEBUG] Error fetching ingredients:", ingErr);
         if (ing) ingredientsData = ing;
 
         const prodResult = await supabaseClient.from('products').select('*');
+        if (prodResult.error) console.error("❌ [DB DEBUG] Error fetching products:", prodResult.error);
         if (prodResult.data) productsData = prodResult.data;
 
-        const { data: rec } = await supabaseClient.from('recipes').select('*');
+        const { data: rec, error: recErr } = await supabaseClient.from('recipes').select('*');
+        if (recErr) console.error("❌ [DB DEBUG] Error fetching recipes:", recErr);
         if (rec) recipesData = rec;
 
+        console.log("✅ [DB DEBUG] Loaded Data -> Products:", productsData.length, "| Recipes:", recipesData.length, "| Ingredients:", ingredientsData.length);
         updateUI();
     } catch (e) {
-        console.error("Supabase fetch error:", e);
+        console.error("❌ [DB DEBUG] Supabase fetch exception:", e);
         loadMockData();
     }
 }
@@ -260,25 +268,35 @@ window.updateMenuRecipeMapping = async function(productId) {
     if (!selectEl) return;
     const recipeId = selectEl.value ? selectEl.value : null;
 
+    console.log(`🔍 [DB DEBUG] Updating mapping for Product ID: ${productId} -> Recipe ID: ${recipeId}`);
+
     // Update local state immediately
     productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
 
     if (supabaseClient && !isDemoMode) {
         try {
-            const { error } = await supabaseClient
+            console.log(`📤 [DB DEBUG] Sending update to Supabase table 'products' with filter eq('id', ${productId})`);
+            
+            const { data, error } = await supabaseClient
                 .from('products')
                 .update({ resep_id: recipeId })
-                .eq('id', productId);
+                .eq('id', productId)
+                .select();
 
             if (error) {
+                console.error("❌ [DB DEBUG] Supabase update error:", error);
                 showModal("Gagal", "Gagal menyimpan resep ke Supabase: " + error.message, "❌");
                 return;
             }
+
+            console.log("✅ [DB DEBUG] Supabase update successful. Response data:", data);
         } catch (e) {
-            console.warn("Supabase mapping update error:", e);
+            console.error("❌ [DB DEBUG] Supabase mapping update exception:", e);
             showModal("Gagal", "Terjadi kesalahan koneksi ke Supabase.", "❌");
             return;
         }
+    } else {
+        console.log("ℹ️ [DB DEBUG] Running in demo mode. Saved locally.");
     }
 
     renderRecipes();
