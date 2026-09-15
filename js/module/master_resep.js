@@ -52,10 +52,10 @@ async function initApp() {
         await authReady;
         if (supabase) {
             supabaseClient = supabase;
-            console.log("🔍 [DB DEBUG] Supabase client initialized. Loading data...");
+            // console.log("🔍 [DB DEBUG] Supabase client initialized. Loading data...");
             await loadDataFromSupabase();
         } else {
-            console.log("⚠️ [DB DEBUG] Supabase not found. Running in Demo Mode.");
+            // console.log("⚠️ [DB DEBUG] Supabase not found. Running in Demo Mode.");
             isDemoMode = true;
             loadMockData();
         }
@@ -68,7 +68,7 @@ async function initApp() {
 
 async function loadDataFromSupabase() {
     try {
-        console.log("🔍 [DB DEBUG] Fetching ingredients, products, and recipes from Supabase...");
+        // console.log("🔍 [DB DEBUG] Fetching ingredients, products, and recipes from Supabase...");
         
         const { data: ing, error: ingErr } = await supabaseClient.from('ingredients').select('*');
         if (ingErr) console.error("❌ [DB DEBUG] Error fetching ingredients:", ingErr);
@@ -78,14 +78,14 @@ async function loadDataFromSupabase() {
         if (prodResult.error) console.error("❌ [DB DEBUG] Error fetching products:", prodResult.error);
         if (prodResult.data) {
             productsData = prodResult.data;
-            console.log("🔍 [DB DEBUG] Loaded products with resep_id mapping:", productsData.map(p => ({ id: p.id, name: p.name || p.nama, resep_id: p.resep_id })));
+            // console.log("🔍 [DB DEBUG] Loaded products with resep_id mapping:", productsData.map(p => ({ id: p.id, name: p.name || p.nama, resep_id: p.resep_id })));
         }
 
         const { data: rec, error: recErr } = await supabaseClient.from('recipes').select('*');
         if (recErr) console.error("❌ [DB DEBUG] Error fetching recipes:", recErr);
         if (rec) recipesData = rec;
 
-        console.log("✅ [DB DEBUG] Loaded Data -> Products:", productsData.length, "| Recipes:", recipesData.length, "| Ingredients:", ingredientsData.length);
+        // console.log("✅ [DB DEBUG] Loaded Data -> Products:", productsData.length, "| Recipes:", recipesData.length, "| Ingredients:", ingredientsData.length);
         updateUI();
     } catch (e) {
         console.error("❌ [DB DEBUG] Supabase fetch exception:", e);
@@ -272,14 +272,14 @@ window.updateMenuRecipeMapping = async function(productId) {
     if (!selectEl) return;
     const recipeId = selectEl.value ? selectEl.value : null;
 
-    console.log(`🔍 [DB DEBUG] Updating mapping for Product ID: ${productId} -> Recipe ID: ${recipeId}`);
+    // console.log(`🔍 [DB DEBUG] Updating mapping for Product ID: ${productId} -> Recipe ID: ${recipeId}`);
 
     // Update local state immediately for snappy UX
     productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
 
     if (supabaseClient && !isDemoMode) {
         try {
-            console.log(`📤 [DB DEBUG] Sending update to Supabase table 'products' with filter eq('id', ${productId})`);
+            // console.log(`📤 [DB DEBUG] Sending update to Supabase table 'products' with filter eq('id', ${productId})`);
             
             const { data, error } = await supabaseClient
                 .from('products')
@@ -293,14 +293,14 @@ window.updateMenuRecipeMapping = async function(productId) {
                 return;
             }
 
-            console.log("✅ [DB DEBUG] Supabase update confirmed. Response data:", data);
+            // console.log("✅ [DB DEBUG] Supabase update confirmed. Response data:", data);
         } catch (e) {
             console.error("❌ [DB DEBUG] Supabase mapping update exception:", e);
             showModal("Gagal", "Terjadi kesalahan koneksi ke Supabase.", "❌");
             return;
         }
     } else {
-        console.log("ℹ️ [DB DEBUG] Running in demo mode. Saved locally.");
+        // console.log("ℹ️ [DB DEBUG] Running in demo mode. Saved locally.");
     }
 
     renderRecipes();
@@ -317,9 +317,9 @@ function updateCalcProductOptions() {
     productsData.forEach(prod => {
         const selected = String(prod.id) === String(currentVal) ? 'selected' : '';
         const stockVal = prod.stok !== undefined ? prod.stok : (prod.stock !== undefined ? prod.stock : 0);
-        const prodQty = prod.qty !== undefined ? prod.qty : 1;
-        const prodUnit = prod.unit !== undefined ? prod.unit : 'pcs';
-        const displayLabel = `${prod.name || prod.nama || 'Produk'} (Stok: ${stockVal} | Isi: ${prodQty} ${prodUnit})`;
+        
+        // Format penamaan produk: Nama Produk (Stok: X)
+        const displayLabel = `${prod.name || prod.nama || 'Produk'} (Stok: ${stockVal})`;
         html += `<option value="${prod.id}" ${selected}>${escapeHtml(displayLabel)}</option>`;
     });
     select.innerHTML = html;
@@ -698,7 +698,7 @@ window.resetRecipeForm = function() {
     document.getElementById('modalTitle').innerText = "Buat Master Resep";
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
-        container.innerHTML = '',
+        container.innerHTML = '';
         addRecipeIngredientRow();
     }
 }
@@ -715,7 +715,7 @@ window.deleteRecipe = async function(id) {
         loadDataFromSupabase();
     } else {
         recipesData = recipesData.filter(r => String(r.id) !== String(id));
-        productsData = productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
+        productsData = productsData.app ? productsData : productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
         updateUI();
     }
     showModal("Terhapus", "Master resep berhasil dihapus.", "🗑️");
