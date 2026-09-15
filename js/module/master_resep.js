@@ -77,7 +77,10 @@ async function loadDataFromSupabase() {
 
         const prodResult = await supabaseClient.from('products').select('*');
         if (prodResult.error) console.error("❌ [DB DEBUG] Error fetching products:", prodResult.error);
-        if (prodResult.data) productsData = prodResult.data;
+        if (prodResult.data) {
+            productsData = prodResult.data;
+            console.log("🔍 [DB DEBUG] Loaded products with resep_id mapping:", productsData.map(p => ({ id: p.id, name: p.name || p.nama, resep_id: p.resep_id })));
+        }
 
         const { data: rec, error: recErr } = await supabaseClient.from('recipes').select('*');
         if (recErr) console.error("❌ [DB DEBUG] Error fetching recipes:", recErr);
@@ -300,6 +303,7 @@ window.updateMenuRecipeMapping = async function(productId) {
     }
 
     renderRecipes();
+    renderMappingUI();
     showModal("Tersimpan", "Relasi menu dan resep berhasil disimpan ke Supabase!", "✅");
 }
 
