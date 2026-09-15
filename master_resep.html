@@ -42,7 +42,7 @@
             <div class="text-rose-600 text-lg mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i></div>
             <div class="flex-1">
                 <h4 class="font-bold text-rose-800 text-xs uppercase tracking-wider">Perhatian: Produk Siap Jual Menipis / Habis!</h4>
-                <p class="text-xs text-rose-600 mt-0.5">Menu berikut di tabel <code class="font-semibold">producs</code> stoknya sudah 0 atau di bawah batas minimum (<= 5). Segera jadwalkan produksi:</p>
+                <p class="text-xs text-rose-600 mt-0.5">Menu berikut di tabel <code class="font-semibold">products</code> stoknya sudah 0 atau di bawah batas minimum (<= 5). Segera jadwalkan produksi:</p>
                 <div id="lowStockProductsList" class="flex flex-wrap gap-2 mt-2"></div>
             </div>
         </div>
@@ -72,7 +72,7 @@
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-orange-50 text-slate-700 font-semibold">
-                            <th class="p-3.5">Nama Produk (<code class="text-orange-600">producs</code>)</th>
+                            <th class="p-3.5">Nama Produk (<code class="text-orange-600">products</code>)</th>
                             <th class="p-3.5">Stok Produk</th>
                             <th class="p-3.5">Porsi / Qty</th>
                             <th class="p-3.5">Judul Resep</th>
@@ -91,7 +91,7 @@
         <div id="section-calculator" class="space-y-6 hidden">
             <div class="bg-gradient-to-r from-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg">
                 <h2 class="text-2xl font-bold mb-2">Kalkulator Order & Kebutuhan Produksi</h2>
-                <p class="text-orange-100 text-sm mb-6">Pilih produk dimsum dari tabel <code class="bg-white/20 px-1 rounded">producs</code>, masukkan target batch, dan kalkulasikan total kebutuhan bahan baku secara instan.</p>
+                <p class="text-orange-100 text-sm mb-6">Pilih produk dimsum dari tabel <code class="bg-white/20 px-1 rounded">products</code>, masukkan target batch, dan kalkulasikan total kebutuhan bahan baku secara instan.</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
                     <div>
@@ -201,7 +201,7 @@
                     <!-- Monitoring Produk Siap Jual (Products) Menggunakan Referensi stok.js -->
                     <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                            <h3 class="font-bold text-slate-800 text-base">Monitoring Stok Produk Siap Jual (<code class="text-orange-600">producs</code>)</h3>
+                            <h3 class="font-bold text-slate-800 text-base">Monitoring Stok Produk Siap Jual (<code class="text-orange-600">products</code>)</h3>
                             <input type="text" id="stokSearch" placeholder="Cari produk..." class="bg-slate-50 border rounded-xl px-3 py-1.5 text-xs outline-none w-48" oninput="renderProductsTable()">
                         </div>
 
@@ -243,7 +243,7 @@
                 <input type="hidden" id="recipe-edit-id">
                 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Produk dari Tabel <code class="text-orange-600">producs</code></label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Produk dari Tabel <code class="text-orange-600">products</code></label>
                     <select id="recipe-product-select" required onchange="onProductSelectChanged()" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
                         <option value="">-- Pilih Produk --</option>
                     </select>
