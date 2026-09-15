@@ -1,7 +1,11 @@
-// Konfigurasi Supabase (Ganti URL & Key sesuai project Anda)
 import { supabase, authReady } from '../supabase.js';
-let products = [];
+
+let ingredientsData = [];
+let productsData = [];
+let recipesData = [];
 let filterStatus = 'all';
+let isDemoMode = false;
+let supabaseClient = null;
 
 window.showModal = function(title, message, icon = '💡') {
     document.getElementById('modal-title').innerText = title;
@@ -16,11 +20,17 @@ window.closeModal = function() {
 
 window.switchTab = function(tabName) {
     ['recipes', 'calculator', 'ingredients'].forEach(t => {
-        document.getElementById(`section-${t}`).classList.add('hidden');
-        document.getElementById(`tab-btn-${t}`).className = "px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition";
+        const sec = document.getElementById(`section-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (sec) sec.classList.add('hidden');
+        if (btn) btn.className = "px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition";
     });
-    document.getElementById(`section-${tabName}`).classList.remove('hidden');
-    document.getElementById(`tab-btn-${tabName}`).className = "px-4 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition";
+    
+    const activeSec = document.getElementById(`section-${tabName}`);
+    const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+    if (activeSec) activeSec.classList.remove('hidden');
+    if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition";
+
     if (tabName === 'calculator') updateCalcProductOptions();
     if (tabName === 'ingredients') {
         renderProductsSummary();
@@ -39,9 +49,10 @@ window.closeRecipeModal = function() {
 
 async function initApp() {
     try {
-        if (typeof supabase !== 'undefined' && SUPABASE_URL !== "https://your-supabase-project.supabase.co") {
-            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            loadDataFromSupabase();
+        await authReady;
+        if (supabase) {
+            supabaseClient = supabase;
+            await loadDataFromSupabase();
         } else {
             isDemoMode = true;
             loadMockData();
@@ -99,8 +110,10 @@ function loadMockData() {
 }
 
 function updateUI() {
-    document.getElementById('statTotalProducts').innerText = productsData.length;
-    document.getElementById('statTotalRecipes').innerText = recipesData.length;
+    const totalProdEl = document.getElementById('statTotalProducts');
+    const totalRecEl = document.getElementById('statTotalRecipes');
+    if (totalProdEl) totalProdEl.innerText = productsData.length;
+    if (totalRecEl) totalRecEl.innerText = recipesData.length;
     
     checkLowStockProducts();
     updateProductDropdowns();
@@ -126,6 +139,7 @@ function updateProductDropdowns() {
 function checkLowStockProducts() {
     const banner = document.getElementById('lowStockAlertBanner');
     const listContainer = document.getElementById('lowStockProductsList');
+    if (!banner || !listContainer) return;
     
     const lowStockItems = productsData.filter(p => {
         const currentStock = p.stok !== undefined ? Number(p.stok) : (p.stock !== undefined ? Number(p.stock) : 0);
@@ -150,8 +164,10 @@ function checkLowStockProducts() {
 }
 
 window.renderRecipes = function() {
-    const query = (document.getElementById('recipeSearch').value || '').toLowerCase();
+    const searchInput = document.getElementById('recipeSearch');
+    const query = searchInput ? (searchInput.value || '').toLowerCase() : '';
     const tbody = document.getElementById('recipeTableBody');
+    if (!tbody) return;
 
     const filtered = recipesData.filter(rec => {
         const prod = productsData.find(p => p.id === rec.product_id);
@@ -201,7 +217,6 @@ window.renderRecipes = function() {
     }).join('');
 }
 
-// --- INGREDIENTS / STOK GUDANG FUNCTIONS ---
 window.handleIngredientSubmit = async function(e) {
     e.preventDefault();
     const id = document.getElementById('ingredient-edit-id').value || 'ing_' + Date.now();
@@ -286,7 +301,6 @@ window.deleteIngredient = async function(id) {
     showModal("Terhapus", "Bahan baku berhasil dihapus.", "🗑️");
 }
 
-// --- MONITORING PRODUK (Referensi stok.js) ---
 function renderProductsSummary() {
     let total = productsData.length, aman = 0, menipis = 0, habis = 0;
     productsData.forEach(p => {
@@ -400,7 +414,6 @@ window.inputStock = async function(id) {
     }
 };
 
-// --- CALCULATOR FUNCTIONS ---
 function updateCalcProductOptions() {
     const select = document.getElementById('calc-product-select');
     if (!select) return;
@@ -418,14 +431,18 @@ function updateCalcProductOptions() {
 }
 
 window.updateCalcPreview = function() {
-    const productId = document.getElementById('calc-product-select').value;
-    const batchMultiplier = parseFloat(document.getElementById('calc-batch-input').value) || 0;
+    const selectEl = document.getElementById('calc-product-select');
+    const batchInput = document.getElementById('calc-batch-input');
     const tbody = document.getElementById('calc-result-tbody');
     const labelTarget = document.getElementById('calc-target-label');
+    if (!selectEl || !tbody) return;
+
+    const productId = selectEl.value;
+    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 0) : 0;
 
     if (!productId) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">Silakan pilih produk dimsum terlebih dahulu.</td></tr>`;
-        labelTarget.innerText = "Menunggu pilihan produk...";
+        if (labelTarget) labelTarget.innerText = "Menunggu pilihan produk...";
         return;
     }
 
@@ -433,12 +450,12 @@ window.updateCalcPreview = function() {
     const prod = productsData.find(p => p.id === productId);
     if (!recipe) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-600">Belum ada resep yang di-link ke produk ini. Silakan buat resepnya di tab <strong>Master Resep</strong>.</td></tr>`;
-        labelTarget.innerText = "Resep belum diset";
+        if (labelTarget) labelTarget.innerText = "Resep belum diset";
         return;
     }
 
     const totalOutputPcs = batchMultiplier * (prod ? (prod.qty || 1) : 1);
-    labelTarget.innerText = `Target: ${batchMultiplier} Batch (~${totalOutputPcs} ${prod ? (prod.unit || 'pcs') : 'pcs'})`;
+    if (labelTarget) labelTarget.innerText = `Target: ${batchMultiplier} Batch (~${totalOutputPcs} ${prod ? (prod.unit || 'pcs') : 'pcs'})`;
 
     tbody.innerHTML = (recipe.items || []).map(item => {
         const ing = ingredientsData.find(i => i.id === item.ingredientId);
@@ -467,8 +484,12 @@ window.updateCalcPreview = function() {
 }
 
 window.exportShoppingList = function() {
-    const productId = document.getElementById('calc-product-select').value;
-    const batchMultiplier = parseFloat(document.getElementById('calc-batch-input').value) || 1;
+    const selectEl = document.getElementById('calc-product-select');
+    const batchInput = document.getElementById('calc-batch-input');
+    if (!selectEl) return;
+    const productId = selectEl.value;
+    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 1) : 1;
+    
     if (!productId) {
         showModal("Perhatian", "Pilih produk terlebih dahulu untuk menyalin daftar belanja.", "⚠️");
         return;
@@ -506,18 +527,19 @@ window.exportShoppingList = function() {
     showModal("Berhasil Disalin!", "Daftar kebutuhan belanja telah disalin ke clipboard. Bisa langsung dipaste ke WhatsApp!", "📋");
 }
 
-// --- RECIPE FORM & HANDLERS ---
 window.onProductSelectChanged = function() {
     const prodId = document.getElementById('recipe-product-select').value;
     const prod = productsData.find(p => p.id === prodId);
-    if (prod && !document.getElementById('recipe-name').value) {
+    const recipeNameInput = document.getElementById('recipe-name');
+    if (prod && recipeNameInput && !recipeNameInput.value) {
         const pName = prod.name || prod.nama || 'Produk';
-        document.getElementById('recipe-name').value = `Resep ${pName} (${prod.qty || 1} ${prod.unit || 'pcs'})`;
+        recipeNameInput.value = `Resep ${pName} (${prod.qty || 1} ${prod.unit || 'pcs'})`;
     }
 }
 
 window.addRecipeIngredientRow = function(selectedIngId = '', amountVal = '') {
     const container = document.getElementById('recipe-ingredients-container');
+    if (!container) return;
     const rowId = 'row_' + Math.random().toString(36).substring(2, 9);
     
     let optionsHtml = '<option value="">-- Pilih Bahan --</option>';
@@ -594,19 +616,25 @@ window.editRecipe = function(id) {
     document.getElementById('modalTitle').innerText = "Edit Master Resep";
     
     const container = document.getElementById('recipe-ingredients-container');
-    container.innerHTML = '';
-    (rec.items || []).forEach(item => {
-        addRecipeIngredientRow(item.ingredientId, item.amount);
-    });
+    if (container) {
+        container.innerHTML = '';
+        (rec.items || []).forEach(item => {
+            addRecipeIngredientRow(item.ingredientId, item.amount);
+        });
+    }
     document.getElementById('recipeModal').classList.remove('hidden');
 }
 
 window.resetRecipeForm = function() {
-    document.getElementById('recipeForm').reset();
+    const form = document.getElementById('recipeForm');
+    if (form) form.reset();
     document.getElementById('recipe-edit-id').value = '';
     document.getElementById('modalTitle').innerText = "Atur Resep ke Produk";
-    document.getElementById('recipe-ingredients-container').innerHTML = '';
-    addRecipeIngredientRow();
+    const container = document.getElementById('recipe-ingredients-container');
+    if (container) {
+        container.innerHTML = '';
+        addRecipeIngredientRow();
+    }
 }
 
 window.deleteRecipe = async function(id) {
