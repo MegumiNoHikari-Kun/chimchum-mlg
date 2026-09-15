@@ -37,6 +37,16 @@
             </div>
         </div>
 
+        <!-- ================= NOTIFIKASI PRODUK STOK MENIPIS / HABIS ================= -->
+        <div id="lowStockAlertBanner" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+            <div class="text-rose-600 text-lg mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="flex-1">
+                <h4 class="font-bold text-rose-800 text-xs uppercase tracking-wider">Perhatian: Produk Siap Jual Menipis / Habis!</h4>
+                <p class="text-xs text-rose-600 mt-0.5">Menu berikut di tabel <code class="font-semibold">producs</code> stoknya sudah 0 atau di bawah batas minimum (<= 5). Segera jadwalkan produksi:</p>
+                <div id="lowStockProductsList" class="flex flex-wrap gap-2 mt-2"></div>
+            </div>
+        </div>
+
         <!-- ================= TAB 1: MASTER RESEP ================= -->
         <div id="section-recipes" class="space-y-6">
             <div class="flex justify-between items-center flex-wrap gap-3">
@@ -62,7 +72,8 @@
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-orange-50 text-slate-700 font-semibold">
-                            <th class="p-3.5">Nama Produk (producs)</th>
+                            <th class="p-3.5">Nama Produk (<code class="text-orange-600">producs</code>)</th>
+                            <th class="p-3.5">Stok Produk</th>
                             <th class="p-3.5">Porsi / Qty</th>
                             <th class="p-3.5">Judul Resep</th>
                             <th class="p-3.5">Komposisi Bahan Baku</th>
@@ -70,7 +81,7 @@
                         </tr>
                     </thead>
                     <tbody id="recipeTableBody" class="divide-y divide-slate-100">
-                        <tr><td colspan="5" class="text-center py-10 text-slate-400">Memuat master resep...</td></tr>
+                        <tr><td colspan="6" class="text-center py-10 text-slate-400">Memuat master resep...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -319,8 +330,8 @@
                 { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml' }
             ];
             productsData = [
-                { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 4, unit: 'pcs' },
-                { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs' }
+                { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 4, unit: 'pcs', stock: 2 }, // Stok menipis
+                { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stock: 0 } // Stok habis
             ];
             recipesData = [
                 {
@@ -341,17 +352,47 @@
             document.getElementById('statTotalProducts').innerText = productsData.length;
             document.getElementById('statTotalRecipes').innerText = recipesData.length;
             
+            // Periksa produk yang stoknya menipis/habis (stok <= 5 atau undefined dianggap 0)
+            checkLowStockProducts();
+
             // Populate Product Dropdown in Recipe Modal
             const select = document.getElementById('recipe-product-select');
             let html = '<option value="">-- Pilih Produk dari Tabel producs --</option>';
             productsData.forEach(prod => {
-                html += `<option value="${prod.id}">${escapeHtml(prod.name)} (Isi: ${prod.qty || 1} ${prod.unit || 'pcs'})</option>`;
+                html += `<option value="${prod.id}">${escapeHtml(prod.name)} (Stok: ${prod.stock ?? 0} | Isi: ${prod.qty || 1} ${prod.unit || 'pcs'})</option>`;
             });
             select.innerHTML = html;
 
             renderRecipes();
             renderIngredientsTable();
             updateCalcProductOptions();
+        }
+
+        function checkLowStockProducts() {
+            const banner = document.getElementById('lowStockAlertBanner');
+            const listContainer = document.getElementById('lowStockProductsList');
+            
+            // Asumsi kolom stok produk di tabel producs bernama 'stock' atau 'stok'
+            const lowStockItems = productsData.filter(p => {
+                const currentStock = p.stock !== undefined ? p.stock : (p.stok !== undefined ? p.stok : 0);
+                return currentStock <= 5;
+            });
+
+            if (lowStockItems.length > 0) {
+                banner.classList.remove('hidden');
+                listContainer.innerHTML = lowStockItems.map(p => {
+                    const stockVal = p.stock !== undefined ? p.stock : (p.stok !== undefined ? p.stok : 0);
+                    const badgeColor = stockVal <= 0 ? 'bg-rose-200 text-rose-900 border-rose-300' : 'bg-amber-100 text-amber-800 border-amber-200';
+                    return `
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${badgeColor}">
+                            <i class="fa-solid fa-box-archive"></i> ${escapeHtml(p.name)} 
+                            <span class="bg-white/80 px-1.5 py-0.5 rounded-md text-[10px]">Stok: ${stockVal}</span>
+                        </span>
+                    `;
+                }).join('');
+            } else {
+                banner.classList.add('hidden');
+            }
         }
 
         window.renderRecipes = function() {
@@ -365,13 +406,24 @@
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-400">Belum ada master resep yang cocok.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-400">Belum ada master resep yang cocok.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = filtered.map(rec => {
                 const prod = productsData.find(p => p.id === rec.product_id);
                 const prodName = prod ? `${prod.name}` : '<span class="text-rose-500">Produk Tidak Ditemukan</span>';
+                const stockVal = prod ? (prod.stock !== undefined ? prod.stock : (prod.stok !== undefined ? prod.stok : 0)) : 0;
+                
+                let stockBadge = '';
+                if (stockVal <= 0) {
+                    stockBadge = `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-md font-bold border border-rose-200 animate-pulse">Habis (0)</span>`;
+                } else if (stockVal <= 5) {
+                    stockBadge = `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-200">Menipis (${stockVal})</span>`;
+                } else {
+                    stockBadge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold">${stockVal}</span>`;
+                }
+
                 const prodQty = prod ? `<span class="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md font-medium">${prod.qty || 1} ${prod.unit || 'pcs'}</span>` : '-';
 
                 const itemsList = (rec.items || []).map(item => {
@@ -382,6 +434,7 @@
                 return `
                     <tr class="hover:bg-slate-50/70 transition">
                         <td class="p-3.5 font-semibold text-slate-800">${escapeHtml(prodName)}</td>
+                        <td class="p-3.5">${stockBadge}</td>
                         <td class="p-3.5">${prodQty}</td>
                         <td class="p-3.5 font-medium text-orange-600">${escapeHtml(rec.name)}</td>
                         <td class="p-3.5 text-slate-600 leading-relaxed">${itemsList || 'Tidak ada bahan'}</td>
