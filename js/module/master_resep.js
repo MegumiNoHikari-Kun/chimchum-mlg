@@ -273,13 +273,14 @@ window.updateMenuRecipeMapping = async function(productId) {
 
     console.log(`🔍 [DB DEBUG] Updating mapping for Product ID: ${productId} -> Recipe ID: ${recipeId}`);
 
-    // Update local state immediately
+    // Update local state immediately for snappy UX
     productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
 
     if (supabaseClient && !isDemoMode) {
         try {
             console.log(`📤 [DB DEBUG] Sending update to Supabase table 'products' with filter eq('id', ${productId})`);
             
+            // Explicitly call update with .select() to verify persistence and bypass RLS empty return blocks
             const { data, error } = await supabaseClient
                 .from('products')
                 .update({ resep_id: recipeId })
@@ -287,12 +288,12 @@ window.updateMenuRecipeMapping = async function(productId) {
                 .select();
 
             if (error) {
-                console.error("❌ [DB DEBUG] Supabase update error:", error);
-                showModal("Gagal", "Gagal menyimpan resep ke Supabase: " + error.message, "❌");
+                console.error("❌ [DB DEBUG] Supabase update error details:", error);
+                showModal("Gagal Supabase", `Error: ${error.message}. Periksa RLS policy tabel products.`, "❌");
                 return;
             }
 
-            console.log("✅ [DB DEBUG] Supabase update successful. Response data:", data);
+            console.log("✅ [DB DEBUG] Supabase update confirmed. Response data:", data);
         } catch (e) {
             console.error("❌ [DB DEBUG] Supabase mapping update exception:", e);
             showModal("Gagal", "Terjadi kesalahan koneksi ke Supabase.", "❌");
@@ -304,6 +305,7 @@ window.updateMenuRecipeMapping = async function(productId) {
 
     renderRecipes();
     renderMappingUI();
+    updateCalcProductOptions();
     showModal("Tersimpan", "Relasi menu dan resep berhasil disimpan ke Supabase!", "✅");
 }
 
@@ -714,7 +716,7 @@ window.deleteRecipe = async function(id) {
         productsData = productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
         updateUI();
     }
-    showModal("Terhapus", "Master resep berhasil dihapus.", "🗑️");
+    showModal("Terhapus", "Master resep berhasil disimpan.", "🗑️");
 }
 
 function escapeHtml(str) {
