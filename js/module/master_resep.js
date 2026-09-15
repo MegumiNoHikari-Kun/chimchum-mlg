@@ -210,12 +210,6 @@ window.renderRecipes = function() {
     }).join('');
 }
 
-window.filterMappingList = function() {
-    const input = document.getElementById('mappingSearchInput');
-    mappingSearchQuery = input ? input.value.toLowerCase().trim() : '';
-    renderMappingUI();
-}
-
 window.renderMappingUI = function() {
     const container = document.getElementById('mapping-products-container');
     if (!container) return;
@@ -225,16 +219,19 @@ window.renderMappingUI = function() {
         return;
     }
 
+    const searchInput = document.getElementById('mappingSearch');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
     let filteredProducts = productsData;
-    if (mappingSearchQuery) {
+    if (query) {
         filteredProducts = productsData.filter(p => {
             const pName = (p.name || p.nama || '').toLowerCase();
-            return pName.includes(mappingSearchQuery);
+            return pName.includes(query);
         });
     }
 
     if (filteredProducts.length === 0) {
-        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Tidak ada menu yang sesuai dengan pencarian "${escapeHtml(mappingSearchQuery)}".</td></tr>`;
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Tidak ada menu yang sesuai dengan pencarian "${escapeHtml(query)}".</td></tr>`;
         return;
     }
 
@@ -291,7 +288,7 @@ window.updateMenuRecipeMapping = async function(productId) {
 
             if (error) {
                 console.error("❌ [DB DEBUG] Supabase update error details:", error);
-                showModal("Gagal Supabase", `Error: ${error.message}. Pastikan RLS policy tabel products mengizinkan UPDATE (atau disable RLS untuk testing).`, "❌");
+                showModal("Gagal Supabase", `Error: ${error.message}. Periksa RLS policy tabel products.`, "❌");
                 return;
             }
 
