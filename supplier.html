@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChimChum Dimsum - Master Supplier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                    <i class="fa-solid id-card"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold text-slate-800">ChimChum Dimsum Master</h1>
+                    <p class="text-xs text-slate-500">Modul Manajemen Master Supplier</p>
+                </div>
+            </div>
+            <button onclick="openSupplierModal()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> Tambah Supplier Baru
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6">
+        
+        <!-- Search & Stats Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="relative w-full sm:w-80">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-search"></i>
+                </span>
+                <input type="text" id="supplierSearch" placeholder="Cari nama supplier atau kontak..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500" oninput="renderSuppliersTable()">
+            </div>
+            <div class="text-xs text-slate-500 font-medium">
+                Total Supplier Terdaftar: <span id="statTotalSuppliers" class="font-bold text-orange-600">0</span>
+            </div>
+        </div>
+
+        <!-- Suppliers Table -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                            <th class="p-4">Nama Supplier</th>
+                            <th class="p-4">Kontak Person</th>
+                            <th class="p-4">No. Telepon / WhatsApp</th>
+                            <th class="p-4">Alamat</th>
+                            <th class="p-4">Catatan</th>
+                            <th class="p-4 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suppliers-table-tbody" class="divide-y divide-slate-100">
+                        <tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data supplier...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="supplierModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 id="supplierModalTitle" class="text-sm font-bold text-slate-800">Tambah Supplier Baru</h3>
+                <button onclick="closeSupplierModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+            </div>
+            <form id="supplierForm" onsubmit="handleSupplierSubmit(event)" class="space-y-3">
+                <input type="hidden" id="supplier-edit-id">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nama Supplier / Toko *</label>
+                    <input type="text" id="sup-name" required placeholder="Contoh: Toko Bahan Makmur Jaya" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Kontak Person (PIC)</label>
+                        <input type="text" id="sup-contact" placeholder="Contoh: Bpk. Budi" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">No. Telepon / WA</label>
+                        <input type="text" id="sup-phone" placeholder="Contoh: 08123456789" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Alamat Supplier</label>
+                    <textarea id="sup-address" rows="2" placeholder="Alamat lengkap supplier..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Catatan Tambahan</label>
+                    <input type="text" id="sup-notes" placeholder="Misal: Buka Senin-Sabtu jam 08.00" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeSupplierModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-orange-600 text-white hover:bg-orange-700 shadow-sm transition">Simpan Supplier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="notification-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-3 shadow-xl">
+            <div id="modal-icon" class="text-3xl">💡</div>
+            <h4 id="modal-title" class="font-bold text-sm text-slate-800">Notifikasi</h4>
+            <p id="modal-message" class="text-xs text-slate-600 leading-relaxed"></p>
+            <button onclick="closeModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-xl text-xs font-semibold transition">Mengerti</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/module/master_supplier.js"></script>
+</body>
+</html>
