@@ -69,8 +69,12 @@ async function loadDataFromSupabase() {
         const { data: ing } = await supabaseClient.from('ingredients').select('*');
         if (ing) ingredientsData = ing;
 
-        const { data: prod } = await supabaseClient.from('producs').select('*');
-        if (prod) productsData = prod;
+        // Fetching from 'products' (or fallback to 'producs' if needed)
+        let prodResult = await supabaseClient.from('products').select('*');
+        if (prodResult.error) {
+            prodResult = await supabaseClient.from('producs').select('*');
+        }
+        if (prodResult.data) productsData = prodResult.data;
 
         const { data: rec } = await supabaseClient.from('recipes').select('*');
         if (rec) recipesData = rec;
@@ -128,7 +132,7 @@ function updateUI() {
 function updateProductDropdowns() {
     const recipeSelect = document.getElementById('recipe-product-select');
     if (!recipeSelect) return;
-    let recipeHtml = '<option value="">-- Pilih Produk dari Tabel producs --</option>';
+    let recipeHtml = '<option value="">-- Pilih Produk dari Tabel products --</option>';
     productsData.forEach(prod => {
         const stockVal = prod.stok !== undefined ? prod.stok : (prod.stock !== undefined ? prod.stock : 0);
         recipeHtml += `<option value="${prod.id}">${escapeHtml(prod.name || prod.nama)} (Stok: ${stockVal} | Isi: ${prod.qty || 1} ${prod.unit || 'pcs'})</option>`;
@@ -394,7 +398,11 @@ window.modStock = async function(id, val) {
     val = Math.max(0, Number(val) || 0);
     try {
         if (supabaseClient && !isDemoMode) {
-            await supabaseClient.from('producs').update({ stok: val }).eq('id', id);
+            // Try updating 'products', fallback to 'producs'
+            let updateRes = await supabaseClient.from('products').update({ stok: val }).eq('id', id);
+            if (updateRes.error) {
+                await supabaseClient.from('producs').update({ stok: val }).eq('id', id);
+            }
         }
         productsData = productsData.map(p => String(p.id) === String(id) ? { ...p, stok: val, stock: val } : p);
         renderProductsSummary();
@@ -578,7 +586,7 @@ window.handleRecipeSubmit = async function(e) {
     });
 
     if (!product_id) {
-        showModal("Perhatian", "Pilih produk dari tabel producs terlebih dahulu.", "⚠️");
+        showModal("Perhatian", "Pilih produk dari tabel products terlebih dahulu.", "⚠️");
         return;
     }
 
@@ -660,4 +668,4 @@ function escapeHtml(str) {
 window.onload = function() {
     initApp();
     addRecipeIngredientRow();
-}
+};
