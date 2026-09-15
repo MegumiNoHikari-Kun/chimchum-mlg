@@ -3,7 +3,6 @@ import { supabase, authReady } from '../supabase.js';
 let ingredientsData = [];
 let productsData = [];
 let recipesData = [];
-let mappingData = []; // Menyimpan relasi product_id <-> recipe_id
 let filterStatus = 'all';
 let isDemoMode = false;
 let supabaseClient = null;
@@ -77,30 +76,11 @@ async function loadDataFromSupabase() {
         const { data: rec } = await supabaseClient.from('recipes').select('*');
         if (rec) recipesData = rec;
 
-        // Coba load tabel mapping khusus jika ada, jika belum gunakan field/mock
-        const mapResult = await supabaseClient.from('menu_recipe_mapping').select('*');
-        if (mapResult.data) {
-            mappingData = mapResult.data;
-        } else {
-            // Fallback ekstrak dari recipes.product_ids jika ada
-            extractMappingFromRecipes();
-        }
-
         updateUI();
     } catch (e) {
         console.error("Supabase fetch error:", e);
         loadMockData();
     }
-}
-
-function extractMappingFromRecipes() {
-    mappingData = [];
-    recipesData.forEach(rec => {
-        const pIds = rec.product_ids || (rec.product_id ? [rec.product_id] : []);
-        pIds.forEach(pId => {
-            mappingData.push({ product_id: pId, recipe_id: rec.id });
-        });
-    });
 }
 
 function loadMockData() {
@@ -112,9 +92,9 @@ function loadMockData() {
         { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml' }
     ];
     productsData = [
-        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 4, unit: 'pcs', stok: 2, foto: 'https://placehold.co/40' },
-        { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stok: 0, foto: 'https://placehold.co/40' },
-        { id: 'prod_3', name: 'Dimsum Ayam Original', qty: 1, unit: 'pcs', stok: 15, foto: 'https://placehold.co/40' }
+        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 4, unit: 'pcs', stok: 2, foto: 'https://placehold.co/40', resep_id: 'rec_1' },
+        { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stok: 0, foto: 'https://placehold.co/40', resep_id: null },
+        { id: 'prod_3', name: 'Dimsum Ayam Original', qty: 1, unit: 'pcs', stok: 15, foto: 'https://placehold.co/40', resep_id: 'rec_1' }
     ];
     recipesData = [
         {
@@ -126,10 +106,6 @@ function loadMockData() {
                 { ingredientId: 'ing4', amount: 4 }
             ]
         }
-    ];
-    mappingData = [
-        { product_id: 'prod_1', recipe_id: 'rec_1' },
-        { product_id: 'prod_3', recipe_id: 'rec_1' }
     ];
     updateUI();
 }
@@ -190,11 +166,8 @@ window.renderRecipes = function() {
     }
 
     tbody.innerHTML = filtered.map(rec => {
-        // Cari produk apa saja yang pakai resep ini via mappingData
-        const linkedProducts = mappingData
-            .filter(m => String(m.recipe_id) === String(rec.id))
-            .map(m => productsData.find(p => String(p.id) === String(m.product_id)))
-            .filter(Boolean);
+        // Cari produk apa saja yang pakai resep ini melalui products.resep_id
+        const linkedProducts = productsData.filter(p => String(p.resep_id) === String(rec.id));
 
         const linkedProductsHtml = linkedProducts.length > 0 ? linkedProducts.map(prod => {
             const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
@@ -231,21 +204,22 @@ window.renderRecipes = function() {
 
 window.renderMappingUI = function() {
     const container = document.getElementById('mapping-products-container');
+    const searchInput = document.getElementById('mappingSearch');
     if (!container) return;
 
-    if (productsData.length === 0) {
-        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Belum ada produk/menu di tabel products.</td></tr>`;
+    const query = searchInput ? (searchInput.value || '').toLowerCase().trim() : '';
+    const filteredProducts = productsData.filter(prod => {
+        const name = (prod.name || prod.nama || '').toLowerCase();
+        return name.includes(query);
+    });
+
+    if (filteredProducts.length === 0) {
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Tidak ada menu yang cocok dengan pencarian.</td></tr>`;
         return;
     }
 
-    let recipeOptionsHtml = '<option value="">-- Belum Dipilih --</option>';
-    recipesData.forEach(r => {
-        recipeOptionsHtml += `<option value="${r.id}">${escapeHtml(r.name)}</option>`;
-    });
-
-    container.innerHTML = productsData.map(prod => {
-        const foundMap = mappingData.find(m => String(m.product_id) === String(prod.id));
-        const currentRecipeId = foundMap ? foundMap.recipe_id : '';
+    container.innerHTML = filteredProducts.map(prod => {
+        const currentRecipeId = prod.resep_id || '';
 
         const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
         let statusBadge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Aman (${stockVal})</span>`;
@@ -278,28 +252,29 @@ window.renderMappingUI = function() {
 window.updateMenuRecipeMapping = async function(productId) {
     const selectEl = document.getElementById(`map-select-${productId}`);
     if (!selectEl) return;
-    const recipeId = selectEl.value;
+    const recipeId = selectEl.value || null;
 
-    // Update local mappingData
-    mappingData = mappingData.filter(m => String(m.product_id) !== String(productId));
-    if (recipeId) {
-        mappingData.push({ product_id: productId, recipe_id: recipeId });
-    }
+    // Update local state productsData
+    productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
 
     if (supabaseClient && !isDemoMode) {
-        // Simpan ke database (bisa pakai tabel khusus menu_recipe_mapping atau update kolom produk)
         try {
-            await supabaseClient.from('menu_recipe_mapping').delete().eq('product_id', productId);
-            if (recipeId) {
-                await supabaseClient.from('menu_recipe_mapping').insert([{ product_id: productId, recipe_id: recipeId }]);
+            const { error } = await supabaseClient
+                .from('products')
+                .update({ resep_id: recipeId })
+                .eq('id', productId);
+            if (error) {
+                console.error("Failed updating resep_id:", error);
+                showModal("Gagal", error.message, "❌");
+                return;
             }
         } catch (e) {
-            console.warn("Mapping table sync notice:", e);
+            console.warn("Supabase update error:", e);
         }
     }
 
     renderRecipes();
-    showModal("Tersimpan", "Relasi menu dan resep berhasil diperbarui!", "✅");
+    showModal("Tersimpan", "Relasi menu dan resep berhasil diperbarui ke tabel products!", "✅");
 }
 
 function updateCalcProductOptions() {
@@ -334,11 +309,10 @@ window.updateCalcPreview = function() {
         return;
     }
 
-    // Cari resep via mappingData
-    const mapItem = mappingData.find(m => String(m.product_id) === String(productId));
-    const recipe = mapItem ? recipesData.find(r => String(r.id) === String(mapItem.recipe_id)) : null;
-
     const prod = productsData.find(p => String(p.id) === String(productId));
+    const recipeId = prod ? prod.resep_id : null;
+    const recipe = recipeId ? recipesData.find(r => String(r.id) === String(recipeId)) : null;
+
     if (!recipe) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-600">Belum ada resep yang di-link ke produk ini. Silakan atur di tab <strong>Kawinkan Menu & Resep</strong>.</td></tr>`;
         if (labelTarget) labelTarget.innerText = "Resep belum diset";
@@ -387,8 +361,8 @@ window.exportShoppingList = function() {
     }
 
     const prod = productsData.find(p => String(p.id) === String(productId));
-    const mapItem = mappingData.find(m => String(m.product_id) === String(productId));
-    const recipe = mapItem ? recipesData.find(r => String(r.id) === String(mapItem.recipe_id)) : null;
+    const recipeId = prod ? prod.resep_id : null;
+    const recipe = recipeId ? recipesData.find(r => String(r.id) === String(recipeId)) : null;
 
     if (!recipe) {
         showModal("Perhatian", "Resep untuk produk ini belum diatur di tab Kawinkan Menu & Resep.", "⚠️");
@@ -714,6 +688,8 @@ window.resetRecipeForm = function() {
 window.deleteRecipe = async function(id) {
     if (!confirm("Hapus master resep ini? Semua menu yang terikat akan terlepas.")) return;
     if (supabaseClient && !isDemoMode) {
+        // Lepas relasi resep_id di products terlebih dahulu
+        await supabaseClient.from('products').update({ resep_id: null }).eq('resep_id', id);
         const { error } = await supabaseClient.from('recipes').delete().eq('id', id);
         if (error) {
             showModal("Gagal", error.message, "❌");
@@ -722,7 +698,7 @@ window.deleteRecipe = async function(id) {
         loadDataFromSupabase();
     } else {
         recipesData = recipesData.filter(r => String(r.id) !== String(id));
-        mappingData = mappingData.filter(m => String(m.recipe_id) !== String(id));
+        productsData = productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
         updateUI();
     }
     showModal("Terhapus", "Master resep berhasil dihapus.", "🗑️");
