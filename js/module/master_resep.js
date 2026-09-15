@@ -3,8 +3,8 @@ import { supabase, authReady } from '../supabase.js';
 let ingredientsData = [];
 let productsData = [];
 let recipesData = [];
-let filterStatus = 'all';
 let mappingSearchQuery = '';
+let filterStatus = 'all';
 let isDemoMode = false;
 let supabaseClient = null;
 
@@ -165,7 +165,6 @@ window.renderRecipes = function() {
     }
 
     tbody.innerHTML = filtered.map(rec => {
-        // Get linked products directly from productsData where product.resep_id === rec.id
         const linkedProducts = productsData.filter(p => String(p.resep_id) === String(rec.id));
         
         const linkedProductsHtml = linkedProducts.length > 0 ? linkedProducts.map(prod => {
@@ -277,6 +276,8 @@ window.updateMenuRecipeMapping = async function(productId) {
             }
         } catch (e) {
             console.warn("Supabase mapping update error:", e);
+            showModal("Gagal", "Terjadi kesalahan koneksi ke Supabase.", "❌");
+            return;
         }
     }
 
@@ -679,7 +680,6 @@ window.resetRecipeForm = function() {
 window.deleteRecipe = async function(id) {
     if (!confirm("Hapus master resep ini? Semua menu yang terikat akan terlepas.")) return;
     if (supabaseClient && !isDemoMode) {
-        // Hapus resep dan set resep_id = null pada produk yang terikat
         await supabaseClient.from('products').update({ resep_id: null }).eq('resep_id', id);
         const { error } = await supabaseClient.from('recipes').delete().eq('id', id);
         if (error) {
