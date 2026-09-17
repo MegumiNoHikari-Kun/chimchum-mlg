@@ -1,3 +1,9 @@
+import { supabase, authReady } from '../../supabase.js';
+
+
+// =====================================================
+// ELEMENTS
+// =====================================================
 
 const sidebarToggle =
     document.getElementById('sidebarToggle');
@@ -8,10 +14,35 @@ const sidebarToggleIcon =
 const adminSidebar =
     document.getElementById('adminSidebar');
 
+const logoutButton =
+    document.getElementById('logoutButton');
+
+const currentUserEmail =
+    document.getElementById('currentUserEmail');
+
+const moduleFrame =
+    document.getElementById('moduleFrame');
+
+const moduleLoading =
+    document.getElementById('moduleLoading');
+
+
+// =====================================================
+// STATE
+// =====================================================
+
 let sidebarOpen = true;
 
 
+// =====================================================
+// SIDEBAR
+// =====================================================
+
 function updateSidebar() {
+
+    if (!adminSidebar || !sidebarToggleIcon) {
+        return;
+    }
 
     if (sidebarOpen) {
 
@@ -50,494 +81,53 @@ function updateSidebar() {
 }
 
 
-sidebarToggle.addEventListener(
-    'click',
-    function () {
-
-        sidebarOpen = !sidebarOpen;
-
-        updateSidebar();
-
-    }
-);
-
-import { supabase } from '../supabase.js';
-
-
 // =====================================================
-// ELEMENTS
+// SIDEBAR TOGGLE EVENT
 // =====================================================
 
-const authLoading = document.getElementById('authLoading');
+if (sidebarToggle) {
 
-const loginScreen = document.getElementById('loginScreen');
+    sidebarToggle.addEventListener(
+        'click',
+        function () {
 
-const adminApp = document.getElementById('adminApp');
+            sidebarOpen = !sidebarOpen;
 
-const loginForm = document.getElementById('loginForm');
+            updateSidebar();
 
-const loginEmail = document.getElementById('loginEmail');
-
-const loginPassword = document.getElementById('loginPassword');
-
-const loginButton = document.getElementById('loginButton');
-
-const loginButtonText = document.getElementById('loginButtonText');
-
-const loginSpinner = document.getElementById('loginSpinner');
-
-const loginError = document.getElementById('loginError');
-
-const loginErrorText = document.getElementById('loginErrorText');
-
-const togglePassword = document.getElementById('togglePassword');
-
-const togglePasswordIcon = document.getElementById('togglePasswordIcon');
-
-const logoutButton = document.getElementById('logoutButton');
-
-const currentUserEmail = document.getElementById('currentUserEmail');
-
-const moduleFrame = document.getElementById('moduleFrame');
-
-const moduleLoading = document.getElementById('moduleLoading');
-
-
-// =====================================================
-// STATE
-// =====================================================
-
-let isAuthenticated = false;
-
-let currentSession = null;
-
-
-// =====================================================
-// HELPER
-// =====================================================
-
-function showLoginError(message) {
-
-    loginErrorText.textContent = message;
-
-    loginError.classList.remove('hidden');
-
-}
-
-
-function hideLoginError() {
-
-    loginError.classList.add('hidden');
-
-    loginErrorText.textContent = '';
-
-}
-
-
-function setLoginLoading(loading) {
-
-    loginButton.disabled = loading;
-
-    loginButton.classList.toggle('opacity-70', loading);
-
-    loginButton.classList.toggle('cursor-not-allowed', loading);
-
-    if (loading) {
-
-        loginButtonText.classList.add('hidden-force');
-
-        loginSpinner.classList.remove('hidden-force');
-
-    } else {
-
-        loginButtonText.classList.remove('hidden-force');
-
-        loginSpinner.classList.add('hidden-force');
-
-    }
+        }
+    );
 
 }
 
 
 // =====================================================
-// SHOW LOGIN
+// LOAD MODULE
 // =====================================================
 
-function showLogin() {
-
-    isAuthenticated = false;
-
-    currentSession = null;
-
-    adminApp.classList.add('hidden-force');
-
-    loginScreen.classList.remove('hidden-force');
-
-    authLoading.classList.add('hidden-force');
-
-    currentUserEmail.textContent = '-';
-
-    // Jangan biarkan iframe tetap menjalankan modul admin
-    moduleFrame.src = 'about:blank';
-
-}
-
-
-// =====================================================
-// SHOW ADMIN
-// =====================================================
-
-function showAdmin(session) {
-
-    isAuthenticated = true;
-
-    currentSession = session;
-
-    loginScreen.classList.add('hidden-force');
-
-    authLoading.classList.add('hidden-force');
-
-    adminApp.classList.remove('hidden-force');
-
-    currentUserEmail.textContent =
-        session?.user?.email || 'Admin';
-
-    // console.log('Supabase session aktif:', session);
-
-    // HANYA setelah login berhasil
-    // iframe baru dimuat
-    if (
-        !moduleFrame.src ||
-        moduleFrame.src.endsWith('about:blank')
-    ) {
-
-        loadModule('pesanan');
-
-    }
-
-}
-
-
-// =====================================================
-// CHECK SESSION
-// =====================================================
-
-async function checkSession() {
-
-    try {
-
-        console.log('Memeriksa Supabase session...');
-
-        const {
-            data,
-            error
-        } = await supabase.auth.getSession();
-
-        if (error) {
-
-            console.error(
-                'getSession error:',
-                error
-            );
-
-            showLogin();
-
-            return;
-
-        }
-
-        const session = data?.session || null;
-
-        if (session) {
-
-            showAdmin(session);
-
-        } else {
-
-            showLogin();
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            'SESSION CHECK ERROR:',
-            error
-        );
-
-        showLogin();
-
-    }
-
-}
-
-
-// =====================================================
-// LOGIN
-// =====================================================
-
-loginForm.addEventListener(
-    'submit',
-    async function(event) {
-
-        event.preventDefault();
-
-        hideLoginError();
-
-        const email =
-            loginEmail.value.trim();
-
-        const password =
-            loginPassword.value;
-
-        if (!email || !password) {
-
-            showLoginError(
-                'Email dan password wajib diisi.'
-            );
-
-            return;
-
-        }
-
-        setLoginLoading(true);
-
-        try {
-
-            console.log(
-                'Mencoba login:',
-                email
-            );
-
-            const {
-                data,
-                error
-            } =
-                await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-            if (error) {
-
-                console.error(
-                    'LOGIN ERROR:',
-                    error
-                );
-
-                throw error;
-
-            }
-
-            if (!data?.session) {
-
-                throw new Error(
-                    'Login berhasil tetapi session Supabase tidak ditemukan.'
-                );
-
-            }
-
-            console.log(
-                'LOGIN BERHASIL:',
-                // data.session
-            );
-
-            loginPassword.value = '';
-
-            showAdmin(data.session);
-
-        } catch (error) {
-
-            console.error(
-                'LOGIN FAILED:',
-                error
-            );
-
-            let message =
-                error?.message ||
-                'Login gagal.';
-
-            if (
-                message
-                    .toLowerCase()
-                    .includes('invalid login credentials')
-            ) {
-
-                message =
-                    'Email atau password salah.';
-
-            }
-
-            showLoginError(message);
-
-        } finally {
-
-            setLoginLoading(false);
-
-        }
-
-    }
-);
-
-
-// =====================================================
-// LOGOUT
-// =====================================================
-
-logoutButton.addEventListener(
-    'click',
-    async function() {
-
-        const confirmed =
-            confirm(
-                'Apakah Anda yakin ingin logout?'
-            );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-
-            logoutButton.disabled = true;
-
-            const {
-                error
-            } =
-                await supabase.auth.signOut();
-
-            if (error) {
-
-                throw error;
-
-            }
-
-            console.log(
-                'Logout berhasil.'
-            );
-
-            showLogin();
-
-        } catch (error) {
-
-            console.error(
-                'LOGOUT ERROR:',
-                error
-            );
-
-            alert(
-                'Gagal logout: ' +
-                (error?.message || error)
-            );
-
-        } finally {
-
-            logoutButton.disabled = false;
-
-        }
-
-    }
-);
-
-
-// =====================================================
-// TOGGLE PASSWORD
-// =====================================================
-
-togglePassword.addEventListener(
-    'click',
-    function() {
-
-        const isPassword =
-            loginPassword.type === 'password';
-
-        loginPassword.type =
-            isPassword
-                ? 'text'
-                : 'password';
-
-        togglePasswordIcon.className =
-            isPassword
-                ? 'fa-solid fa-eye-slash'
-                : 'fa-solid fa-eye';
-
-    }
-);
-
-
-// =====================================================
-// AUTH STATE CHANGE
-// =====================================================
-
-supabase.auth.onAuthStateChange(
-    function(event, session) {
-
-        console.log(
-            'AUTH STATE:',
-            event,
-            // session
-        );
-
-        if (session) {
-
-            // Hindari memanggil showAdmin berulang
-            if (!isAuthenticated) {
-
-                showAdmin(session);
-
-            } else {
-
-                currentSession =
-                    session;
-
-                currentUserEmail.textContent =
-                    session?.user?.email ||
-                    'Admin';
-
-            }
-
-        } else {
-
-            if (isAuthenticated) {
-
-                showLogin();
-
-            }
-
-        }
-
-    }
-);
-
-
-// =====================================================
-// MODULE ROUTER
-// =====================================================
-
-window.loadModule = function(
+window.loadModule = function (
     moduleName,
     btnElement = null
 ) {
 
-    // Jangan izinkan module dibuka
-    // kalau belum login
-    if (!isAuthenticated) {
+    if (!moduleFrame) {
 
-        console.warn(
-            'Module diblokir karena user belum login.'
+        console.error(
+            '❌ moduleFrame tidak ditemukan.'
         );
-
-        showLogin();
 
         return;
 
     }
 
 
-    // Update active button
+    // =========================================
+    // UPDATE SEMUA BUTTON MENJADI NON-AKTIF
+    // =========================================
+
     document
         .querySelectorAll('.nav-btn')
-        .forEach(function(btn) {
+        .forEach(function (btn) {
 
             btn.classList.remove(
                 'bg-orange-500',
@@ -555,16 +145,16 @@ window.loadModule = function(
         });
 
 
-    // Kalau dipanggil programmatically,
-    // cari tombol berdasarkan moduleName
+    // =========================================
+    // CARI BUTTON BERDASARKAN MODULE
+    // =========================================
+
     if (!btnElement) {
 
         const buttons =
-            document.querySelectorAll(
-                '.nav-btn'
-            );
+            document.querySelectorAll('.nav-btn');
 
-        buttons.forEach(function(btn) {
+        buttons.forEach(function (btn) {
 
             const onclick =
                 btn.getAttribute('onclick') || '';
@@ -584,6 +174,10 @@ window.loadModule = function(
     }
 
 
+    // =========================================
+    // AKTIFKAN BUTTON
+    // =========================================
+
     if (btnElement) {
 
         btnElement.classList.remove(
@@ -602,20 +196,30 @@ window.loadModule = function(
     }
 
 
-    // Loading
-    moduleLoading.classList.remove(
-        'opacity-0'
-    );
+    // =========================================
+    // TAMPILKAN LOADING
+    // =========================================
+
+    if (moduleLoading) {
+
+        moduleLoading.classList.remove(
+            'opacity-0'
+        );
+
+    }
 
 
-    // Set iframe
+    // =========================================
+    // LOAD HTML MODULE KE IFRAME
+    // =========================================
+
     const target =
         moduleName + '.html';
 
-    // console.log(
-    //     'Loading module:',
-    //     target
-    // );
+    console.log(
+        '📦 Loading admin module:',
+        target
+    );
 
     moduleFrame.src = target;
 
@@ -626,25 +230,240 @@ window.loadModule = function(
 // IFRAME LOAD
 // =====================================================
 
-moduleFrame.addEventListener(
-    'load',
-    function() {
+if (moduleFrame) {
 
-        moduleLoading.classList.add(
-            'opacity-0'
-        );
+    moduleFrame.addEventListener(
+        'load',
+        function () {
 
-        // console.log(
-        //     'Module loaded:',
-        //     moduleFrame.src
-        // );
+            if (moduleLoading) {
 
-    }
-);
+                moduleLoading.classList.add(
+                    'opacity-0'
+                );
+
+            }
+
+            console.log(
+                '✅ Module loaded:',
+                moduleFrame.src
+            );
+
+        }
+    );
+
+}
+
+
+// =====================================================
+// LOGOUT
+// =====================================================
+
+if (logoutButton) {
+
+    logoutButton.addEventListener(
+        'click',
+        async function () {
+
+            const confirmed =
+                confirm(
+                    'Apakah Anda yakin ingin logout?'
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            try {
+
+                logoutButton.disabled = true;
+
+                logoutButton.classList.add(
+                    'opacity-70',
+                    'cursor-not-allowed'
+                );
+
+
+                // Tunggu Supabase siap
+                await authReady;
+
+
+                // Logout Supabase
+                const {
+                    error
+                } =
+                    await supabase.auth.signOut();
+
+
+                if (error) {
+
+                    throw error;
+
+                }
+
+
+                console.log(
+                    '✅ Logout berhasil.'
+                );
+
+
+                // Kembali ke halaman login
+                window.location.replace(
+                    '/login.html'
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    '❌ LOGOUT ERROR:',
+                    error
+                );
+
+
+                alert(
+                    'Gagal logout:\n\n' +
+                    (
+                        error?.message ||
+                        error
+                    )
+                );
+
+
+                logoutButton.disabled = false;
+
+                logoutButton.classList.remove(
+                    'opacity-70',
+                    'cursor-not-allowed'
+                );
+
+            }
+
+        }
+    );
+
+}
 
 
 // =====================================================
 // INITIALIZATION
 // =====================================================
 
-checkSession();
+async function initAdmin() {
+
+    try {
+
+        // =========================================
+        // TUNGGU SUPABASE SIAP
+        // =========================================
+
+        await authReady;
+
+
+        // =========================================
+        // AMBIL SESSION
+        // =========================================
+
+        const {
+            data,
+            error
+        } =
+            await supabase.auth.getSession();
+
+
+        if (error) {
+
+            console.error(
+                '❌ Gagal mengambil session:',
+                error
+            );
+
+            window.location.replace(
+                '/login.html'
+            );
+
+            return;
+
+        }
+
+
+        // =========================================
+        // SESSION TIDAK ADA
+        // =========================================
+
+        if (!data?.session?.user) {
+
+            console.warn(
+                '⚠️ Session tidak tersedia.'
+            );
+
+            window.location.replace(
+                '/login.html'
+            );
+
+            return;
+
+        }
+
+
+        // =========================================
+        // USER LOGIN
+        // =========================================
+
+        const user =
+            data.session.user;
+
+
+        const email =
+            user.email || 'Admin';
+
+
+        console.log(
+            '✅ Admin session aktif:',
+            email
+        );
+
+
+        // =========================================
+        // TAMPILKAN EMAIL USER
+        // =========================================
+
+        if (currentUserEmail) {
+
+            currentUserEmail.textContent =
+                email;
+
+        }
+
+
+        // =========================================
+        // LOAD MODULE DEFAULT
+        // =========================================
+
+        loadModule(
+            'pesanan'
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            '❌ ADMIN INIT ERROR:',
+            error
+        );
+
+        window.location.replace(
+            '/login.html'
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// START ADMIN
+// =====================================================
+
+initAdmin();
