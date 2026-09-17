@@ -11,19 +11,24 @@ let suppliersData = [];
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'dimsum-master';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
-const supabaseUrl = window.SUPABASE_URL || 'https://your-supabase-project.supabase.co';
-const supabaseKey = window.SUPABASE_KEY || 'your-supabase-anon-key';
+// Catatan: Variabel authReady diimpor dari modul eksternal, jadi deklarasi lokal dihapus untuk menghindari konflik.
 
 window.showModal = function(title, message, icon = '💡') {
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerText = message;
-    document.getElementById('modal-icon').innerText = icon;
-    document.getElementById('notification-modal').classList.remove('hidden');
-}
+    const titleEl = document.getElementById('modal-title');
+    const msgEl = document.getElementById('modal-message');
+    const iconEl = document.getElementById('modal-icon');
+    const modalEl = document.getElementById('notification-modal');
+
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerText = message;
+    if (iconEl) iconEl.innerText = icon;
+    if (modalEl) modalEl.classList.remove('hidden');
+};
 
 window.closeModal = function() {
-    document.getElementById('notification-modal').classList.add('hidden');
-}
+    const modalEl = document.getElementById('notification-modal');
+    if (modalEl) modalEl.classList.add('hidden');
+};
 
 window.switchTab = function(tabName) {
     ['recipes', 'mapping', 'calculator', 'orders', 'ingredients'].forEach(t => {
@@ -41,16 +46,18 @@ window.switchTab = function(tabName) {
     if (tabName === 'mapping') renderMappingUI();
     if (tabName === 'ingredients') { renderIngredientsTable(); }
     if (tabName === 'orders') loadPurchaseOrders();
-}
+};
 
 window.openRecipeModal = function() {
     resetRecipeForm();
-    document.getElementById('recipeModal').classList.remove('hidden');
-}
+    const recipeModal = document.getElementById('recipeModal');
+    if (recipeModal) recipeModal.classList.remove('hidden');
+};
 
 window.closeRecipeModal = function() {
-    document.getElementById('recipeModal').classList.add('hidden');
-}
+    const recipeModal = document.getElementById('recipeModal');
+    if (recipeModal) recipeModal.classList.add('hidden');
+};
 
 async function initApp() {
     try {
@@ -59,7 +66,8 @@ async function initApp() {
             supabaseClient = supabase;
         } else {
             try {
-                supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                // Pastikan variabel URL dan Key Supabase tersedia di scope global jika menggunakan fallback ini
+                supabaseClient = window.supabase.createClient(window.supabaseUrl, window.supabaseKey);
             } catch(err) {
                 isDemoMode = true;
             }
@@ -204,7 +212,7 @@ window.renderRecipes = function() {
             </tr>
         `;
     }).join('');
-}
+};
 
 window.renderMappingUI = function() {
     const container = document.getElementById('mapping-products-container');
@@ -245,7 +253,7 @@ window.renderMappingUI = function() {
             </tr>
         `;
     }).join('');
-}
+};
 
 window.updateMenuRecipeMapping = async function(productId) {
     const selectEl = document.getElementById(`map-select-${productId}`);
@@ -261,7 +269,7 @@ window.updateMenuRecipeMapping = async function(productId) {
     renderMappingUI();
     updateCalcProductOptions();
     showModal("Tersimpan", "Relasi menu dan resep berhasil diperbarui!", "✅");
-}
+};
 
 function updateCalcProductOptions() {
     const select = document.getElementById('calc-product-select');
@@ -326,7 +334,7 @@ window.updateCalcPreview = function() {
             </tr>
         `;
     }).join('');
-}
+};
 
 window.exportShoppingList = function() {
     const selectEl = document.getElementById('calc-product-select');
@@ -354,7 +362,7 @@ window.exportShoppingList = function() {
     document.execCommand("copy");
     document.body.removeChild(dummy);
     showModal("Berhasil Disalin!", "Daftar belanja telah disalin ke clipboard.", "📋");
-}
+};
 
 window.processRestockDeduction = async function() {
     const selectEl = document.getElementById('calc-product-select');
@@ -411,13 +419,13 @@ window.openOrderModal = function() {
         return;
     }
 
-    filterSupplierOptions('');
+    window.filterSupplierOptions();
     
     const previewContainer = document.getElementById('order-items-preview');
     let itemsHtml = '';
     let hasShortage = false;
 
-    (recipe.items || []).forEach((item, index) => {
+    (recipe.items || []).forEach((item) => {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
         const name = ing ? ing.name : 'Bahan';
         const unit = ing ? ing.unit : '';
@@ -451,13 +459,15 @@ window.openOrderModal = function() {
         itemsHtml = `<div class="text-emerald-600 font-semibold text-center py-2">Semua stok bahan baku aman! Tidak ada kekurangan untuk batch ini.</div>`;
     }
 
-    previewContainer.innerHTML = itemsHtml;
-    document.getElementById('orderModal').classList.remove('hidden');
+    if (previewContainer) previewContainer.innerHTML = itemsHtml;
+    const orderModal = document.getElementById('orderModal');
+    if (orderModal) orderModal.classList.remove('hidden');
 };
 
 window.filterSupplierOptions = function() {
     const query = (document.getElementById('supplierSearchInput')?.value || '').toLowerCase().trim();
     const supSelect = document.getElementById('order-supplier-select');
+    if (!supSelect) return;
     const filtered = suppliersData.filter(s => (s.name || s.nama || '').toLowerCase().includes(query));
     supSelect.innerHTML = '<option value="">-- Pilih Supplier --</option>' + filtered.map(s => `
         <option value="${s.id}">${escapeHtml(s.name || s.nama)}</option>
@@ -465,13 +475,16 @@ window.filterSupplierOptions = function() {
 };
 
 window.closeOrderModal = function() {
-    document.getElementById('orderModal').classList.add('hidden');
+    const orderModal = document.getElementById('orderModal');
+    if (orderModal) orderModal.classList.add('hidden');
 };
 
 window.submitOrder = async function(e) {
     e.preventDefault();
-    const supplierId = document.getElementById('order-supplier-select').value;
-    const notes = document.getElementById('order-notes').value;
+    const supplierEl = document.getElementById('order-supplier-select');
+    const notesEl = document.getElementById('order-notes');
+    const supplierId = supplierEl ? supplierEl.value : '';
+    const notes = notesEl ? notesEl.value : '';
 
     if (!supplierId) {
         showModal("Perhatian", "Pilih supplier terlebih dahulu.", "⚠️");
@@ -544,7 +557,7 @@ window.submitOrder = async function(e) {
 
         closeOrderModal();
         showModal("Order Berhasil Dibuat!", `Purchase Order berhasil dicatat dengan total estimasi Rp ${grandTotal.toLocaleString('id-ID')}.`, "✅");
-        switchTab('orders');
+        window.switchTab('orders');
     } catch (err) {
         console.error("Gagal simpan PO:", err);
         showModal("Gagal", `Terjadi kesalahan saat menyimpan PO: ${err.message}`, "❌");
@@ -553,6 +566,7 @@ window.submitOrder = async function(e) {
 
 window.loadPurchaseOrders = async function() {
     const tbody = document.getElementById('orders-table-tbody');
+    if (!tbody) return;
     let ordersList = [];
 
     if (supabaseClient && !isDemoMode) {
@@ -609,7 +623,6 @@ window.loadPurchaseOrders = async function() {
 };
 
 window.togglePOStatus = async function(poId) {
-    let ordersList = [];
     if (supabaseClient && !isDemoMode) {
         const { data } = await supabaseClient.from('purchase_orders').select('*').eq('id', poId).single();
         if (data) {
@@ -617,7 +630,7 @@ window.togglePOStatus = async function(poId) {
             await supabaseClient.from('purchase_orders').update({ status: newStatus }).eq('id', poId);
         }
     } else {
-        ordersList = JSON.parse(localStorage.getItem('dimsum_purchase_orders') || '[]');
+        let ordersList = JSON.parse(localStorage.getItem('dimsum_purchase_orders') || '[]');
         ordersList = ordersList.map(po => {
             if (po.id === poId) po.status = po.status === 'pending' ? 'completed' : 'pending';
             return po;
@@ -647,7 +660,7 @@ window.handleIngredientSubmit = async function(e) {
     }
     resetIngredientForm();
     showModal("Sukses", "Bahan baku berhasil disimpan!", "✅");
-}
+};
 
 window.renderIngredientsTable = function() {
     const query = (document.getElementById('ingSearch')?.value || '').toLowerCase();
@@ -672,7 +685,7 @@ window.renderIngredientsTable = function() {
             </td>
         </tr>
     `).join('');
-}
+};
 
 window.editIngredient = function(id) {
     const ing = ingredientsData.find(i => String(i.id) === String(id));
@@ -682,14 +695,17 @@ window.editIngredient = function(id) {
     document.getElementById('ing-stock').value = ing.stock;
     document.getElementById('ing-unit').value = ing.unit;
     document.getElementById('ing-price').value = ing.price || 0;
-    document.getElementById('ingredient-form-title').innerText = "Edit Bahan Baku";
-}
+    const titleEl = document.getElementById('ingredient-form-title');
+    if (titleEl) titleEl.innerText = "Edit Bahan Baku";
+};
 
 window.resetIngredientForm = function() {
-    document.getElementById('ingredient-form').reset();
+    const form = document.getElementById('ingredient-form');
+    if (form) form.reset();
     document.getElementById('ingredient-edit-id').value = '';
-    document.getElementById('ingredient-form-title').innerText = "Tambah / Edit Bahan Baku";
-}
+    const titleEl = document.getElementById('ingredient-form-title');
+    if (titleEl) titleEl.innerText = "Tambah / Edit Bahan Baku";
+};
 
 window.deleteIngredient = async function(id) {
     if (!confirm("Hapus bahan ini?")) return;
@@ -701,7 +717,7 @@ window.deleteIngredient = async function(id) {
         updateUI();
     }
     showModal("Terhapus", "Bahan baku berhasil dihapus.", "🗑️");
-}
+};
 
 window.addRecipeIngredientRow = function(selectedIngId = '', amountVal = '') {
     const container = document.getElementById('recipe-ingredients-container');
@@ -724,7 +740,7 @@ window.addRecipeIngredientRow = function(selectedIngId = '', amountVal = '') {
         <button type="button" onclick="document.getElementById('${rowId}').remove()" class="text-rose-500 hover:text-rose-700 p-1 text-xs font-bold">✕</button>
     `;
     container.appendChild(div);
-}
+};
 
 window.handleRecipeSubmit = async function(e) {
     e.preventDefault();
@@ -756,32 +772,36 @@ window.handleRecipeSubmit = async function(e) {
     }
     closeRecipeModal();
     showModal("Sukses", "Master resep berhasil disimpan!", "✅");
-}
+};
 
 window.editRecipe = function(id) {
     const rec = recipesData.find(r => String(r.id) === String(id));
     if (!rec) return;
     document.getElementById('recipe-edit-id').value = rec.id;
     document.getElementById('recipe-name').value = rec.name;
-    document.getElementById('modalTitle').innerText = "Edit Master Resep";
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.innerText = "Edit Master Resep";
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
         container.innerHTML = '';
-        (rec.items || []).forEach(item => addRecipeIngredientRow(item.ingredientId, item.amount));
+        (rec.items || []).forEach(item => window.addRecipeIngredientRow(item.ingredientId, item.amount));
     }
-    document.getElementById('recipeModal').classList.remove('hidden');
-}
+    const recipeModal = document.getElementById('recipeModal');
+    if (recipeModal) recipeModal.classList.remove('hidden');
+};
 
 window.resetRecipeForm = function() {
-    document.getElementById('recipeForm').reset();
+    const recipeForm = document.getElementById('recipeForm');
+    if (recipeForm) recipeForm.reset();
     document.getElementById('recipe-edit-id').value = '';
-    document.getElementById('modalTitle').innerText = "Buat Master Resep";
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.innerText = "Buat Master Resep";
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
         container.innerHTML = '';
-        addRecipeIngredientRow();
+        window.addRecipeIngredientRow();
     }
-}
+};
 
 window.deleteRecipe = async function(id) {
     if (!confirm("Hapus master resep ini?")) return;
@@ -795,7 +815,7 @@ window.deleteRecipe = async function(id) {
         updateUI();
     }
     showModal("Terhapus", "Master resep berhasil dihapus.", "🗑️");
-}
+};
 
 function escapeHtml(str) {
     return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -803,5 +823,5 @@ function escapeHtml(str) {
 
 window.onload = function() {
     initApp();
-    addRecipeIngredientRow();
+    window.addRecipeIngredientRow();
 };
