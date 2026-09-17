@@ -260,7 +260,6 @@
                 const supName = sup ? (sup.name || sup.nama) : 'Supplier Umum';
                 const supPhone = sup ? (sup.phone || '') : '';
                 
-                // Format tanggal GMT+7 Jakarta
                 const formattedDate = new Date(po.order_date).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' });
 
                 let statusBadge = po.status === 'completed' ?
@@ -270,7 +269,6 @@
                 const itemsArr = po.items || [];
                 const itemsSummary = itemsArr.map(i => `• ${i.ingredient_name || i.name || 'Bahan'}: <strong>${i.quantity} ${i.unit}</strong> (Rp ${(i.subtotal || 0).toLocaleString('id-ID')})`).join('<br>');
 
-                // Format WhatsApp Message
                 const waMessage = `Halo ${supName}, saya ingin melakukan order bahan baku:\n\n` +
                     itemsArr.map(i => `- ${i.ingredient_name || i.name || 'Bahan'}: *${i.quantity} ${i.unit}*`).join('\n') +
                     `\n\nCatatan: ${po.notes || '-'}\nTotal: Rp ${(po.total_amount || 0).toLocaleString('id-ID')}\nTerima kasih!`;
@@ -306,7 +304,6 @@
             document.getElementById('poModalTitle').innerText = "Buat Purchase Order Baru";
             document.getElementById('poForm').reset();
             
-            // Set default datetime ke waktu Jakarta GMT+7 saat ini
             const nowJakarta = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
             const tzOffset = nowJakarta.getTimezoneOffset() * 60000;
             const jakartaLocalISOTime = (new Date(nowJakarta - tzOffset)).toISOString().slice(0, 16);
@@ -436,7 +433,7 @@
                 }
 
                 closePOModal();
-                showModal("Sukses", "Purchase Order berhasil disimpan!", "✅");
+                showModal("Sukses", "Purchase Order berhasil disimpan ke database!", "✅");
             } catch (err) {
                 console.error("Gagal simpan PO:", err);
                 showModal("Gagal", `Terjadi kesalahan Supabase: ${err.message}`, "❌");
@@ -453,7 +450,6 @@
             document.getElementById('po-status-select').value = po.status;
             document.getElementById('po-notes').value = po.notes || '';
 
-            // Set datetime local
             const d = new Date(po.order_date);
             const tzOffset = d.getTimezoneOffset() * 60000;
             document.getElementById('po-order-date').value = (new Date(d - tzOffset)).toISOString().slice(0, 16);
@@ -483,7 +479,7 @@
                     po.status = newStatus;
                     renderPOTable();
                 }
-                showModal("Status Diperbarui", `Status PO berhasil diubah menjadi "${newStatus}".`, "✅");
+                showModal("Status Diperbarui", `Status PO berhasil diubah menjadi "${newStatus}" di database.`, "✅");
             } catch (err) {
                 console.error("Gagal update status PO:", err);
                 showModal("Gagal", `Gagal memperbarui status ke database: ${err.message}`, "❌");
@@ -491,10 +487,9 @@
         };
 
         window.deletePO = async function(poId) {
-            if (!confirm("Hapus Purchase Order ini?")) return;
+            if (!confirm("Hapus Purchase Order ini dari database?")) return;
             try {
                 if (supabaseClient && !isDemoMode) {
-                    // Hapus items terlebih dahulu untuk menjaga relasi foreign key cascade
                     const { error: itemErr } = await supabaseClient.from('purchase_order_items').delete().eq('order_id', poId);
                     if (itemErr) throw itemErr;
 
