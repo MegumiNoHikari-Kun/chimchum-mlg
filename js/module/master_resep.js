@@ -604,48 +604,7 @@ window.closeOrderModal = function() {
     document.getElementById('orderModal').classList.add('hidden');
 };
 
-window.submitOrder = async function(e) {
-    e.preventDefault();
-    const supplierId = document.getElementById('order-supplier-select').value;
-    const notes = document.getElementById('order-notes').value;
-
-    if (!supplierId) {
-        showModal("Perhatian", "Silakan pilih supplier terlebih dahulu.", "⚠️");
-        return;
-    }
-
-    const checkedItems = document.querySelectorAll('.order-item-checkbox:checked');
-    const uncheckedItems = document.querySelectorAll('.order-item-checkbox:not(:checked)');
-
-    if (checkedItems.length === 0) {
-        showModal("Perhatian", "Pilih minimal 1 bahan yang ingin di-order.", "⚠️");
-        return;
-    }
-
-    function buildItems(checkboxList) {
-        let items = [];
-        let total = 0;
-        checkboxList.forEach(cb => {
-            const ingredientId = cb.value;
-            const ingredientName = cb.getAttribute('data-name');
-            const quantity = parseFloat(cb.getAttribute('data-qty'));
-            const unit = cb.getAttribute('data-unit');
-            const unitPrice = parseFloat(cb.getAttribute('data-price')) || 0;
-            const subtotal = quantity * unitPrice;
-            total += subtotal;
-            items.push({
-                ingredient_id: ingredientId || null,
-                ingredient_name: ingredientName,
-                quantity: quantity,
-                unit: unit,
-                unit_price: unitPrice,
-                subtotal: subtotal
-            });
-        });
-        return { items, total };
-    }
-
-    async function createPO(supplierIdForPO, orderItems, total, poNotes) {
+async function createPO(supplierIdForPO, orderItems, total, poNotes) {
     if (!supabaseClient || isDemoMode) return null;
 
     const { data: orderData, error: orderError } = await supabaseClient
