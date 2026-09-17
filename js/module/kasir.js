@@ -1,4 +1,4 @@
-import { supabase, authReady } from '../../supabase.js';
+import { supabase, authReady } from '../supabase.js';
 
 let cachedProducts = [];
 let cachedOrders = [];
