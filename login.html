@@ -35,8 +35,8 @@
         }
 
         .spinner {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border: 3px solid rgba(255,255,255,.35);
             border-top-color: white;
             border-radius: 50%;
@@ -44,8 +44,8 @@
         }
 
         .spinner-dark {
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             border: 3px solid #e2e8f0;
             border-top-color: #f97316;
             border-radius: 50%;
@@ -68,14 +68,10 @@
         class="fixed inset-0 z-[9999] bg-slate-100 flex items-center justify-center"
     >
         <div class="text-center">
-            <div class="spinner-dark mx-auto mb-4"></div>
+            <div class="spinner-dark mx-auto mb-3"></div>
 
-            <h2 class="font-semibold text-slate-700">
-                Memeriksa sesi login...
-            </h2>
-
-            <p class="text-sm text-slate-500 mt-1">
-                Mohon tunggu sebentar
+            <p class="text-sm font-medium text-slate-600">
+                Memeriksa sesi...
             </p>
         </div>
     </div>
@@ -84,26 +80,26 @@
     <!-- LOGIN -->
     <section
         id="loginScreen"
-        class="hidden-force min-h-screen flex items-center justify-center p-6"
+        class="hidden-force min-h-screen flex items-center justify-center px-4 py-6"
     >
 
-        <div class="w-full max-w-md">
+        <div class="w-full max-w-sm">
 
-            <!-- Logo -->
-            <div class="text-center mb-8">
+            <!-- BRAND -->
+            <div class="text-center mb-5">
 
                 <img
                     src="./assets/logo-transparan.png"
                     alt="ChimChum"
-                    class="h-24 w-24 object-cover rounded-3xl mx-auto shadow-lg"
-                    onerror="this.src='https://placehold.co/100?text=CC'"
+                    class="h-16 w-16 object-cover rounded-2xl mx-auto shadow-md"
+                    onerror="this.src='https://placehold.co/80?text=CC'"
                 >
 
-                <h1 class="text-2xl font-bold text-orange-600 mt-5">
+                <h1 class="text-xl font-bold text-orange-600 mt-3">
                     ChimChum Malang
                 </h1>
 
-                <p class="text-sm text-slate-500 mt-1">
+                <p class="text-xs text-slate-500 mt-0.5">
                     Management System
                 </p>
 
@@ -111,29 +107,23 @@
 
 
             <!-- LOGIN CARD -->
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-7">
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-5">
 
-                <div class="mb-6">
-
-                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
-                        <i class="fa-solid fa-lock text-xl"></i>
-                    </div>
-
-                    <h2 class="text-xl font-bold text-slate-800">
-                        Login
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-slate-800">
+                        Masuk
                     </h2>
 
-                    <p class="text-sm text-slate-500 mt-1">
-                        Masuk menggunakan akun ChimChum.
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Silakan masuk menggunakan akun Anda.
                     </p>
-
                 </div>
 
 
                 <!-- ERROR -->
                 <div
                     id="loginError"
-                    class="hidden mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm"
+                    class="hidden mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs"
                 >
                     <div class="flex items-start gap-2">
                         <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
@@ -144,21 +134,23 @@
 
 
                 <!-- FORM -->
-                <form id="loginForm" class="space-y-5">
+                <form id="loginForm" class="space-y-3.5">
 
                     <!-- EMAIL -->
                     <div>
 
                         <label
                             for="loginEmail"
-                            class="block text-sm font-semibold text-slate-700 mb-2"
+                            class="block text-xs font-semibold text-slate-700 mb-1.5"
                         >
                             Email
                         </label>
 
                         <div class="relative">
 
-                            <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <i
+                                class="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"
+                            ></i>
 
                             <input
                                 id="loginEmail"
@@ -166,7 +158,7 @@
                                 autocomplete="email"
                                 required
                                 placeholder="nama@email.com"
-                                class="w-full pl-11 pr-4 py-3.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
+                                class="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
                             >
 
                         </div>
@@ -178,14 +170,16 @@
 
                         <label
                             for="loginPassword"
-                            class="block text-sm font-semibold text-slate-700 mb-2"
+                            class="block text-xs font-semibold text-slate-700 mb-1.5"
                         >
                             Password
                         </label>
 
                         <div class="relative">
 
-                            <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <i
+                                class="fa-solid fa-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"
+                            ></i>
 
                             <input
                                 id="loginPassword"
@@ -193,17 +187,17 @@
                                 autocomplete="current-password"
                                 required
                                 placeholder="Masukkan password"
-                                class="w-full pl-11 pr-12 py-3.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
+                                class="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
                             >
 
                             <button
                                 type="button"
                                 id="togglePassword"
-                                class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-600"
+                                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-600 transition"
                             >
                                 <i
                                     id="togglePasswordIcon"
-                                    class="fa-solid fa-eye"
+                                    class="fa-solid fa-eye text-sm"
                                 ></i>
                             </button>
 
@@ -215,11 +209,11 @@
                     <button
                         id="loginButton"
                         type="submit"
-                        class="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold py-3.5 rounded-xl transition flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20"
+                        class="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white text-sm font-semibold py-2.5 rounded-lg transition flex items-center justify-center gap-2 shadow-md shadow-orange-500/20"
                     >
 
                         <span id="loginButtonText">
-                            <i class="fa-solid fa-right-to-bracket mr-2"></i>
+                            <i class="fa-solid fa-right-to-bracket mr-1.5"></i>
                             Masuk
                         </span>
 
@@ -233,11 +227,11 @@
                 </form>
 
 
-                <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+                <div class="mt-4 pt-3 border-t border-slate-100 text-center">
 
-                    <p class="text-xs text-slate-400">
+                    <p class="text-[11px] text-slate-400">
                         <i class="fa-solid fa-shield-halved mr-1"></i>
-                        Silakan login untuk mengakses sistem.
+                        Akses sistem ChimChum Malang
                     </p>
 
                 </div>
