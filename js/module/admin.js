@@ -5,6 +5,9 @@ import { supabase, authReady } from '../supabase.js';
 // ELEMENTS
 // =====================================================
 
+const adminApp =
+    document.getElementById('adminApp');
+
 const sidebarToggle =
     document.getElementById('sidebarToggle');
 
@@ -35,6 +38,29 @@ let sidebarOpen = true;
 
 
 // =====================================================
+// SHOW ADMIN APPLICATION
+// =====================================================
+
+function showAdminApp() {
+
+    if (!adminApp) {
+
+        console.error(
+            '❌ Element #adminApp tidak ditemukan.'
+        );
+
+        return;
+
+    }
+
+    adminApp.classList.remove(
+        'hidden-force'
+    );
+
+}
+
+
+// =====================================================
 // SIDEBAR
 // =====================================================
 
@@ -46,7 +72,6 @@ function updateSidebar() {
 
     if (sidebarOpen) {
 
-        // Buka sidebar
         adminSidebar.classList.remove(
             'w-0',
             'border-r-0'
@@ -62,7 +87,6 @@ function updateSidebar() {
 
     } else {
 
-        // Tutup sidebar
         adminSidebar.classList.remove(
             'w-72',
             'border-r'
@@ -82,7 +106,7 @@ function updateSidebar() {
 
 
 // =====================================================
-// SIDEBAR TOGGLE EVENT
+// SIDEBAR TOGGLE
 // =====================================================
 
 if (sidebarToggle) {
@@ -122,7 +146,7 @@ window.loadModule = function (
 
 
     // =========================================
-    // UPDATE SEMUA BUTTON MENJADI NON-AKTIF
+    // RESET ACTIVE BUTTON
     // =========================================
 
     document
@@ -146,7 +170,7 @@ window.loadModule = function (
 
 
     // =========================================
-    // CARI BUTTON BERDASARKAN MODULE
+    // CARI BUTTON
     // =========================================
 
     if (!btnElement) {
@@ -197,7 +221,7 @@ window.loadModule = function (
 
 
     // =========================================
-    // TAMPILKAN LOADING
+    // LOADING
     // =========================================
 
     if (moduleLoading) {
@@ -210,7 +234,7 @@ window.loadModule = function (
 
 
     // =========================================
-    // LOAD HTML MODULE KE IFRAME
+    // LOAD IFRAME
     // =========================================
 
     const target =
@@ -285,11 +309,9 @@ if (logoutButton) {
                 );
 
 
-                // Tunggu Supabase siap
                 await authReady;
 
 
-                // Logout Supabase
                 const {
                     error
                 } =
@@ -297,9 +319,7 @@ if (logoutButton) {
 
 
                 if (error) {
-
                     throw error;
-
                 }
 
 
@@ -308,7 +328,6 @@ if (logoutButton) {
                 );
 
 
-                // Kembali ke halaman login
                 window.location.replace(
                     '/login.html'
                 );
@@ -355,14 +374,14 @@ async function initAdmin() {
     try {
 
         // =========================================
-        // TUNGGU SUPABASE SIAP
+        // SUPABASE READY
         // =========================================
 
         await authReady;
 
 
         // =========================================
-        // AMBIL SESSION
+        // GET SESSION
         // =========================================
 
         const {
@@ -408,12 +427,18 @@ async function initAdmin() {
 
 
         // =========================================
-        // USER LOGIN
+        // TAMPILKAN ADMIN APP
+        // =========================================
+
+        showAdminApp();
+
+
+        // =========================================
+        // USER
         // =========================================
 
         const user =
             data.session.user;
-
 
         const email =
             user.email || 'Admin';
@@ -426,7 +451,7 @@ async function initAdmin() {
 
 
         // =========================================
-        // TAMPILKAN EMAIL USER
+        // TAMPILKAN EMAIL
         // =========================================
 
         if (currentUserEmail) {
@@ -438,7 +463,7 @@ async function initAdmin() {
 
 
         // =========================================
-        // LOAD MODULE DEFAULT
+        // DEFAULT MODULE
         // =========================================
 
         loadModule(
@@ -463,7 +488,7 @@ async function initAdmin() {
 
 
 // =====================================================
-// START ADMIN
+// START
 // =====================================================
 
 initAdmin();
