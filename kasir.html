@@ -486,7 +486,15 @@ tr:last-child td { border-bottom: none; }
 
 </div><!-- /container -->
 
-<script type="module" src="./js/module/kasir.js"></script>
+<script type="module">
+    import { requireAuth } from './js/module/auth-guard.js';
+
+    const auth = await requireAuth(['kasir']);
+
+    if (auth) {
+        await import('./kasir.js');
+    }
+</script>
 
 </body>
 </html>
