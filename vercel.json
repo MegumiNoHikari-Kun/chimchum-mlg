@@ -6,5 +6,6 @@
     
     { "source": "/:path*", "destination": "/index.html" },
     { "source": "/:path/supabase.js", "destination": "/index.html" }
+    { "source": "/js/app.js", "destination": "/index.html" }
   ]
 }
