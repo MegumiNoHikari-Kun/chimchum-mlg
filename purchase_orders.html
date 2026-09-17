@@ -474,26 +474,43 @@
             if (!po) return;
             const newStatus = po.status === 'pending' ? 'completed' : 'pending';
 
-            if (supabaseClient && !isDemoMode) {
-                await supabaseClient.from('purchase_orders').update({ status: newStatus }).eq('id', poId);
-                await loadAllData();
-            } else {
-                po.status = newStatus;
-                renderPOTable();
+            try {
+                if (supabaseClient && !isDemoMode) {
+                    const { error } = await supabaseClient.from('purchase_orders').update({ status: newStatus }).eq('id', poId);
+                    if (error) throw error;
+                    await loadAllData();
+                } else {
+                    po.status = newStatus;
+                    renderPOTable();
+                }
+                showModal("Status Diperbarui", `Status PO berhasil diubah menjadi "${newStatus}".`, "✅");
+            } catch (err) {
+                console.error("Gagal update status PO:", err);
+                showModal("Gagal", `Gagal memperbarui status ke database: ${err.message}`, "❌");
             }
         };
 
         window.deletePO = async function(poId) {
             if (!confirm("Hapus Purchase Order ini?")) return;
-            if (supabaseClient && !isDemoMode) {
-                await supabaseClient.from('purchase_order_items').delete().eq('order_id', poId);
-                await supabaseClient.from('purchase_orders').delete().eq('id', poId);
-                await loadAllData();
-            } else {
-                purchaseOrdersData = purchaseOrdersData.filter(p => String(p.id) !== String(poId));
-                renderPOTable();
+            try {
+                if (supabaseClient && !isDemoMode) {
+                    // Hapus items terlebih dahulu untuk menjaga relasi foreign key cascade
+                    const { error: itemErr } = await supabaseClient.from('purchase_order_items').delete().eq('order_id', poId);
+                    if (itemErr) throw itemErr;
+
+                    const { error: poErr } = await supabaseClient.from('purchase_orders').delete().eq('id', poId);
+                    if (poErr) throw poErr;
+
+                    await loadAllData();
+                } else {
+                    purchaseOrdersData = purchaseOrdersData.filter(p => String(p.id) !== String(poId));
+                    renderPOTable();
+                }
+                showModal("Terhapus", "Purchase Order berhasil dihapus dari database.", "🗑️");
+            } catch (err) {
+                console.error("Gagal hapus PO:", err);
+                showModal("Gagal", `Gagal menghapus data dari database: ${err.message}`, "❌");
             }
-            showModal("Terhapus", "Purchase Order berhasil dihapus.", "🗑️");
         };
 
         function escapeHtml(str) {
