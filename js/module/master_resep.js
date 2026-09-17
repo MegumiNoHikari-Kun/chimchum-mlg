@@ -53,10 +53,8 @@ async function initApp() {
         await authReady;
         if (supabase) {
             supabaseClient = supabase;
-            // console.log("🔍 [DB DEBUG] Supabase client initialized. Loading data...");
             await loadDataFromSupabase();
         } else {
-            // console.log("⚠️ [DB DEBUG] Supabase not found. Running in Demo Mode.");
             isDemoMode = true;
             loadMockData();
         }
@@ -69,8 +67,6 @@ async function initApp() {
 
 async function loadDataFromSupabase() {
     try {
-        // console.log("🔍 [DB DEBUG] Fetching ingredients, products, and recipes from Supabase...");
-        
         const { data: ing, error: ingErr } = await supabaseClient.from('ingredients').select('*');
         if (ingErr) console.error("❌ [DB DEBUG] Error fetching ingredients:", ingErr);
         if (ing) ingredientsData = ing;
@@ -79,7 +75,6 @@ async function loadDataFromSupabase() {
         if (prodResult.error) console.error("❌ [DB DEBUG] Error fetching products:", prodResult.error);
         if (prodResult.data) {
             productsData = prodResult.data;
-            // console.log("🔍 [DB DEBUG] Loaded products with resep_id mapping:", productsData.map(p => ({ id: p.id, name: p.name || p.nama, resep_id: p.resep_id })));
         }
 
         const { data: rec, error: recErr } = await supabaseClient.from('recipes').select('*');
@@ -90,7 +85,6 @@ async function loadDataFromSupabase() {
         if (supErr) console.error("❌ [DB DEBUG] Error fetching suppliers:", supErr);
         if (sup) suppliersData = sup;
 
-        // console.log("✅ [DB DEBUG] Loaded Data -> Products:", productsData.length, "| Recipes:", recipesData.length, "| Ingredients:", ingredientsData.length);
         updateUI();
     } catch (e) {
         console.error("❌ [DB DEBUG] Supabase fetch exception:", e);
@@ -282,15 +276,10 @@ window.updateMenuRecipeMapping = async function(productId) {
     if (!selectEl) return;
     const recipeId = selectEl.value ? selectEl.value : null;
 
-    // console.log(`🔍 [DB DEBUG] Updating mapping for Product ID: ${productId} -> Recipe ID: ${recipeId}`);
-
-    // Update local state immediately for snappy UX
     productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
 
     if (supabaseClient && !isDemoMode) {
         try {
-            // console.log(`📤 [DB DEBUG] Sending update to Supabase table 'products' with filter eq('id', ${productId})`);
-            
             const { data, error } = await supabaseClient
                 .from('products')
                 .update({ resep_id: recipeId })
@@ -302,15 +291,11 @@ window.updateMenuRecipeMapping = async function(productId) {
                 showModal("Gagal Supabase", `Error: ${error.message}. Periksa RLS policy tabel products.`, "❌");
                 return;
             }
-
-            // console.log("✅ [DB DEBUG] Supabase update confirmed. Response data:", data);
         } catch (e) {
             console.error("❌ [DB DEBUG] Supabase mapping update exception:", e);
             showModal("Gagal", "Terjadi kesalahan koneksi ke Supabase.", "❌");
             return;
         }
-    } else {
-        // console.log("ℹ️ [DB DEBUG] Running in demo mode. Saved locally.");
     }
 
     renderRecipes();
@@ -327,8 +312,6 @@ function updateCalcProductOptions() {
     productsData.forEach(prod => {
         const selected = String(prod.id) === String(currentVal) ? 'selected' : '';
         const stockVal = prod.stok !== undefined ? prod.stok : (prod.stock !== undefined ? prod.stock : 0);
-        
-        // Format penamaan produk: Nama Produk (Stok: X)
         const displayLabel = `${prod.name || prod.nama || 'Produk'} (Stok: ${stockVal})`;
         html += `<option value="${prod.id}" ${selected}>${escapeHtml(displayLabel)}</option>`;
     });
@@ -480,7 +463,6 @@ window.renderIngredientsTable = function() {
     `).join('');
 }
 
-// 1. TOMBOL PROSES: Mengurangi stok gudang (ingredients)
 window.processRestockDeduction = async function() {
     const selectEl = document.getElementById('calc-product-select');
     const batchInput = document.getElementById('calc-batch-input');
@@ -508,7 +490,6 @@ window.processRestockDeduction = async function() {
         return;
     }
 
-    // Hitung pengurangan & update local/database
     for (const item of recipe.items) {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
         if (ing) {
@@ -531,7 +512,6 @@ window.processRestockDeduction = async function() {
     showModal("Berhasil Diproses!", "Stok bahan baku di gudang telah dikurangi sesuai kebutuhan resep.", "✅");
 };
 
-// 2. TOMBOL ORDER STOK: Membuka form order & konek ke master suppliers
 window.openOrderModal = function() {
     const selectEl = document.getElementById('calc-product-select');
     const batchInput = document.getElementById('calc-batch-input');
@@ -550,33 +530,48 @@ window.openOrderModal = function() {
         return;
     }
 
-    // Render dropdown supplier
     const supSelect = document.getElementById('order-supplier-select');
     supSelect.innerHTML = '<option value="">-- Pilih Supplier --</option>' + suppliersData.map(s => `
         <option value="${s.id}">${escapeHtml(s.name || s.nama)}</option>
     `).join('');
 
-    // Render preview bahan yang kurang
     const previewContainer = document.getElementById('order-items-preview');
     let itemsHtml = '';
     let hasShortage = false;
 
-    (recipe.items || []).forEach(item => {
+    (recipe.items || []).forEach((item, index) => {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
         const name = ing ? ing.name : 'Bahan';
         const unit = ing ? ing.unit : '';
         const totalNeeded = item.amount * batchMultiplier;
-        const currentStock = ing ? ing.stock : 0;
+        const currentStock = ing ? Number(ing.stock) : 0;
         const shortage = Math.max(0, totalNeeded - currentStock);
 
         if (shortage > 0) {
             hasShortage = true;
-            itemsHtml += `<div>• <strong>${escapeHtml(name)}</strong>: Kurang <strong>${shortage.toFixed(1)} ${unit}</strong></div>`;
+            const uniqueId = `order_item_${index}`;
+            itemsHtml += `
+                <div class="flex items-center justify-between gap-2 p-1.5 bg-white rounded-lg border border-slate-200">
+                    <label class="flex items-center gap-2 cursor-pointer flex-1">
+                        <input type="checkbox" class="order-item-checkbox rounded text-orange-600 focus:ring-orange-500 w-4 h-4" 
+                               value="${ing ? ing.id : ''}" 
+                               data-name="${escapeHtml(name)}"
+                               data-qty="${shortage}"
+                               data-unit="${unit}"
+                               data-price="${ing && ing.price ? Number(ing.price) : 0}"
+                               checked>
+                        <span class="text-slate-800 font-medium">${escapeHtml(name)}</span>
+                    </label>
+                    <span class="text-slate-500 text-xs bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
+                        Kurang: ${shortage.toFixed(1)} ${unit}
+                    </span>
+                </div>
+            `;
         }
     });
 
     if (!hasShortage) {
-        itemsHtml = `<div class="text-emerald-600 font-semibold">Semua stok bahan baku aman! Tidak ada kekurangan untuk batch ini.</div>`;
+        itemsHtml = `<div class="text-emerald-600 font-semibold text-center py-2">Semua stok bahan baku aman! Tidak ada kekurangan untuk batch ini.</div>`;
     }
 
     previewContainer.innerHTML = itemsHtml;
@@ -597,60 +592,42 @@ window.submitOrder = async function(e) {
         return;
     }
 
-    const selectEl = document.getElementById('calc-product-select');
-    const batchInput = document.getElementById('calc-batch-input');
-    const productId = selectEl ? selectEl.value : '';
-    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 1) : 1;
-
-    const prod = productsData.find(p => String(p.id) === String(productId));
-    const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
-
-    if (!recipe) {
-        showModal("Perhatian", "Resep produk tidak ditemukan.", "⚠️");
+    const checkedItems = document.querySelectorAll('.order-item-checkbox:checked');
+    if (checkedItems.length === 0) {
+        showModal("Perhatian", "Pilih minimal 1 bahan yang ingin di-order.", "⚠️");
         return;
     }
 
-    // Hitung item yang kurang dan susun data detail order
     let orderItems = [];
     let grandTotal = 0;
 
-    (recipe.items || []).forEach(item => {
-        const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
-        const totalNeeded = item.amount * batchMultiplier;
-        const currentStock = ing ? Number(ing.stock) : 0;
-        const shortage = Math.max(0, totalNeeded - currentStock);
+    checkedItems.forEach(cb => {
+        const ingredientId = cb.value;
+        const ingredientName = cb.getAttribute('data-name');
+        const quantity = parseFloat(cb.getAttribute('data-qty'));
+        const unit = cb.getAttribute('data-unit');
+        const unitPrice = parseFloat(cb.getAttribute('data-price')) || 0;
+        const subtotal = quantity * unitPrice;
 
-        if (shortage > 0) {
-            // Asumsi harga satuan diambil dari data bahan (ing.price) atau default 0 jika belum diset
-            const unitPrice = ing && ing.price ? Number(ing.price) : 0; 
-            const subtotal = shortage * unitPrice;
-            grandTotal += subtotal;
+        grandTotal += subtotal;
 
-            orderItems.push({
-                ingredient_id: ing ? ing.id : null,
-                ingredient_name: ing ? ing.name : 'Bahan',
-                quantity: shortage,
-                unit: ing ? ing.unit : '',
-                unit_price: unitPrice,
-                subtotal: subtotal
-            });
-        }
+        orderItems.push({
+            ingredient_id: ingredientId || null,
+            ingredient_name: ingredientName,
+            quantity: quantity,
+            unit: unit,
+            unit_price: unitPrice,
+            subtotal: subtotal
+        });
     });
-
-    if (orderItems.length === 0) {
-        showModal("Informasi", "Tidak ada kekurangan bahan untuk di-order pada batch ini.", "ℹ️");
-        closeOrderModal();
-        return;
-    }
 
     try {
         if (supabaseClient && !isDemoMode) {
-            // 1. Simpan header order ke tabel purchase_orders
             const { data: orderData, error: orderError } = await supabaseClient
                 .from('purchase_orders')
                 .insert([{
                     supplier_id: supplierId,
-                    status: 'pending', // Status awal order
+                    status: 'pending',
                     total_amount: grandTotal,
                     notes: notes
                 }])
@@ -659,7 +636,6 @@ window.submitOrder = async function(e) {
 
             if (orderError) throw orderError;
 
-            // 2. Masukkan ID order utama ke masing-masing item detail, lalu simpan ke purchase_order_items
             const orderId = orderData.id;
             const itemsWithId = orderItems.map(item => ({ ...item, order_id: orderId }));
 
@@ -672,7 +648,7 @@ window.submitOrder = async function(e) {
 
         const selectedSupplier = suppliersData.find(s => String(s.id) === String(supplierId));
         closeOrderModal();
-        showModal("Order Berhasil Disimpan!", `Pesanan ke ${selectedSupplier?.name || 'Supplier'} berhasil dicatat ke database dengan total estimasi Rp ${grandTotal.toLocaleString('id-ID')}.`, "✅");
+        showModal("Order Berhasil Disimpan!", `Pesanan ke ${selectedSupplier?.name || 'Supplier'} dengan ${orderItems.length} jenis bahan berhasil dicatat ke database. Total estimasi: Rp ${grandTotal.toLocaleString('id-ID')}.`, "✅");
 
     } catch (err) {
         console.error("❌ [DB ERROR] Gagal menyimpan order:", err);
