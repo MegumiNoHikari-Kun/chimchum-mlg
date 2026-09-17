@@ -424,11 +424,11 @@
                     } else {
                         const { error: updateErr } = await supabaseClient.from('purchase_orders').update(poPayload).eq('id', poId);
                         if (updateErr) throw updateErr;
-                        const { error: deleteItemsError } =
-                            await supabaseClient
-                                .from('purchase_order_items')
-                                .delete()
-                                .eq('order_id', poId);
+                        
+                        const { error: deleteItemsError } = await supabaseClient
+                            .from('purchase_order_items')
+                            .delete()
+                            .eq('order_id', poId);
                         
                         if (deleteItemsError) {
                             throw deleteItemsError;
@@ -442,7 +442,7 @@
                     await loadAllData();
                 } else {
                     if (editId) {
-                        purchaseOrdersData = purchaseOrdersData.map(po => po.id === editId ? { ...po, ...poPayload, items } : po);
+                        purchaseOrdersData = purchaseOrdersData.map(po => String(po.id) === String(editId) ? { ...po, ...poPayload, items } : po);
                     } else {
                         purchaseOrdersData.unshift({ id: 'po_' + Date.now(), ...poPayload, items });
                     }
@@ -489,22 +489,14 @@
 
             try {
                 if (supabaseClient && !isDemoMode) {
-                    const { data, error } = await supabaseClient
+                    const { error } = await supabaseClient
                         .from('purchase_orders')
                         .update({ status: newStatus })
-                        .eq('id', poId)
-                        .select();
+                        .eq('id', poId);
                     
                     if (error) {
                         throw error;
                     }
-                    
-                    if (!data || data.length === 0) {
-                        throw new Error(
-                            `Tidak ada Purchase Order yang berubah. ID: ${poId}`
-                        );
-                    }
-                    if (error) throw error;
                     await loadAllData();
                 } else {
                     po.status = newStatus;
@@ -524,23 +516,14 @@
                     const { error: itemErr } = await supabaseClient.from('purchase_order_items').delete().eq('order_id', poId);
                     if (itemErr) throw itemErr;
 
-                    const { data: deletedPO, error: poErr } =
-                        await supabaseClient
-                            .from('purchase_orders')
-                            .delete()
-                            .eq('id', poId)
-                            .select();
+                    const { error: poErr } = await supabaseClient
+                        .from('purchase_orders')
+                        .delete()
+                        .eq('id', poId);
                     
                     if (poErr) {
                         throw poErr;
                     }
-                    
-                    if (!deletedPO || deletedPO.length === 0) {
-                        throw new Error(
-                            `Purchase Order tidak ditemukan atau tidak dapat dihapus. ID: ${poId}`
-                        );
-                    }
-                    if (poErr) throw poErr;
 
                     await loadAllData();
                 } else {
