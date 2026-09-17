@@ -8,6 +8,12 @@ let isDemoMode = false;
 let supabaseClient = null;
 let suppliersData = []; 
 
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'dimsum-master';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+const supabaseUrl = window.SUPABASE_URL || 'https://your-supabase-project.supabase.co';
+const supabaseKey = window.SUPABASE_KEY || 'your-supabase-anon-key';
+
 window.showModal = function(title, message, icon = '💡') {
     document.getElementById('modal-title').innerText = title;
     document.getElementById('modal-message').innerText = message;
@@ -20,23 +26,21 @@ window.closeModal = function() {
 }
 
 window.switchTab = function(tabName) {
-    ['recipes', 'mapping', 'calculator', 'ingredients'].forEach(t => {
+    ['recipes', 'mapping', 'calculator', 'orders', 'ingredients'].forEach(t => {
         const sec = document.getElementById(`section-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (sec) sec.classList.add('hidden');
-        if (btn) btn.className = "px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition";
+        if (btn) btn.className = "px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition";
     });
     const activeSec = document.getElementById(`section-${tabName}`);
     const activeBtn = document.getElementById(`tab-btn-${tabName}`);
     if (activeSec) activeSec.classList.remove('hidden');
-    if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition";
+    if (activeBtn) activeBtn.className = "px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition";
     
     if (tabName === 'calculator') updateCalcProductOptions();
     if (tabName === 'mapping') renderMappingUI();
-    if (tabName === 'ingredients') {
-        renderProductsSummary();
-        renderProductsTable();
-    }
+    if (tabName === 'ingredients') { renderIngredientsTable(); }
+    if (tabName === 'orders') loadPurchaseOrders();
 }
 
 window.openRecipeModal = function() {
@@ -51,8 +55,17 @@ window.closeRecipeModal = function() {
 async function initApp() {
     try {
         await authReady;
-        if (supabase) {
+        if (typeof supabase !== 'undefined' && supabase.createClient) {
             supabaseClient = supabase;
+        } else {
+            try {
+                supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            } catch(err) {
+                isDemoMode = true;
+            }
+        }
+
+        if (supabaseClient && !isDemoMode) {
             await loadDataFromSupabase();
         } else {
             isDemoMode = true;
@@ -68,42 +81,39 @@ async function initApp() {
 async function loadDataFromSupabase() {
     try {
         const { data: ing, error: ingErr } = await supabaseClient.from('ingredients').select('*');
-        if (ingErr) console.error("❌ [DB DEBUG] Error fetching ingredients:", ingErr);
+        if (ingErr) console.error("❌ Error fetching ingredients:", ingErr);
         if (ing) ingredientsData = ing;
 
         const prodResult = await supabaseClient.from('products').select('*');
-        if (prodResult.error) console.error("❌ [DB DEBUG] Error fetching products:", prodResult.error);
-        if (prodResult.data) {
-            productsData = prodResult.data;
-        }
+        if (prodResult.error) console.error("❌ Error fetching products:", prodResult.error);
+        if (prodResult.data) productsData = prodResult.data;
 
         const { data: rec, error: recErr } = await supabaseClient.from('recipes').select('*');
-        if (recErr) console.error("❌ [DB DEBUG] Error fetching recipes:", recErr);
+        if (recErr) console.error("❌ Error fetching recipes:", recErr);
         if (rec) recipesData = rec;
 
         const { data: sup, error: supErr } = await supabaseClient.from('suppliers').select('*');
-        if (supErr) console.error("❌ [DB DEBUG] Error fetching suppliers:", supErr);
+        if (supErr) console.error("❌ Error fetching suppliers:", supErr);
         if (sup) suppliersData = sup;
 
         updateUI();
     } catch (e) {
-        console.error("❌ [DB DEBUG] Supabase fetch exception:", e);
+        console.error("❌ Supabase fetch exception:", e);
         loadMockData();
     }
 }
 
 function loadMockData() {
     ingredientsData = [
-        { id: 'ing1', name: 'Ayam Fillet Dada', stock: 5000, unit: 'gram' },
-        { id: 'ing2', name: 'Udang Kupas', stock: 2000, unit: 'gram' },
-        { id: 'ing3', name: 'Tepung Tapioka', stock: 1500, unit: 'gram' },
-        { id: 'ing4', name: 'Kulit Dimsum', stock: 300, unit: 'pcs' },
-        { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml' }
+        { id: 'ing1', name: 'Ayam Fillet Dada', stock: 5000, unit: 'gram', price: 45000 },
+        { id: 'ing2', name: 'Udang Kupas', stock: 2000, unit: 'gram', price: 90000 },
+        { id: 'ing3', name: 'Tepung Tapioka', stock: 1500, unit: 'gram', price: 12000 },
+        { id: 'ing4', name: 'Kulit Dimsum', stock: 300, unit: 'pcs', price: 250 },
+        { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml', price: 35000 }
     ];
     productsData = [
-        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 8, unit: 'pcs', stok: 10, resep_id: 'rec_1', foto: 'https://placehold.co/40' },
-        { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stok: 0, resep_id: null, foto: 'https://placehold.co/40' },
-        { id: 'prod_3', name: 'Dimsum Ayam Original', qty: 1, unit: 'pcs', stok: 15, resep_id: 'rec_1', foto: 'https://placehold.co/40' }
+        { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 8, unit: 'pcs', stok: 3, resep_id: 'rec_1', foto: 'https://placehold.co/40' },
+        { id: 'prod_2', name: 'Dimsum Udang Spesial', qty: 50, unit: 'pcs', stok: 0, resep_id: null, foto: 'https://placehold.co/40' }
     ];
     recipesData = [
         {
@@ -116,10 +126,9 @@ function loadMockData() {
             ]
         }
     ];
-
     suppliersData = [
-        { id: 'sup_1', name: 'PT Bahan Pangan Utama', phone: '08123456789' },
-        { id: 'sup_2', name: 'Toko Supplier Makmur', phone: '08987654321' }
+        { id: 'sup_1', name: 'PT Bahan Pangan Utama', phone: '628123456789' },
+        { id: 'sup_2', name: 'Toko Supplier Makmur Jaya', phone: '628987654321' }
     ];
     updateUI();
 }
@@ -134,8 +143,6 @@ function updateUI() {
     renderRecipes();
     renderMappingUI();
     renderIngredientsTable();
-    renderProductsSummary();
-    renderProductsTable();
     updateCalcProductOptions();
 }
 
@@ -145,19 +152,17 @@ function checkLowStockProducts() {
     if (!banner || !listContainer) return;
 
     const lowStockItems = productsData.filter(p => {
-        const currentStock = p.stok !== undefined ? Number(p.stok) : (p.stock !== undefined ? Number(p.stock) : 0);
-        return currentStock <= 5;
+        const stockVal = Number(p.stok !== undefined ? p.stok : p.stock) || 0;
+        return stockVal <= 5;
     });
 
     if (lowStockItems.length > 0) {
         banner.classList.remove('hidden');
         listContainer.innerHTML = lowStockItems.map(p => {
-            const stockVal = p.stok !== undefined ? p.stok : (p.stock !== undefined ? p.stock : 0);
-            const badgeColor = stockVal <= 0 ? 'bg-rose-200 text-rose-900 border-rose-300' : 'bg-amber-100 text-amber-800 border-amber-200';
+            const stockVal = p.stok !== undefined ? p.stok : p.stock;
             return `
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${badgeColor}">
-                    <i class="fa-solid fa-box-archive"></i> ${escapeHtml(p.name || p.nama)} 
-                    <span class="bg-white/80 px-1.5 py-0.5 rounded-md text-[10px]">Stok: ${stockVal}</span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border bg-rose-100 text-rose-800 border-rose-300">
+                    <i class="fa-solid fa-box-archive"></i> ${escapeHtml(p.name || p.nama)} (Stok: ${stockVal})
                 </span>
             `;
         }).join('');
@@ -180,31 +185,19 @@ window.renderRecipes = function() {
 
     tbody.innerHTML = filtered.map(rec => {
         const linkedProducts = productsData.filter(p => String(p.resep_id) === String(rec.id));
+        const linkedHtml = linkedProducts.length > 0 ? linkedProducts.map(p => `<span class="bg-orange-50 text-orange-700 px-2 py-0.5 rounded font-semibold text-[10px] mr-1">${escapeHtml(p.name || p.nama)}</span>`).join('') : '<span class="text-slate-400 italic">Belum ada menu</span>';
         
-        const linkedProductsHtml = linkedProducts.length > 0 ? linkedProducts.map(prod => {
-            const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
-            let stockBadge = '';
-            if (stockVal <= 0) {
-                stockBadge = `<span class="bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-bold text-[9px] animate-pulse">Habis (0)</span>`;
-            } else if (stockVal <= 5) {
-                stockBadge = `<span class="bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded font-bold text-[9px]">Menipis (${stockVal})</span>`;
-            } else {
-                stockBadge = `<span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded font-semibold text-[9px]">Stok: ${stockVal}</span>`;
-            }
-            return `<div class="mb-1 flex items-center gap-1.5 flex-wrap"><strong class="text-slate-800">${escapeHtml(prod.name || prod.nama)}</strong> ${stockBadge}</div>`;
-        }).join('') : '<span class="text-slate-400 italic">Belum ada menu yang menggunakan resep ini</span>';
-
         const itemsList = (rec.items || []).map(item => {
             const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
-            return `• ${ing ? escapeHtml(ing.name) : 'Bahan Terhapus'}: <strong class="text-slate-800">${item.amount} ${ing ? ing.unit : ''}</strong>`;
+            return `• ${ing ? escapeHtml(ing.name) : 'Bahan Terhapus'}: <strong>${item.amount} ${ing ? ing.unit : ''}</strong>`;
         }).join('<br>');
 
         return `
-            <tr class="hover:bg-slate-50/70 transition">
-                <td class="p-3.5 font-medium text-orange-600">${escapeHtml(rec.name)}</td>
-                <td class="p-3.5 text-slate-600 leading-relaxed">${itemsList || 'Tidak ada bahan'}</td>
-                <td class="p-3.5 space-y-1">${linkedProductsHtml}</td>
-                <td class="p-3.5 text-right space-x-2">
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 font-medium text-orange-600">${escapeHtml(rec.name)}</td>
+                <td class="p-4 text-slate-600">${itemsList || 'Tidak ada bahan'}</td>
+                <td class="p-4">${linkedHtml}</td>
+                <td class="p-4 text-right space-x-2">
                     <button onclick="editRecipe('${rec.id}')" class="text-orange-600 hover:text-orange-800 font-semibold px-2.5 py-1 bg-orange-50 rounded-lg">Edit</button>
                     <button onclick="deleteRecipe('${rec.id}')" class="text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1 bg-rose-50 rounded-lg">Hapus</button>
                 </td>
@@ -217,34 +210,19 @@ window.renderMappingUI = function() {
     const container = document.getElementById('mapping-products-container');
     if (!container) return;
 
-    if (productsData.length === 0) {
-        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Belum ada produk/menu di tabel products.</td></tr>`;
-        return;
-    }
-
     const searchInput = document.getElementById('mappingSearch');
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    let filtered = productsData.filter(p => (p.name || p.nama || '').toLowerCase().includes(query));
 
-    let filteredProducts = productsData;
-    if (query) {
-        filteredProducts = productsData.filter(p => {
-            const pName = (p.name || p.nama || '').toLowerCase();
-            return pName.includes(query);
-        });
-    }
-
-    if (filteredProducts.length === 0) {
-        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Tidak ada menu yang sesuai dengan pencarian "${escapeHtml(query)}".</td></tr>`;
+    if (filtered.length === 0) {
+        container.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400">Tidak ada menu ditemukan.</td></tr>`;
         return;
     }
 
-    container.innerHTML = filteredProducts.map(prod => {
+    container.innerHTML = filtered.map(prod => {
         const currentRecipeId = prod.resep_id || '';
-        const stockVal = prod.stok !== undefined ? Number(prod.stok) : (prod.stock !== undefined ? Number(prod.stock) : 0);
-        const prodQty = prod.qty !== undefined ? prod.qty : 1;
-        const prodUnit = prod.unit !== undefined ? prod.unit : 'pcs';
-        
-        let statusBadge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Aman (${stockVal})</span>`;
+        const stockVal = Number(prod.stok !== undefined ? prod.stok : prod.stock) || 0;
+        let statusBadge = `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">Aman (${stockVal})</span>`;
         if (stockVal <= 0) statusBadge = `<span class="bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">Habis (0)</span>`;
         else if (stockVal <= 5) statusBadge = `<span class="bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full font-semibold text-[10px]">Menipis (${stockVal})</span>`;
 
@@ -256,15 +234,13 @@ window.renderMappingUI = function() {
 
         return `
             <tr class="hover:bg-slate-50 transition">
-                <td class="p-3.5"><img src="${prod.foto || prod.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='https://placehold.co/40'"></td>
-                <td class="p-3.5 font-semibold text-slate-800">${escapeHtml(prod.name || prod.nama)} (${prodQty} ${prodUnit})</td>
-                <td class="p-3.5">${statusBadge}</td>
-                <td class="p-3.5">
-                    <div class="flex items-center gap-2">
-                        <select id="map-select-${prod.id}" onchange="updateMenuRecipeMapping('${prod.id}')" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                            ${selectOptions}
-                        </select>
-                    </div>
+                <td class="p-4"><img src="${prod.foto || prod.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='https://placehold.co/40'"></td>
+                <td class="p-4 font-semibold text-slate-800">${escapeHtml(prod.name || prod.nama)} (${prod.qty || 1} ${prod.unit || 'pcs'})</td>
+                <td class="p-4">${statusBadge}</td>
+                <td class="p-4">
+                    <select id="map-select-${prod.id}" onchange="updateMenuRecipeMapping('${prod.id}')" class="border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium">
+                        ${selectOptions}
+                    </select>
                 </td>
             </tr>
         `;
@@ -279,29 +255,12 @@ window.updateMenuRecipeMapping = async function(productId) {
     productsData = productsData.map(p => String(p.id) === String(productId) ? { ...p, resep_id: recipeId } : p);
 
     if (supabaseClient && !isDemoMode) {
-        try {
-            const { data, error } = await supabaseClient
-                .from('products')
-                .update({ resep_id: recipeId })
-                .eq('id', productId)
-                .select();
-
-            if (error) {
-                console.error("❌ [DB DEBUG] Supabase update error details:", error);
-                showModal("Gagal Supabase", `Error: ${error.message}. Periksa RLS policy tabel products.`, "❌");
-                return;
-            }
-        } catch (e) {
-            console.error("❌ [DB DEBUG] Supabase mapping update exception:", e);
-            showModal("Gagal", "Terjadi kesalahan koneksi ke Supabase.", "❌");
-            return;
-        }
+        await supabaseClient.from('products').update({ resep_id: recipeId }).eq('id', productId);
     }
-
     renderRecipes();
     renderMappingUI();
     updateCalcProductOptions();
-    showModal("Tersimpan", "Relasi menu dan resep berhasil disimpan ke Supabase!", "✅");
+    showModal("Tersimpan", "Relasi menu dan resep berhasil diperbarui!", "✅");
 }
 
 function updateCalcProductOptions() {
@@ -312,11 +271,10 @@ function updateCalcProductOptions() {
     productsData.forEach(prod => {
         const selected = String(prod.id) === String(currentVal) ? 'selected' : '';
         const stockVal = prod.stok !== undefined ? prod.stok : (prod.stock !== undefined ? prod.stock : 0);
-        const displayLabel = `${prod.name || prod.nama || 'Produk'} (Stok: ${stockVal})`;
-        html += `<option value="${prod.id}" ${selected}>${escapeHtml(displayLabel)}</option>`;
+        html += `<option value="${prod.id}" ${selected}>${escapeHtml(prod.name || prod.nama)} (Stok: ${stockVal})</option>`;
     });
     select.innerHTML = html;
-    updateCalcPreview();
+    window.updateCalcPreview();
 }
 
 window.updateCalcPreview = function() {
@@ -339,34 +297,31 @@ window.updateCalcPreview = function() {
     const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
 
     if (!recipe) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-600">Belum ada resep yang di-link ke produk ini. Silakan atur di tab <strong>Kawinkan Menu & Resep</strong>.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-amber-600">Belum ada resep yang di-link ke produk ini.</td></tr>`;
         if (labelTarget) labelTarget.innerText = "Resep belum diset";
         return;
     }
 
     const totalOutputPcs = batchMultiplier * (prod ? (prod.qty || 1) : 1);
-    if (labelTarget) labelTarget.innerText = `Target: ${batchMultiplier} Batch (~${totalOutputPcs} ${prod ? (prod.unit || 'pcs') : 'pcs'})`;
+    if (labelTarget) labelTarget.innerText = `Target: ${batchMultiplier} Batch (~${totalOutputPcs} ${prod?.unit || 'pcs'})`;
 
     tbody.innerHTML = (recipe.items || []).map(item => {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
-        const name = ing ? escapeHtml(ing.name) : 'Bahan Telah Dihapus';
+        const name = ing ? escapeHtml(ing.name) : 'Bahan Dihapus';
         const unit = ing ? ing.unit : '';
-        const currentStock = ing ? ing.stock : 0;
+        const currentStock = ing ? Number(ing.stock) : 0;
         const totalNeeded = item.amount * batchMultiplier;
         const shortage = totalNeeded - currentStock;
 
-        let statusBadge = '';
-        if (shortage <= 0) {
-            statusBadge = `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-semibold border border-emerald-200">Stok Aman</span>`;
-        } else {
-            statusBadge = `<span class="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full font-semibold border border-rose-200">Kurang: ${shortage.toFixed(1)} ${unit}</span>`;
-        }
+        let statusBadge = shortage <= 0 ? 
+            `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-semibold border border-emerald-200">Aman</span>` :
+            `<span class="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full font-semibold border border-rose-200">Kurang: ${shortage.toFixed(1)} ${unit}</span>`;
 
         return `
             <tr class="hover:bg-slate-50 transition">
                 <td class="p-4 font-medium text-slate-800">${name}</td>
-                <td class="p-4 font-bold text-orange-600">${totalNeeded.toFixed(1)} <span class="font-normal text-slate-500">${unit}</span></td>
-                <td class="p-4 text-slate-600">${currentStock} <span class="text-slate-400">${unit}</span></td>
+                <td class="p-4 font-bold text-orange-600">${totalNeeded.toFixed(1)} ${unit}</td>
+                <td class="p-4 text-slate-600">${currentStock} ${unit}</td>
                 <td class="p-4">${statusBadge}</td>
             </tr>
         `;
@@ -376,34 +331,21 @@ window.updateCalcPreview = function() {
 window.exportShoppingList = function() {
     const selectEl = document.getElementById('calc-product-select');
     const batchInput = document.getElementById('calc-batch-input');
-    if (!selectEl) return;
-    const productId = selectEl.value;
-    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 1) : 1;
-
-    if (!productId) {
-        showModal("Perhatian", "Pilih produk terlebih dahulu untuk menyalin daftar belanja.", "⚠️");
+    if (!selectEl || !selectEl.value) {
+        showModal("Perhatian", "Pilih produk terlebih dahulu.", "⚠️");
         return;
     }
-
-    const prod = productsData.find(p => String(p.id) === String(productId));
+    const prod = productsData.find(p => String(p.id) === String(selectEl.value));
     const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
+    const batchMultiplier = parseFloat(batchInput.value) || 1;
 
-    if (!recipe) {
-        showModal("Perhatian", "Resep untuk produk ini belum diatur di tab Kawinkan Menu & Resep.", "⚠️");
-        return;
-    }
-
-    let text = `📋 DAFTAR BELANJA & RESTOK DIMSUM\nMenu: ${prod ? (prod.name || prod.nama) : 'Produk'}\nJumlah: ${batchMultiplier} Batch\n------------------------------------\n`;
-    (recipe.items || []).forEach(item => {
+    let text = `📋 DAFTAR BELANJA & RESTOK DIMSUM\nMenu: ${prod?.name || prod?.nama}\nJumlah: ${batchMultiplier} Batch\n------------------------------------\n`;
+    (recipe?.items || []).forEach(item => {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
-        const name = ing ? ing.name : 'Bahan';
-        const unit = ing ? ing.unit : '';
         const totalNeeded = item.amount * batchMultiplier;
-        const currentStock = ing ? ing.stock : 0;
-        const shortage = Math.max(0, totalNeeded - currentStock);
-        text += `- ${name}: Butuh ${totalNeeded.toFixed(1)} ${unit} (Kurang: ${shortage.toFixed(1)} ${unit})\n`;
+        const shortage = Math.max(0, totalNeeded - (ing ? Number(ing.stock) : 0));
+        text += `- ${ing?.name || 'Bahan'}: Butuh ${totalNeeded.toFixed(1)} ${ing?.unit} (Kurang: ${shortage.toFixed(1)} ${ing?.unit})\n`;
     });
-    text += `------------------------------------\nGenerated by ChimChum Dimsum Master`;
 
     const dummy = document.createElement("textarea");
     document.body.appendChild(dummy);
@@ -411,56 +353,7 @@ window.exportShoppingList = function() {
     dummy.select();
     document.execCommand("copy");
     document.body.removeChild(dummy);
-    showModal("Berhasil Disalin!", "Daftar kebutuhan belanja telah disalin ke clipboard.", "📋");
-}
-
-window.handleIngredientSubmit = async function(e) {
-    e.preventDefault();
-    const id = document.getElementById('ingredient-edit-id').value || 'ing_' + Date.now();
-    const name = document.getElementById('ing-name').value;
-    const stock = parseFloat(document.getElementById('ing-stock').value);
-    const unit = document.getElementById('ing-unit').value;
-    const payload = { id, name, stock, unit };
-
-    if (supabaseClient && !isDemoMode) {
-        const { error } = await supabaseClient.from('ingredients').upsert([payload]);
-        if (error) {
-            showModal("Gagal", error.message, "❌");
-            return;
-        }
-        loadDataFromSupabase();
-    } else {
-        const idx = ingredientsData.findIndex(i => i.id === id);
-        if (idx >= 0) ingredientsData[idx] = payload;
-        else ingredientsData.push(payload);
-        updateUI();
-    }
-    resetIngredientForm();
-    showModal("Sukses", "Bahan baku berhasil disimpan!", "✅");
-}
-
-window.renderIngredientsTable = function() {
-    const query = (document.getElementById('ingSearch')?.value || '').toLowerCase();
-    const tbody = document.getElementById('ingredients-table-tbody');
-    if (!tbody) return;
-
-    const filtered = ingredientsData.filter(i => i.name.toLowerCase().includes(query));
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada data bahan baku.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = filtered.map(ing => `
-        <tr class="hover:bg-slate-50 transition">
-            <td class="p-3 font-medium text-slate-800">${escapeHtml(ing.name)}</td>
-            <td class="p-3 text-slate-600 font-semibold">${ing.stock}</td>
-            <td class="p-3 text-slate-500">${ing.unit}</td>
-            <td class="p-3 text-right space-x-2">
-                <button onclick="editIngredient('${ing.id}')" class="text-orange-600 hover:text-orange-800 font-semibold px-2.5 py-1 bg-orange-50 rounded-lg">Edit</button>
-                <button onclick="deleteIngredient('${ing.id}')" class="text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1 bg-rose-50 rounded-lg">Hapus</button>
-            </td>
-        </tr>
-    `).join('');
+    showModal("Berhasil Disalin!", "Daftar belanja telah disalin ke clipboard.", "📋");
 }
 
 window.processRestockDeduction = async function() {
@@ -472,12 +365,7 @@ window.processRestockDeduction = async function() {
     }
     
     const productId = selectEl.value;
-    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 0) : 0;
-    if (batchMultiplier <= 0) {
-        showModal("Perhatian", "Jumlah batch harus lebih dari 0.", "⚠️");
-        return;
-    }
-
+    const batchMultiplier = parseFloat(batchInput.value) || 0;
     const prod = productsData.find(p => String(p.id) === String(productId));
     const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
 
@@ -486,28 +374,21 @@ window.processRestockDeduction = async function() {
         return;
     }
 
-    if (!confirm(`Proses produksi ${batchMultiplier} batch ${prod.name || prod.nama}? Stok bahan baku di gudang akan otomatis dikurangi.`)) {
-        return;
-    }
+    if (!confirm(`Proses produksi ${batchMultiplier} batch ${prod.name || prod.nama}? Stok bahan baku gudang akan otomatis dikurangi.`)) return;
 
     for (const item of recipe.items) {
         const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
         if (ing) {
             const totalNeeded = item.amount * batchMultiplier;
-            const newStock = Math.max(0, Number(ing.stock) - totalNeeded);
-            ing.stock = newStock;
-
+            ing.stock = Math.max(0, Number(ing.stock) - totalNeeded);
             if (supabaseClient && !isDemoMode) {
-                await supabaseClient.from('ingredients').update({ stock: newStock }).eq('id', ing.id);
+                await supabaseClient.from('ingredients').update({ stock: ing.stock }).eq('id', ing.id);
             }
         }
     }
 
-    if (supabaseClient && !isDemoMode) {
-        await loadDataFromSupabase();
-    } else {
-        updateUI();
-    }
+    if (supabaseClient && !isDemoMode) await loadDataFromSupabase();
+    else updateUI();
 
     showModal("Berhasil Diproses!", "Stok bahan baku di gudang telah dikurangi sesuai kebutuhan resep.", "✅");
 };
@@ -521,7 +402,7 @@ window.openOrderModal = function() {
     }
 
     const productId = selectEl.value;
-    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 1) : 1;
+    const batchMultiplier = parseFloat(batchInput.value) || 1;
     const prod = productsData.find(p => String(p.id) === String(productId));
     const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
 
@@ -530,11 +411,8 @@ window.openOrderModal = function() {
         return;
     }
 
-    const supSelect = document.getElementById('order-supplier-select');
-    supSelect.innerHTML = '<option value="">-- Pilih Supplier --</option>' + suppliersData.map(s => `
-        <option value="${s.id}">${escapeHtml(s.name || s.nama)}</option>
-    `).join('');
-
+    filterSupplierOptions('');
+    
     const previewContainer = document.getElementById('order-items-preview');
     let itemsHtml = '';
     let hasShortage = false;
@@ -549,16 +427,15 @@ window.openOrderModal = function() {
 
         if (shortage > 0) {
             hasShortage = true;
-            const uniqueId = `order_item_${index}`;
             itemsHtml += `
-                <div class="flex items-center justify-between gap-2 p-1.5 bg-white rounded-lg border border-slate-200">
+                <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-xl border border-slate-200">
                     <label class="flex items-center gap-2 cursor-pointer flex-1">
-                        <input type="checkbox" class="order-item-checkbox rounded text-orange-600 focus:ring-orange-500 w-4 h-4" 
+                        <input type="checkbox" class="order-item-checkbox rounded text-orange-600 w-4 h-4" 
                                value="${ing ? ing.id : ''}" 
                                data-name="${escapeHtml(name)}"
                                data-qty="${shortage}"
                                data-unit="${unit}"
-                               data-price="${ing && ing.price ? Number(ing.price) : 0}"
+                               data-price="${ing?.price || 0}"
                                checked>
                         <span class="text-slate-800 font-medium">${escapeHtml(name)}</span>
                     </label>
@@ -578,6 +455,15 @@ window.openOrderModal = function() {
     document.getElementById('orderModal').classList.remove('hidden');
 };
 
+window.filterSupplierOptions = function() {
+    const query = (document.getElementById('supplierSearchInput')?.value || '').toLowerCase().trim();
+    const supSelect = document.getElementById('order-supplier-select');
+    const filtered = suppliersData.filter(s => (s.name || s.nama || '').toLowerCase().includes(query));
+    supSelect.innerHTML = '<option value="">-- Pilih Supplier --</option>' + filtered.map(s => `
+        <option value="${s.id}">${escapeHtml(s.name || s.nama)}</option>
+    `).join('');
+};
+
 window.closeOrderModal = function() {
     document.getElementById('orderModal').classList.add('hidden');
 };
@@ -588,7 +474,7 @@ window.submitOrder = async function(e) {
     const notes = document.getElementById('order-notes').value;
 
     if (!supplierId) {
-        showModal("Perhatian", "Silakan pilih supplier terlebih dahulu.", "⚠️");
+        showModal("Perhatian", "Pilih supplier terlebih dahulu.", "⚠️");
         return;
     }
 
@@ -610,16 +496,21 @@ window.submitOrder = async function(e) {
         const subtotal = quantity * unitPrice;
 
         grandTotal += subtotal;
-
-        orderItems.push({
-            ingredient_id: ingredientId || null,
-            ingredient_name: ingredientName,
-            quantity: quantity,
-            unit: unit,
-            unit_price: unitPrice,
-            subtotal: subtotal
-        });
+        orderItems.push({ ingredient_id: ingredientId || null, ingredient_name: ingredientName, quantity, unit, unit_price: unitPrice, subtotal });
     });
+
+    const jakartaDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+    const jakartaDate = new Date(jakartaDateString);
+
+    const newOrder = {
+        id: 'po_' + Date.now(),
+        supplier_id: supplierId,
+        order_date: jakartaDate.toISOString(),
+        status: 'pending',
+        total_amount: grandTotal,
+        notes: notes,
+        items: orderItems
+    };
 
     try {
         if (supabaseClient && !isDemoMode) {
@@ -627,6 +518,7 @@ window.submitOrder = async function(e) {
                 .from('purchase_orders')
                 .insert([{
                     supplier_id: supplierId,
+                    order_date: jakartaDate.toISOString(),
                     status: 'pending',
                     total_amount: grandTotal,
                     notes: notes
@@ -644,27 +536,153 @@ window.submitOrder = async function(e) {
                 .insert(itemsWithId);
 
             if (itemsError) throw itemsError;
+        } else {
+            let localOrders = JSON.parse(localStorage.getItem('dimsum_purchase_orders') || '[]');
+            localOrders.unshift(newOrder);
+            localStorage.setItem('dimsum_purchase_orders', JSON.stringify(localOrders));
         }
 
-        const selectedSupplier = suppliersData.find(s => String(s.id) === String(supplierId));
         closeOrderModal();
-        showModal("Order Berhasil Disimpan!", `Pesanan ke ${selectedSupplier?.name || 'Supplier'} dengan ${orderItems.length} jenis bahan berhasil dicatat ke database. Total estimasi: Rp ${grandTotal.toLocaleString('id-ID')}.`, "✅");
-
+        showModal("Order Berhasil Dibuat!", `Purchase Order berhasil dicatat dengan total estimasi Rp ${grandTotal.toLocaleString('id-ID')}.`, "✅");
+        switchTab('orders');
     } catch (err) {
-        console.error("❌ [DB ERROR] Gagal menyimpan order:", err);
-        showModal("Gagal", `Terjadi kesalahan saat menyimpan order: ${err.message}`, "❌");
+        console.error("Gagal simpan PO:", err);
+        showModal("Gagal", `Terjadi kesalahan saat menyimpan PO: ${err.message}`, "❌");
     }
 };
 
+window.loadPurchaseOrders = async function() {
+    const tbody = document.getElementById('orders-table-tbody');
+    let ordersList = [];
+
+    if (supabaseClient && !isDemoMode) {
+        const { data, error } = await supabaseClient.from('purchase_orders').select('*, purchase_order_items(*)');
+        if (!error && data) ordersList = data;
+    } else {
+        ordersList = JSON.parse(localStorage.getItem('dimsum_purchase_orders') || '[]');
+    }
+
+    if (ordersList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400">Belum ada riwayat Purchase Order.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = ordersList.map(po => {
+        const sup = suppliersData.find(s => String(s.id) === String(po.supplier_id));
+        const supName = sup ? (sup.name || sup.nama) : 'Supplier Umum';
+        const supPhone = sup ? (sup.phone || '') : '';
+        const formattedDate = new Date(po.order_date).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'medium', timeStyle: 'short' });
+
+        let statusBadge = po.status === 'completed' ? 
+            `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-semibold border border-emerald-200">Selesai (Closed)</span>` :
+            `<span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full font-semibold border border-amber-200">Pending</span>`;
+
+        const itemsArr = po.items || po.purchase_order_items || [];
+        const itemsSummary = itemsArr.map(i => `• ${i.ingredient_name}: <strong>${i.quantity} ${i.unit}</strong>`).join('<br>');
+
+        const waMessage = `Halo ${supName}, saya ingin melakukan order bahan baku berikut:\n\n` +
+            itemsArr.map(i => `- ${i.ingredient_name}: *${i.quantity} ${i.unit}*`).join('\n') +
+            `\n\nCatatan: ${po.notes || '-'}\nTotal Estimasi: Rp ${(po.total_amount || 0).toLocaleString('id-ID')}\nTerima kasih!`;
+        const encodedWaUrl = `https://wa.me/${supPhone}?text=${encodeURIComponent(waMessage)}`;
+
+        return `
+            <tr class="hover:bg-slate-50 transition align-top">
+                <td class="p-4 font-medium text-slate-800">${formattedDate} WIB</td>
+                <td class="p-4 font-bold text-slate-900">${escapeHtml(supName)}</td>
+                <td class="p-4">${statusBadge}</td>
+                <td class="p-4 font-bold text-orange-600">Rp ${(po.total_amount || 0).toLocaleString('id-ID')}</td>
+                <td class="p-4 text-slate-600">
+                    <div class="mb-1 text-slate-500 italic text-[11px]">${escapeHtml(po.notes || '-')}</div>
+                    <div class="text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-100">${itemsSummary || 'Tidak ada item'}</div>
+                </td>
+                <td class="p-4 text-right space-y-1.5">
+                    <a href="${encodedWaUrl}" target="_blank" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-semibold text-[11px] shadow-sm transition">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Kirim WA
+                    </a>
+                    <div>
+                        <button onclick="togglePOStatus('${po.id}')" class="text-xs text-orange-600 hover:underline font-semibold">Ubah Status</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
+window.togglePOStatus = async function(poId) {
+    let ordersList = [];
+    if (supabaseClient && !isDemoMode) {
+        const { data } = await supabaseClient.from('purchase_orders').select('*').eq('id', poId).single();
+        if (data) {
+            const newStatus = data.status === 'pending' ? 'completed' : 'pending';
+            await supabaseClient.from('purchase_orders').update({ status: newStatus }).eq('id', poId);
+        }
+    } else {
+        ordersList = JSON.parse(localStorage.getItem('dimsum_purchase_orders') || '[]');
+        ordersList = ordersList.map(po => {
+            if (po.id === poId) po.status = po.status === 'pending' ? 'completed' : 'pending';
+            return po;
+        });
+        localStorage.setItem('dimsum_purchase_orders', JSON.stringify(ordersList));
+    }
+    loadPurchaseOrders();
+};
+
+window.handleIngredientSubmit = async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('ingredient-edit-id').value || 'ing_' + Date.now();
+    const name = document.getElementById('ing-name').value;
+    const stock = parseFloat(document.getElementById('ing-stock').value);
+    const unit = document.getElementById('ing-unit').value;
+    const price = parseFloat(document.getElementById('ing-price').value) || 0;
+    const payload = { id, name, stock, unit, price };
+
+    if (supabaseClient && !isDemoMode) {
+        await supabaseClient.from('ingredients').upsert([payload]);
+        await loadDataFromSupabase();
+    } else {
+        const idx = ingredientsData.findIndex(i => String(i.id) === String(id));
+        if (idx >= 0) ingredientsData[idx] = payload;
+        else ingredientsData.push(payload);
+        updateUI();
+    }
+    resetIngredientForm();
+    showModal("Sukses", "Bahan baku berhasil disimpan!", "✅");
+}
+
+window.renderIngredientsTable = function() {
+    const query = (document.getElementById('ingSearch')?.value || '').toLowerCase();
+    const tbody = document.getElementById('ingredients-table-tbody');
+    if (!tbody) return;
+
+    const filtered = ingredientsData.filter(i => i.name.toLowerCase().includes(query));
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada data bahan baku.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(ing => `
+        <tr class="hover:bg-slate-50 transition">
+            <td class="p-3.5 font-medium text-slate-800">${escapeHtml(ing.name)}</td>
+            <td class="p-3.5 font-semibold">${ing.stock}</td>
+            <td class="p-3.5 text-slate-500">${ing.unit}</td>
+            <td class="p-3.5 text-slate-600">Rp ${(ing.price || 0).toLocaleString('id-ID')}</td>
+            <td class="p-3.5 text-right space-x-2">
+                <button onclick="editIngredient('${ing.id}')" class="text-orange-600 hover:text-orange-800 font-semibold px-2.5 py-1 bg-orange-50 rounded-lg">Edit</button>
+                <button onclick="deleteIngredient('${ing.id}')" class="text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1 bg-rose-50 rounded-lg">Hapus</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
 window.editIngredient = function(id) {
-    const ing = ingredientsData.find(i => i.id === id);
+    const ing = ingredientsData.find(i => String(i.id) === String(id));
     if (!ing) return;
     document.getElementById('ingredient-edit-id').value = ing.id;
     document.getElementById('ing-name').value = ing.name;
     document.getElementById('ing-stock').value = ing.stock;
     document.getElementById('ing-unit').value = ing.unit;
+    document.getElementById('ing-price').value = ing.price || 0;
     document.getElementById('ingredient-form-title').innerText = "Edit Bahan Baku";
-    switchTab('ingredients');
 }
 
 window.resetIngredientForm = function() {
@@ -676,129 +694,14 @@ window.resetIngredientForm = function() {
 window.deleteIngredient = async function(id) {
     if (!confirm("Hapus bahan ini?")) return;
     if (supabaseClient && !isDemoMode) {
-        const { error } = await supabaseClient.from('ingredients').delete().eq('id', id);
-        if (error) {
-            showModal("Gagal", error.message, "❌");
-            return;
-        }
-        loadDataFromSupabase();
+        await supabaseClient.from('ingredients').delete().eq('id', id);
+        await loadDataFromSupabase();
     } else {
-        ingredientsData = ingredientsData.filter(i => i.id !== id);
+        ingredientsData = ingredientsData.filter(i => String(i.id) !== String(id));
         updateUI();
     }
     showModal("Terhapus", "Bahan baku berhasil dihapus.", "🗑️");
 }
-
-function renderProductsSummary() {
-    let total = productsData.length, aman = 0, menipis = 0, habis = 0;
-    productsData.forEach(p => {
-        const st = Number(p.stok !== undefined ? p.stok : p.stock) || 0;
-        if (st <= 0) habis++;
-        else if (st <= 10) menipis++;
-        else aman++;
-    });
-    const summaryEl = document.getElementById('stokSummary');
-    if (!summaryEl) return;
-
-    summaryEl.innerHTML = `
-        <div onclick="setFilter('all')" class="border rounded-xl p-3 cursor-pointer hover:shadow-sm ${filterStatus==='all'?'border-slate-800 bg-slate-50':''}">
-            <div class="text-[11px] text-slate-500">Total Produk</div>
-            <div class="text-lg font-bold text-slate-800">${total}</div>
-        </div>
-        <div onclick="setFilter('aman')" class="border rounded-xl p-3 cursor-pointer hover:shadow-sm ${filterStatus==='aman'?'border-emerald-500 bg-emerald-50/50':''}">
-            <div class="text-[11px] text-slate-500">Aman (>10)</div>
-            <div class="text-lg font-bold text-emerald-600">${aman}</div>
-        </div>
-        <div onclick="setFilter('menipis')" class="border rounded-xl p-3 cursor-pointer hover:shadow-sm ${filterStatus==='menipis'?'border-amber-500 bg-amber-50/50':''}">
-            <div class="text-[11px] text-slate-500">Menipis (1-10)</div>
-            <div class="text-lg font-bold text-amber-600">${menipis}</div>
-        </div>
-        <div onclick="setFilter('habis')" class="border rounded-xl p-3 cursor-pointer hover:shadow-sm ${filterStatus==='habis'?'border-rose-500 bg-rose-50/50':''}">
-            <div class="text-[11px] text-slate-500">Habis (0)</div>
-            <div class="text-lg font-bold text-rose-600">${habis}</div>
-        </div>
-    `;
-}
-
-window.setFilter = function(st) {
-    filterStatus = st;
-    renderProductsSummary();
-    renderProductsTable();
-};
-
-window.renderProductsTable = function() {
-    const searchInput = document.getElementById('stokSearch');
-    const kw = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const tbody = document.getElementById('stokTableBody');
-    if (!tbody) return;
-
-    let filtered = productsData.filter(p => (p.nama || p.name || '').toLowerCase().includes(kw));
-    if (filterStatus !== 'all') {
-        filtered = filtered.filter(p => {
-            const st = Number(p.stok !== undefined ? p.stok : p.stock) || 0;
-            if (filterStatus === 'habis') return st <= 0;
-            if (filterStatus === 'menipis') return st > 0 && st <= 10;
-            if (filterStatus === 'aman') return st > 10;
-            return true;
-        });
-    }
-
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-400">Tidak ada produk ditemukan.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = filtered.map(p => {
-        const st = Number(p.stok !== undefined ? p.stok : p.stock) || 0;
-        let badge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Aman</span>`;
-        if (st <= 0) badge = `<span class="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Habis</span>`;
-        else if (st <= 10) badge = `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">Menipis</span>`;
-        
-        const prodName = p.name || p.nama || 'Produk';
-        const prodFoto = p.foto || p.image || 'https://placehold.co/40';
-
-        return `
-            <tr class="hover:bg-slate-50">
-                <td class="p-3"><img src="${prodFoto}" class="w-10 h-10 object-cover rounded-lg" onerror="this.src='https://placehold.co/40'"></td>
-                <td class="p-3 font-semibold text-slate-800">${escapeHtml(prodName)}</td>
-                <td class="p-3">${p.qty || 1} ${p.unit || 'pcs'}</td>
-                <td class="p-3 font-bold">${st}</td>
-                <td class="p-3">${badge}</td>
-                <td class="p-3">
-                    <div class="flex items-center gap-1">
-                        <button onclick="modStock('${p.id}', ${st - 1})" class="bg-slate-100 px-2.5 py-1 rounded font-bold">-</button>
-                        <input type="number" value="${st}" id="stok-${p.id}" class="w-12 text-center bg-slate-50 border rounded p-1" onchange="inputStock('${p.id}')">
-                        <button onclick="modStock('${p.id}', ${st + 1})" class="bg-slate-100 px-2.5 py-1 rounded font-bold">+</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-};
-
-window.modStock = async function(id, val) {
-    val = Math.max(0, Number(val) || 0);
-    try {
-        if (supabaseClient && !isDemoMode) {
-            await supabaseClient.from('products').update({ stok: val }).eq('id', id);
-        }
-        productsData = productsData.map(p => String(p.id) === String(id) ? { ...p, stok: val, stock: val } : p);
-        renderProductsSummary();
-        renderProductsTable();
-        checkLowStockProducts();
-        updateCalcProductOptions();
-    } catch(e) { 
-        showModal("Gagal", "Gagal update stok: " + e.message, "❌"); 
-    }
-};
-
-window.inputStock = async function(id) {
-    const inputEl = document.getElementById(`stok-${id}`);
-    if (inputEl) {
-        const v = Number(inputEl.value);
-        await modStock(id, v);
-    }
-};
 
 window.addRecipeIngredientRow = function(selectedIngId = '', amountVal = '') {
     const container = document.getElementById('recipe-ingredients-container');
@@ -833,9 +736,7 @@ window.handleRecipeSubmit = async function(e) {
     itemRows.forEach(row => {
         const ingredientId = row.querySelector('.recipe-ing-select').value;
         const amount = parseFloat(row.querySelector('.recipe-ing-amount').value);
-        if (ingredientId && !isNaN(amount)) {
-            items.push({ ingredientId, amount });
-        }
+        if (ingredientId && !isNaN(amount)) items.push({ ingredientId, amount });
     });
 
     if (items.length === 0) {
@@ -845,12 +746,8 @@ window.handleRecipeSubmit = async function(e) {
 
     const payload = { id, name, description: name, items };
     if (supabaseClient && !isDemoMode) {
-        const { error } = await supabaseClient.from('recipes').upsert([payload]);
-        if (error) {
-            showModal("Gagal", error.message, "❌");
-            return;
-        }
-        loadDataFromSupabase();
+        await supabaseClient.from('recipes').upsert([payload]);
+        await loadDataFromSupabase();
     } else {
         const idx = recipesData.findIndex(r => String(r.id) === String(id));
         if (idx >= 0) recipesData[idx] = payload;
@@ -870,16 +767,13 @@ window.editRecipe = function(id) {
     const container = document.getElementById('recipe-ingredients-container');
     if (container) {
         container.innerHTML = '';
-        (rec.items || []).forEach(item => {
-            addRecipeIngredientRow(item.ingredientId, item.amount);
-        });
+        (rec.items || []).forEach(item => addRecipeIngredientRow(item.ingredientId, item.amount));
     }
     document.getElementById('recipeModal').classList.remove('hidden');
 }
 
 window.resetRecipeForm = function() {
-    const form = document.getElementById('recipeForm');
-    if (form) form.reset();
+    document.getElementById('recipeForm').reset();
     document.getElementById('recipe-edit-id').value = '';
     document.getElementById('modalTitle').innerText = "Buat Master Resep";
     const container = document.getElementById('recipe-ingredients-container');
@@ -890,25 +784,21 @@ window.resetRecipeForm = function() {
 }
 
 window.deleteRecipe = async function(id) {
-    if (!confirm("Hapus master resep ini? Semua menu yang terikat akan terlepas.")) return;
+    if (!confirm("Hapus master resep ini?")) return;
     if (supabaseClient && !isDemoMode) {
         await supabaseClient.from('products').update({ resep_id: null }).eq('resep_id', id);
-        const { error } = await supabaseClient.from('recipes').delete().eq('id', id);
-        if (error) {
-            showModal("Gagal", error.message, "❌");
-            return;
-        }
-        loadDataFromSupabase();
+        await supabaseClient.from('recipes').delete().eq('id', id);
+        await loadDataFromSupabase();
     } else {
         recipesData = recipesData.filter(r => String(r.id) !== String(id));
-        productsData = productsData.app ? productsData : productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
+        productsData = productsData.map(p => String(p.resep_id) === String(id) ? { ...p, resep_id: null } : p);
         updateUI();
     }
     showModal("Terhapus", "Master resep berhasil dihapus.", "🗑️");
 }
 
 function escapeHtml(str) {
-    return String(str || '').replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, "\"").replace(/'/g, "'");
+    return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 window.onload = function() {
