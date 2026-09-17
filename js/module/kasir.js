@@ -15,56 +15,31 @@ const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOff
 return localTime.toISOString().replace('Z', '+07:00');
 }
 
-// LOGIN AUTHENTICATION CHECK AGAINST usersetup TABLE
-window.handleKasirLogin = async function(e) {
-e.preventDefault();
-const usernameInput = document.getElementById('loginUsername').value.trim();
-const passwordInput = document.getElementById('loginPassword').value.trim();
-const errorEl = document.getElementById('loginError');
-errorEl.style.display = 'none';
 
-await authReady;
-try {
-    const { data, error } = await supabase
-        .from('usersetup')
-        .select('*')
-        .eq('username', usernameInput)
-        .maybeSingle();
 
-    if (error) throw error;
+window.logoutKasir = async function () {
+    if (!confirm("Keluar dari panel kasir?")) return;
 
-    if (data && (data.password === passwordInput || data.pass === passwordInput)) {
-        sessionStorage.setItem('kasir_logged_in', 'true');
-        sessionStorage.setItem('kasir_user', usernameInput);
-        document.getElementById('loginOverlay').style.display = 'none';
-        initKasirDashboard();
-    } else {
-        errorEl.innerText = 'Username atau password salah!';
-        errorEl.style.display = 'block';
+    try {
+        await authReady;
+
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            throw error;
+        }
+
+        // Bersihkan session lama jika masih ada
+        sessionStorage.removeItem('kasir_logged_in');
+        sessionStorage.removeItem('kasir_user');
+
+        // Kembali ke halaman login
+        window.location.replace('./login.html');
+
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('Gagal logout.\n\n' + (error.message || error));
     }
-} catch (err) {
-    console.warn('Login verification exception:', err);
-    // Fallback default accounts
-    if ((usernameInput === 'kasir' && passwordInput === 'kasirchimchum123') || (usernameInput === 'admin' && passwordInput === 'chimchum123')) {
-        sessionStorage.setItem('kasir_logged_in', 'true');
-        sessionStorage.setItem('kasir_user', usernameInput);
-        document.getElementById('loginOverlay').style.display = 'none';
-        initKasirDashboard();
-    } else {
-        errorEl.innerText = 'Username atau password salah / gagal verifikasi.';
-        errorEl.style.display = 'block';
-    }
-}
-};
-
-window.logoutKasir = function() {
-if (confirm("Keluar dari panel kasir?")) {
-    sessionStorage.removeItem('kasir_logged_in');
-    sessionStorage.removeItem('kasir_user');
-    document.getElementById('loginOverlay').style.display = 'flex';
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
-}
 };
 
 window.switchTab = (tabId, element) => {
@@ -76,14 +51,6 @@ element.classList.add('active');
 if (tabId === 'tab-pesanan') window.loadOrders();
 };
 
-window.addEventListener('DOMContentLoaded', async () => {
-if (sessionStorage.getItem('kasir_logged_in') === 'true') {
-    document.getElementById('loginOverlay').style.display = 'none';
-    initKasirDashboard();
-} else {
-    document.getElementById('loginOverlay').style.display = 'flex';
-}
-});
 
 async function initKasirDashboard() {
 await window.loadProducts();
