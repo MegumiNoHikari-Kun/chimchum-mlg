@@ -550,11 +550,8 @@ window.openOrderModal = function() {
             hasShortage = true;
             const rowId = `order_row_${index}`;
             itemsHtml += `
-                <div class="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-slate-200" data-order-row id="${rowId}">
-                    <select class="order-item-supplier w-32 border border-slate-200 rounded-lg text-xs p-1.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                        ${supplierOptionsHtml}
-                    </select>
-                    <label class="flex items-center gap-2 cursor-pointer flex-1">
+                <div class="grid grid-cols-[1fr_auto] items-center gap-2 p-2 bg-white rounded-lg border border-slate-200" data-order-row id="${rowId}">
+                    <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" class="order-item-checkbox rounded text-orange-600 focus:ring-orange-500 w-4 h-4"
                                value="${ing ? ing.id : ''}"
                                data-name="${escapeHtml(name)}"
@@ -563,22 +560,34 @@ window.openOrderModal = function() {
                                data-price="${ing && ing.price ? Number(ing.price) : 0}"
                                checked
                                onchange="toggleOrderRowSupplier('${rowId}')">
-                        <span class="text-slate-800 font-medium">${escapeHtml(name)}</span>
+                        <span class="text-slate-800 font-medium text-xs">${escapeHtml(name)}</span>
+                        <span class="text-slate-500 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-md font-semibold whitespace-nowrap">
+                            Kurang: ${shortage.toFixed(1)} ${unit}
+                        </span>
                     </label>
-                    <span class="text-slate-500 text-xs bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
-                        Kurang: ${shortage.toFixed(1)} ${unit}
-                    </span>
+                    <select class="order-item-supplier w-32 border border-slate-200 rounded-lg text-xs p-1.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        ${supplierOptionsHtml}
+                    </select>
                 </div>
             `;
         }
     });
 
     if (!hasShortage) {
-        itemsHtml = `<div class="text-emerald-600 font-semibold text-center py-2">Semua stok bahan baku aman! Tidak ada kekurangan untuk batch ini.</div>`;
+        itemsHtml = `<div class="text-emerald-600 font-semibold text-center py-2 text-xs">Semua stok bahan baku aman! Tidak ada kekurangan untuk batch ini.</div>`;
     }
 
     previewContainer.innerHTML = itemsHtml;
     document.getElementById('orderModal').classList.remove('hidden');
+};
+
+window.toggleOrderRowSupplier = function(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const checkbox = row.querySelector('.order-item-checkbox');
+    const supplierSelect = row.querySelector('.order-item-supplier');
+    supplierSelect.disabled = !checkbox.checked;
+    if (!checkbox.checked) supplierSelect.value = '';
 };
 
 // Kalau checkbox di-uncheck, supplier baris itu benar2 dikosongkan & dropdown-nya di-disable
