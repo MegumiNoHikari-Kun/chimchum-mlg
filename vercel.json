@@ -8,7 +8,7 @@
     {
       "source": "/js/supabase.js",
       "destination": "/404"
-    }
+    },
     {
       "source": "/js/app.js",
       "destination": "/404"
