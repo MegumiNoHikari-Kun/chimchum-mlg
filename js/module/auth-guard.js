@@ -2,19 +2,19 @@ import { supabase, authReady } from '../supabase.js';
 
 export async function requireAuth(allowedRoles = []) {
     try {
+        // =========================================
+        // 1. TUNGGU SUPABASE SIAP
+        // =========================================
         await authReady;
 
-        // =========================================
-        // 1. SUPABASE
-        // =========================================
         if (!supabase) {
             console.error('❌ Supabase tidak tersedia.');
-            window.location.replace('/admin.html');
+            window.location.replace('/login.html');
             return null;
         }
 
         // =========================================
-        // 2. CHECK LOGIN
+        // 2. CEK SESSION LOGIN
         // =========================================
         const {
             data: { session },
@@ -22,19 +22,19 @@ export async function requireAuth(allowedRoles = []) {
         } = await supabase.auth.getSession();
 
         if (sessionError) {
-            console.error(
-                '❌ Session error:',
-                sessionError
-            );
+            console.error('❌ Session error:', sessionError);
 
-            window.location.replace('/admin.html');
+            window.location.replace('/login.html');
             return null;
         }
 
+        // =========================================
+        // 3. BELUM LOGIN
+        // =========================================
         if (!session?.user) {
-            console.log('⚠️ User belum login.');
+            console.log('⚠️ User belum login → login.html');
 
-            window.location.replace('/admin.html');
+            window.location.replace('/login.html');
             return null;
         }
 
@@ -43,7 +43,7 @@ export async function requireAuth(allowedRoles = []) {
         console.log('✅ LOGIN USER:', user.email);
 
         // =========================================
-        // 3. AMBIL USER DARI USERSETUP
+        // 4. AMBIL DATA USERSETUP
         // =========================================
         const {
             data: userSetup,
@@ -60,10 +60,13 @@ export async function requireAuth(allowedRoles = []) {
                 userSetupError
             );
 
-            window.location.replace('/admin.html');
+            window.location.replace('/login.html');
             return null;
         }
 
+        // =========================================
+        // 5. USER TIDAK ADA DI USERSETUP
+        // =========================================
         if (!userSetup) {
             console.error(
                 '❌ User tidak ditemukan di usersetup:',
@@ -72,12 +75,12 @@ export async function requireAuth(allowedRoles = []) {
 
             await supabase.auth.signOut();
 
-            window.location.replace('/admin.html');
+            window.location.replace('/login.html');
             return null;
         }
 
         // =========================================
-        // 4. AMBIL ROLE
+        // 6. AMBIL ROLE
         // =========================================
         const role = String(userSetup.role || '')
             .trim()
@@ -86,71 +89,76 @@ export async function requireAuth(allowedRoles = []) {
         console.log('👤 Username:', userSetup.username);
         console.log('🔐 Role:', role);
 
+        // =========================================
+        // 7. ROLE KOSONG
+        // =========================================
         if (!role) {
-            console.error(
-                '❌ User tidak memiliki role.'
-            );
+            console.error('❌ User tidak memiliki role.');
 
             await supabase.auth.signOut();
 
-            window.location.replace('/admin.html');
+            window.location.replace('/login.html');
             return null;
         }
 
         // =========================================
-        // 5. CHECK ROLE HALAMAN
+        // 8. NORMALISASI ROLE YANG DIIZINKAN
         // =========================================
-        const normalizedAllowedRoles =
-            allowedRoles.map(role =>
-                String(role).trim().toLowerCase()
-            );
+        const normalizedAllowedRoles = allowedRoles.map(role =>
+            String(role)
+                .trim()
+                .toLowerCase()
+        );
 
+        // =========================================
+        // 9. CEK ROLE UNTUK HALAMAN INI
+        // =========================================
         if (
             normalizedAllowedRoles.length > 0 &&
             !normalizedAllowedRoles.includes(role)
         ) {
             console.warn(
-                `⛔ Role "${role}" tidak memiliki akses.`
+                `⛔ Role "${role}" tidak memiliki akses ke halaman ini.`
             );
 
-            // Redirect berdasarkan role
+            // -----------------------------------------
+            // KASIR → KASIR
+            // -----------------------------------------
             if (role === 'kasir') {
-
-                console.log(
-                    '➡️ Redirect ke kasir.html'
-                );
+                console.log('➡️ Redirect ke kasir.html');
 
                 window.location.replace('/kasir.html');
-
-            } else if (role === 'admin') {
-
-                console.log(
-                    '➡️ Redirect ke index.html'
-                );
-
-                window.location.replace('/index.html');
-
-            } else {
-
-                console.warn(
-                    '⚠️ Role tidak dikenali:',
-                    role
-                );
-
-                await supabase.auth.signOut();
-
-                window.location.replace('/admin.html');
+                return null;
             }
 
+            // -----------------------------------------
+            // ADMIN → ADMIN
+            // -----------------------------------------
+            if (role === 'admin') {
+                console.log('➡️ Redirect ke admin.html');
+
+                window.location.replace('/admin.html');
+                return null;
+            }
+
+            // -----------------------------------------
+            // ROLE TIDAK DIKENALI
+            // -----------------------------------------
+            console.warn(
+                '⚠️ Role tidak dikenali:',
+                role
+            );
+
+            await supabase.auth.signOut();
+
+            window.location.replace('/login.html');
             return null;
         }
 
         // =========================================
-        // 6. SEMUA VALID
+        // 10. AUTH & ROLE VALID
         // =========================================
-        console.log(
-            '✅ AUTH & ROLE VALID'
-        );
+        console.log('✅ AUTH & ROLE VALID');
 
         return {
             session,
@@ -166,7 +174,8 @@ export async function requireAuth(allowedRoles = []) {
             error
         );
 
-        window.location.replace('/admin.html');
+        // Error apa pun → kembali ke login
+        window.location.replace('/login.html');
 
         return null;
     }
