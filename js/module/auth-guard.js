@@ -1,11 +1,11 @@
-import { supabase, authReady } from '../supabase.js';
+import { supabase, authReady } from '../../supabase.js';
 
 export async function requireAuth(allowedRoles = []) {
     try {
         await authReady;
 
         // =========================================
-        // 1. SUPABASE HARUS TERSEDIA
+        // 1. SUPABASE
         // =========================================
         if (!supabase) {
             console.error('❌ Supabase tidak tersedia.');
@@ -23,7 +23,7 @@ export async function requireAuth(allowedRoles = []) {
 
         if (sessionError) {
             console.error(
-                '❌ Gagal mendapatkan session:',
+                '❌ Session error:',
                 sessionError
             );
 
@@ -31,7 +31,6 @@ export async function requireAuth(allowedRoles = []) {
             return null;
         }
 
-        // BELUM LOGIN
         if (!session?.user) {
             console.log('⚠️ User belum login.');
 
@@ -41,33 +40,34 @@ export async function requireAuth(allowedRoles = []) {
 
         const user = session.user;
 
-        console.log('✅ User login:', user.email);
+        console.log('✅ LOGIN USER:', user.email);
 
         // =========================================
-        // 3. CHECK PROFILE / ROLE
+        // 3. AMBIL USER DARI USERSETUP
         // =========================================
         const {
-            data: profile,
-            error: profileError
+            data: userSetup,
+            error: userSetupError
         } = await supabase
-            .from('profiles')
-            .select('id, name, role')
-            .eq('id', user.id)
+            .from('usersetup')
+            .select('username, role')
+            .eq('username', user.email)
             .maybeSingle();
 
-        if (profileError) {
+        if (userSetupError) {
             console.error(
-                '❌ Gagal mengambil profile:',
-                profileError
+                '❌ Gagal membaca usersetup:',
+                userSetupError
             );
 
             window.location.replace('/admin.html');
             return null;
         }
 
-        if (!profile) {
+        if (!userSetup) {
             console.error(
-                '❌ Profile user tidak ditemukan.'
+                '❌ User tidak ditemukan di usersetup:',
+                user.email
             );
 
             await supabase.auth.signOut();
@@ -76,71 +76,86 @@ export async function requireAuth(allowedRoles = []) {
             return null;
         }
 
-        const role = String(profile.role || '')
+        // =========================================
+        // 4. AMBIL ROLE
+        // =========================================
+        const role = String(userSetup.role || '')
             .trim()
             .toLowerCase();
 
-        console.log('👤 User:', user.email);
+        console.log('👤 Username:', userSetup.username);
         console.log('🔐 Role:', role);
 
-        // =========================================
-        // 4. CHECK ROLE
-        // =========================================
-
-        // Tidak ada role yang diizinkan
-        if (
-            allowedRoles.length > 0 &&
-            !allowedRoles.includes(role)
-        ) {
-            console.warn(
-                `⛔ Role "${role}" tidak memiliki akses ke halaman ini.`
+        if (!role) {
+            console.error(
+                '❌ User tidak memiliki role.'
             );
 
-            // Redirect berdasarkan ROLE user
-            switch (role) {
+            await supabase.auth.signOut();
 
-                case 'kasir':
-                    console.log(
-                        '➡️ Redirect user kasir ke kasir.html'
-                    );
+            window.location.replace('/admin.html');
+            return null;
+        }
 
-                    window.location.replace('/kasir.html');
-                    break;
+        // =========================================
+        // 5. CHECK ROLE HALAMAN
+        // =========================================
+        const normalizedAllowedRoles =
+            allowedRoles.map(role =>
+                String(role).trim().toLowerCase()
+            );
 
-                case 'admin':
-                    console.log(
-                        '➡️ Redirect user admin ke index.html'
-                    );
+        if (
+            normalizedAllowedRoles.length > 0 &&
+            !normalizedAllowedRoles.includes(role)
+        ) {
+            console.warn(
+                `⛔ Role "${role}" tidak memiliki akses.`
+            );
 
-                    window.location.replace('/index.html');
-                    break;
+            // Redirect berdasarkan role
+            if (role === 'kasir') {
 
-                default:
-                    console.warn(
-                        '⚠️ Role tidak dikenali:',
-                        role
-                    );
+                console.log(
+                    '➡️ Redirect ke kasir.html'
+                );
 
-                    await supabase.auth.signOut();
+                window.location.replace('/kasir.html');
 
-                    window.location.replace('/admin.html');
-                    break;
+            } else if (role === 'admin') {
+
+                console.log(
+                    '➡️ Redirect ke index.html'
+                );
+
+                window.location.replace('/index.html');
+
+            } else {
+
+                console.warn(
+                    '⚠️ Role tidak dikenali:',
+                    role
+                );
+
+                await supabase.auth.signOut();
+
+                window.location.replace('/admin.html');
             }
 
             return null;
         }
 
         // =========================================
-        // 5. AUTH + ROLE VALID
+        // 6. SEMUA VALID
         // =========================================
         console.log(
-            `✅ Authentication & authorization OK: ${role}`
+            '✅ AUTH & ROLE VALID'
         );
 
         return {
             session,
             user,
-            profile,
+            userSetup,
             role
         };
 
