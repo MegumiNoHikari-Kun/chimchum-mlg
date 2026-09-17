@@ -151,8 +151,9 @@
         let isDemoMode = false;
         let supabaseClient = null;
 
-        const supabaseUrl = window.SUPABASE_URL || 'https://your-project.supabase.co';
-        const supabaseKey = window.SUPABASE_KEY || 'your-anon-key';
+        const SUPABASE_URL = 'https://wnftkpopbgtupdxruqsj.supabase.co'; // Ganti dengan URL Supabase Anda
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduZnRrcG9wYmd0dXBkeHJ1cXNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzNDk4NzIsImV4cCI6MjA5ODkyNTg3Mn0.HWEY7E3FUZQ6bPOC-0XhXxUZF6119N5POhrVF934RwE'; // Ganti dengan Anon/Public Key Anda
+
 
         window.showModal = function(title, message, icon = '💡') {
             document.getElementById('modal-title').innerText = title;
