@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Resep & Kalkulator Restok - ChimChum</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .spinner-dark {
+            width: 24px; height: 24px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #f97316;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-white p-6 overflow-y-auto text-slate-800">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <div class="flex justify-between items-center flex-wrap gap-4 border-b pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-book-open text-orange-500 mr-2"></i> Master Resep & Kalkulator Restok Dimsum</h2>
+                <p class="text-xs text-slate-500">Kelola komposisi resep, kawinkan menu & resep, pantau stok gudang & produk, dan hitung kebutuhan belanja otomatis.</p>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl flex-wrap">
+                <button onclick="switchTab('recipes')" id="tab-btn-recipes" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-orange-600 shadow-sm transition">Master Resep</button>
+                <button onclick="switchTab('mapping')" id="tab-btn-mapping" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition">Kawinkan Menu & Resep</button>
+                <button onclick="switchTab('calculator')" id="tab-btn-calculator" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition">Kalkulator Restok</button>
+                <button onclick="switchTab('ingredients')" id="tab-btn-ingredients" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-orange-600 transition">Stok Gudang & Produk</button>
+            </div>
+        </div>
+    
+        <!-- ================= NOTIFIKASI PRODUK STOK MENIPIS / HABIS ================= -->
+        <div id="lowStockAlertBanner" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+            <div class="text-rose-600 text-lg mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="flex-1">
+                <h4 class="font-bold text-rose-800 text-xs uppercase tracking-wider">Perhatian: Produk Siap Jual Menipis / Habis!</h4>
+                <p class="text-xs text-rose-600 mt-0.5">Menu berikut di tabel <code class="font-semibold">products</code> stoknya sudah 0 atau di bawah batas minimum (<= 5). Segera jadwalkan produksi:</p>
+                <div id="lowStockProductsList" class="flex flex-wrap gap-2 mt-2"></div>
+            </div>
+        </div>
+    
+        <!-- ================= TAB 1: MASTER RESEP ================= -->
+        <div id="section-recipes" class="space-y-6">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase">Total Resep</p>
+                        <h3 id="statTotalRecipes" class="text-lg font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-orange-50/60 px-4 py-3 rounded-2xl border border-orange-100">
+                        <p class="text-[10px] font-semibold text-orange-600 uppercase">Total Produk/Menu</p>
+                        <h3 id="statTotalProducts" class="text-lg font-bold text-orange-700">0</h3>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="recipeSearch" placeholder="Cari resep..." class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500 w-60" oninput="renderRecipes()">
+                    <button onclick="openRecipeModal()" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Buat Resep Baru
+                    </button>
+                </div>
+            </div>
+    
+            <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-orange-50 text-slate-700 font-semibold">
+                            <th class="p-3.5">Judul Resep</th>
+                            <th class="p-3.5">Komposisi Bahan Baku</th>
+                            <th class="p-3.5">Menu yang Menggunakan</th>
+                            <th class="p-3.5 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recipeTableBody" class="divide-y divide-slate-100">
+                        <tr><td colspan="4" class="text-center py-10 text-slate-400">Memuat master resep...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    
+        <!-- ================= TAB 2: KAWINKAN MENU & RESEP ================= -->
+        <div id="section-mapping" class="space-y-6 hidden">
+            <div class="bg-orange-50 border border-orange-100 rounded-3xl p-6">
+                <h3 class="font-bold text-slate-800 text-base mb-1"><i class="fa-solid fa-link text-orange-500 mr-2"></i> Kawinkan Menu & Resep</h3>
+                <p class="text-xs text-slate-600">Pilih resep standar untuk masing-masing menu yang tersedia. Satu resep dapat digunakan oleh banyak menu sekaligus.</p>
+            </div>
+            <div>
+                <input type="text" id="mappingSearch" placeholder="Cari menu..." class="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500 w-60 shadow-sm" oninput="renderMappingUI()">
+            </div>
+    
+            <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm bg-white">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
+                            <th class="p-4 w-16">Foto</th>
+                            <th class="p-4">Nama Menu / Produk (<code class="text-orange-600">products</code>)</th>
+                            <th class="p-4">Status Stok</th>
+                            <th class="p-4">Resep yang Digunakan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-products-container" class="divide-y divide-slate-100">
+                        <tr><td colspan="4" class="text-center py-10 text-slate-400">Memuat daftar menu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    
+        <!-- ================= TAB 3: KALKULATOR RESTOK ================= -->
+        <div id="section-calculator" class="space-y-6 hidden">
+            <div class="bg-gradient-to-r from-orange-500 to-amber-600 rounded-3xl p-6 md:p-8 text-white shadow-lg">
+                <h2 class="text-2xl font-bold mb-2">Kalkulator Order & Kebutuhan Produksi</h2>
+                <p class="text-orange-100 text-sm mb-6">Pilih produk dimsum dari tabel <code class="bg-white/20 px-1 rounded">products</code>, masukkan target batch, dan kalkulasikan total kebutuhan bahan baku secara instan.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-orange-100 mb-1">Pilih Produk Dimsum</label>
+                        <select id="calc-product-select" onchange="updateCalcPreview()" class="w-full bg-white text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-300">
+                            <option value="">-- Pilih Produk Dimsum --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-orange-100 mb-1">Jumlah Batch / Resep</label>
+                        <input type="number" id="calc-batch-input" value="1" min="0.1" step="0.1" oninput="updateCalcPreview()" class="w-full bg-white text-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-300">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="exportShoppingList()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition shadow flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-copy"></i> Salin Daftar Belanja WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Hasil Tabel Kalkulasi -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 text-base">Rincian Kebutuhan Bahan Baku</h3>
+                    <span id="calc-target-label" class="text-xs bg-orange-50 text-orange-700 font-semibold px-3 py-1 rounded-full border border-orange-200">Menunggu pilihan produk...</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
+                                <th class="p-4">Nama Bahan Baku</th>
+                                <th class="p-4">Kebutuhan Total</th>
+                                <th class="p-4">Stok Gudang Saat Ini</th>
+                                <th class="p-4">Status / Kurang</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calc-result-tbody" class="divide-y divide-slate-100">
+                            <tr><td colspan="4" class="p-8 text-center text-slate-400">Silakan pilih produk dimsum dan tentukan jumlah batch di atas.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+              <!-- Di dalam section Kalkulator, tambahkan tombol ini di sebelah/bawah export -->
+              <div class="flex gap-2 mt-4">
+                  <button onclick="processRestockDeduction()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
+                      <i class="fa-solid fa-check-to-slot mr-1"></i> Proses (Kurangi Stok Gudang)
+                  </button>
+                  <button onclick="openOrderModal()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
+                      <i class="fa-solid fa-cart-shopping mr-1"></i> Order Stok ke Supplier
+                  </button>
+              </div>
+              
+              <!-- Modal Form Order Supplier -->
+              <div id="orderModal" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+                  <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+                      <div class="flex justify-between items-center border-b pb-3">
+                          <h3 class="text-base font-bold text-slate-800">Form Order Stok Supplier</h3>
+                          <button onclick="closeOrderModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                      </div>
+                      <form id="orderForm" onsubmit="submitOrder(event)" class="space-y-4">
+                          <div>
+                              <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Supplier</label>
+                              <select id="order-supplier-select" required class="w-full border rounded-xl p-2.5 text-xs bg-slate-50 focus:ring-2 focus:ring-orange-500">
+                                  <option value="">-- Memuat Data Supplier --</option>
+                              </select>
+                          </div>
+                          <div>
+                              <label class="block text-xs font-semibold text-slate-600 mb-1">Daftar Bahan yang Kurang</label>
+                              <div id="order-items-preview" class="border rounded-xl p-3 bg-slate-50 max-h-40 overflow-y-auto text-xs space-y-1">
+                                  <!-- Dinamis terisi dari kalkulator -->
+                              </div>
+                          </div>
+                          <div>
+                              <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Tambahan</label>
+                              <textarea id="order-notes" placeholder="Catatan untuk supplier..." class="w-full border rounded-xl p-2.5 text-xs bg-slate-50"></textarea>
+                          </div>
+                          <div class="flex justify-end gap-2 pt-2">
+                              <button type="button" onclick="closeOrderModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold">Batal</button>
+                              <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-semibold">Kirim Pesanan</button>
+                          </div>
+                      </form>
+                  </div>
+              </div>
+            </div>
+        </div>
+    
+        <!-- ================= TAB 4: STOK GUDANG & PRODUK ================= -->
+        <div id="section-ingredients" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Form Tambah Bahan -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+                    <h3 id="ingredient-form-title" class="font-bold text-slate-800 text-base">Tambah / Edit Bahan Baku</h3>
+                    <form id="ingredient-form" onsubmit="handleIngredientSubmit(event)" class="space-y-4">
+                        <input type="hidden" id="ingredient-edit-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Bahan Baku</label>
+                            <input type="text" id="ing-name" required placeholder="Cth: Ayam Fillet Dada" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Stok Gudang</label>
+                                <input type="number" id="ing-stock" step="any" required placeholder="0" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Satuan</label>
+                                <select id="ing-unit" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                    <option value="gram">gram (g)</option>
+                                    <option value="kg">kilogram (kg)</option>
+                                    <option value="ml">mililiter (ml)</option>
+                                    <option value="liter">liter (l)</option>
+                                    <option value="pcs">pcs / butir</option>
+                                    <option value="sdt">sendok teh (sdt)</option>
+                                    <option value="sdm">sendok makan (sdm)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 rounded-xl text-xs transition">Simpan Bahan</button>
+                            <button type="button" onclick="resetIngredientForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-xl text-xs transition">Batal</button>
+                        </div>
+                    </form>
+                </div>
+    
+                <!-- Tabel Inventaris Gudang & Monitoring Produk -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Stok Gudang (Ingredients) -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800 text-base">Monitoring Inventaris Gudang (<code class="text-orange-600">ingredients</code>)</h3>
+                            <input type="text" id="ingSearch" placeholder="Cari bahan baku..." class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-orange-500 w-48" oninput="renderIngredientsTable()">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-100">
+                                        <th class="p-3">Nama Bahan</th>
+                                        <th class="p-3">Stok Gudang</th>
+                                        <th class="p-3">Satuan</th>
+                                        <th class="p-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ingredients-table-tbody" class="divide-y divide-slate-100">
+                                    <tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada data bahan baku.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recipe Modal (Tanpa Checkbox Produk Lagi) -->
+    <div id="recipeModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="modalTitle" class="font-bold text-slate-800 text-base">Buat Master Resep</h3>
+                <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
+            </div>
+    
+            <form id="recipeForm" onsubmit="handleRecipeSubmit(event)" class="space-y-4">
+                <input type="hidden" id="recipe-edit-id">
+    
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Resep / Keterangan Batch</label>
+                    <input type="text" id="recipe-name" required placeholder="Cth: Standar Adonan Dasar Ayam" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+    
+                <div class="border-t border-slate-100 pt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Komposisi Bahan Baku</label>
+                        <button type="button" onclick="addRecipeIngredientRow()" class="text-xs text-orange-600 hover:text-orange-700 font-semibold">+ Tambah Bahan</button>
+                    </div>
+                    <div id="recipe-ingredients-container" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+    
+                <div class="flex gap-2 pt-3 border-t">
+                    <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-sm">Simpan Master Resep</button>
+                    <button type="button" onclick="closeRecipeModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-xl text-xs transition">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Notification Modal -->
+    <div id="notification-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-3">
+            <div id="modal-icon" class="text-3xl">💡</div>
+            <h3 id="modal-title" class="text-base font-bold text-slate-900">Informasi</h3>
+            <p id="modal-message" class="text-xs text-slate-600">Pesan di sini...</p>
+            <button onclick="closeModal()" class="w-full bg-orange-500 text-white font-medium py-2 rounded-xl text-xs hover:bg-orange-600 transition">Mengerti</button>
+        </div>
+    </div>
+    
+    <script type="module" src="./js/module/master_resep.js"></script>
+
+</body>
+</html>
