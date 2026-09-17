@@ -530,10 +530,9 @@ window.openOrderModal = function() {
         return;
     }
 
-    const supSelect = document.getElementById('order-supplier-select');
-    supSelect.innerHTML = '<option value="">-- Pilih Supplier --</option>' + suppliersData.map(s => `
-        <option value="${s.id}">${escapeHtml(s.name || s.nama)}</option>
-    `).join('');
+    const supplierOptionsHtml = '<option value="">-- Kosong --</option>' + suppliersData.map(s =>
+        `<option value="${s.id}">${escapeHtml(s.name || s.nama)}</option>`
+    ).join('');
 
     const previewContainer = document.getElementById('order-items-preview');
     let itemsHtml = '';
@@ -549,17 +548,21 @@ window.openOrderModal = function() {
 
         if (shortage > 0) {
             hasShortage = true;
-            const uniqueId = `order_item_${index}`;
+            const rowId = `order_row_${index}`;
             itemsHtml += `
-                <div class="flex items-center justify-between gap-2 p-1.5 bg-white rounded-lg border border-slate-200">
+                <div class="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-slate-200" data-order-row id="${rowId}">
+                    <select class="order-item-supplier w-32 border border-slate-200 rounded-lg text-xs p-1.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        ${supplierOptionsHtml}
+                    </select>
                     <label class="flex items-center gap-2 cursor-pointer flex-1">
-                        <input type="checkbox" class="order-item-checkbox rounded text-orange-600 focus:ring-orange-500 w-4 h-4" 
-                               value="${ing ? ing.id : ''}" 
+                        <input type="checkbox" class="order-item-checkbox rounded text-orange-600 focus:ring-orange-500 w-4 h-4"
+                               value="${ing ? ing.id : ''}"
                                data-name="${escapeHtml(name)}"
                                data-qty="${shortage}"
                                data-unit="${unit}"
                                data-price="${ing && ing.price ? Number(ing.price) : 0}"
-                               checked>
+                               checked
+                               onchange="toggleOrderRowSupplier('${rowId}')">
                         <span class="text-slate-800 font-medium">${escapeHtml(name)}</span>
                     </label>
                     <span class="text-slate-500 text-xs bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
@@ -576,6 +579,16 @@ window.openOrderModal = function() {
 
     previewContainer.innerHTML = itemsHtml;
     document.getElementById('orderModal').classList.remove('hidden');
+};
+
+// Kalau checkbox di-uncheck, supplier baris itu benar2 dikosongkan & dropdown-nya di-disable
+window.toggleOrderRowSupplier = function(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const checkbox = row.querySelector('.order-item-checkbox');
+    const supplierSelect = row.querySelector('.order-item-supplier');
+    supplierSelect.disabled = !checkbox.checked;
+    if (!checkbox.checked) supplierSelect.value = '';
 };
 
 window.closeOrderModal = function() {
@@ -624,55 +637,102 @@ window.submitOrder = async function(e) {
     }
 
     async function createPO(supplierIdForPO, orderItems, total, poNotes) {
-        if (!supabaseClient || isDemoMode) return null;
+    if (!supabaseClient || isDemoMode) return null;
 
-        const { data: orderData, error: orderError } = await supabaseClient
-            .from('purchase_orders')
-            .insert([{
-                supplier_id: supplierIdForPO, // null when supplier is left blank
-                status: 'pending',
-                total_amount: total,
-                notes: poNotes
-            }])
-            .select()
-            .single();
+    const { data: orderData, error: orderError } = await supabaseClient
+        .from('purchase_orders')
+        .insert([{
+            supplier_id: supplierIdForPO, // null kalau kosong
+            status: 'pending',
+            total_amount: total,
+            notes: poNotes
+        }])
+        .select()
+        .single();
 
-        if (orderError) throw orderError;
+    if (orderError) throw orderError;
 
-        const orderId = orderData.id;
-        const itemsWithId = orderItems.map(item => ({ ...item, order_id: orderId }));
+    const orderId = orderData.id;
+    const itemsWithId = orderItems.map(item => ({ ...item, order_id: orderId }));
 
-        const { error: itemsError } = await supabaseClient
-            .from('purchase_order_items')
-            .insert(itemsWithId);
+    const { error: itemsError } = await supabaseClient
+        .from('purchase_order_items')
+        .insert(itemsWithId);
 
-        if (itemsError) throw itemsError;
+    if (itemsError) throw itemsError;
 
-        return orderData;
+    return orderData;
+}
+
+window.submitOrder = async function(e) {
+    e.preventDefault();
+    const notes = document.getElementById('order-notes').value;
+
+    const rows = document.querySelectorAll('#order-items-preview [data-order-row]');
+    if (rows.length === 0) {
+        showModal("Perhatian", "Tidak ada bahan untuk di-order.", "⚠️");
+        return;
     }
 
-    const { items: checkedOrderItems, total: checkedTotal } = buildItems(checkedItems);
-    const { items: uncheckedOrderItems, total: uncheckedTotal } = buildItems(uncheckedItems);
+    // key: supplierId ('' = kosong) -> { items: [], total: 0 }
+    const groups = new Map();
+
+    function pushToGroup(key, item) {
+        if (!groups.has(key)) groups.set(key, { items: [], total: 0 });
+        const g = groups.get(key);
+        g.items.push(item);
+        g.total += item.subtotal;
+    }
+
+    rows.forEach(row => {
+        const checkbox = row.querySelector('.order-item-checkbox');
+        const supplierSelect = row.querySelector('.order-item-supplier');
+
+        const ingredientId = checkbox.value;
+        const ingredientName = checkbox.getAttribute('data-name');
+        const quantity = parseFloat(checkbox.getAttribute('data-qty'));
+        const unit = checkbox.getAttribute('data-unit');
+        const unitPrice = parseFloat(checkbox.getAttribute('data-price')) || 0;
+        const subtotal = quantity * unitPrice;
+
+        const item = {
+            ingredient_id: ingredientId || null,
+            ingredient_name: ingredientName,
+            quantity: quantity,
+            unit: unit,
+            unit_price: unitPrice,
+            subtotal: subtotal
+        };
+
+        // Kalau bahan tidak dicentang, supplier dipaksa kosong apapun isi dropdown-nya
+        const supplierKey = checkbox.checked ? (supplierSelect.value || '') : '';
+        pushToGroup(supplierKey, item);
+    });
 
     try {
-        await createPO(supplierId, checkedOrderItems, checkedTotal, notes);
+        const createdPOs = [];
+        for (const [supplierKey, group] of groups.entries()) {
+            const supplierId = supplierKey || null;
+            const poNotes = supplierId
+                ? notes
+                : (notes ? `${notes} (Auto: bahan tanpa supplier / tidak dicentang)` : "Auto: bahan tanpa supplier / tidak dicentang.");
 
-        let uncheckedNote = "";
-        if (uncheckedOrderItems.length > 0) {
-            await createPO(
-                null,
-                uncheckedOrderItems,
-                uncheckedTotal,
-                "Auto: bahan yang tidak dicentang pada order sebelumnya (supplier belum ditentukan)."
-            );
-            uncheckedNote = ` Selain itu, ${uncheckedOrderItems.length} bahan yang tidak dicentang otomatis dibuatkan PO terpisah dengan supplier belum ditentukan.`;
+            const po = await createPO(supplierId, group.items, group.total, poNotes);
+            createdPOs.push({ supplierId, count: group.items.length, total: group.total, po });
         }
 
-        const selectedSupplier = suppliersData.find(s => String(s.id) === String(supplierId));
         closeOrderModal();
+
+        const summaryLines = createdPOs.map(p => {
+            const supplierName = p.supplierId
+                ? (suppliersData.find(s => String(s.id) === String(p.supplierId))?.name || 'Supplier')
+                : 'Belum ditentukan';
+            return `${supplierName}: ${p.count} bahan (Rp ${p.total.toLocaleString('id-ID')})`;
+        }).join('\n');
+
         showModal(
             "Order Berhasil Disimpan!",
-            `Pesanan ke ${selectedSupplier?.name || 'Supplier'} dengan ${checkedOrderItems.length} jenis bahan berhasil dicatat ke database. Total estimasi: Rp ${checkedTotal.toLocaleString('id-ID')}.${uncheckedNote}`,
+            `${createdPOs.length} PO berhasil dibuat:\n${summaryLines}`,
             "✅"
         );
 
@@ -681,6 +741,7 @@ window.submitOrder = async function(e) {
         showModal("Gagal", `Terjadi kesalahan saat menyimpan order: ${err.message}`, "❌");
     }
 };
+
 
 window.editIngredient = function(id) {
     const ing = ingredientsData.find(i => i.id === id);
