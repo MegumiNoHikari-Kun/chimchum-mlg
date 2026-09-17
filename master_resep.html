@@ -159,6 +159,47 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Di dalam section Kalkulator, tambahkan tombol ini di sebelah/bawah export -->
+                <div class="flex gap-2 mt-4">
+                    <button onclick="processRestockDeduction()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
+                        <i class="fa-solid fa-check-to-slot mr-1"></i> Proses (Kurangi Stok Gudang)
+                    </button>
+                    <button onclick="openOrderModal()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
+                        <i class="fa-solid fa-cart-shopping mr-1"></i> Order Stok ke Supplier
+                    </button>
+                </div>
+                
+                <!-- Modal Form Order Supplier -->
+                <div id="orderModal" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="text-base font-bold text-slate-800">Form Order Stok Supplier</h3>
+                            <button onclick="closeOrderModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                        </div>
+                        <form id="orderForm" onsubmit="submitOrder(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Supplier</label>
+                                <select id="order-supplier-select" required class="w-full border rounded-xl p-2.5 text-xs bg-slate-50 focus:ring-2 focus:ring-orange-500">
+                                    <option value="">-- Memuat Data Supplier --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Daftar Bahan yang Kurang</label>
+                                <div id="order-items-preview" class="border rounded-xl p-3 bg-slate-50 max-h-40 overflow-y-auto text-xs space-y-1">
+                                    <!-- Dinamis terisi dari kalkulator -->
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Tambahan</label>
+                                <textarea id="order-notes" placeholder="Catatan untuk supplier..." class="w-full border rounded-xl p-2.5 text-xs bg-slate-50"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button type="button" onclick="closeOrderModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold">Batal</button>
+                                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-semibold">Kirim Pesanan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     
