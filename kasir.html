@@ -31,39 +31,7 @@ body{
   color: var(--dark);
 }
 
-/* LOGIN OVERLAY */
-#loginOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(30, 41, 59, 0.85);
-  backdrop-filter: blur(6px);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.login-box {
-  background: white;
-  padding: 32px;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
-  text-align: center;
-}
-.login-box img {
-  height: 64px;
-  width: auto;
-  margin-bottom: 16px;
-  object-fit: contain;
-}
-.login-box h2 {
-  font-size: 20px;
-  color: var(--primary);
-  margin-bottom: 24px;
-  font-weight: 700;
-}
+
 
 /* HEADER */
 header {
@@ -282,25 +250,6 @@ tr:last-child td { border-bottom: none; }
 </head>
 <body>
 
-<!-- LOGIN OVERLAY -->
-<div id="loginOverlay">
-  <div class="login-box">
-    <img src="./assets/logo-transparan.png" alt="Logo" onerror="this.src='https://placehold.co/60?text=CC'">
-    <h2>Login Kasir POS</h2>
-    <form id="loginForm" onsubmit="handleKasirLogin(event)">
-      <div style="text-align:left;">
-        <label style="font-size:12px; font-weight:600; color:var(--gray);">Username</label>
-        <input type="text" id="loginUsername" placeholder="kasir atau admin" required style="margin-top:4px;">
-      </div>
-      <div style="text-align:left; margin-top:10px;">
-        <label style="font-size:12px; font-weight:600; color:var(--gray);">Password</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" required style="margin-top:4px;">
-      </div>
-      <button type="submit" class="btn-primary" style="width:100%; margin-top:16px; padding:12px;">Masuk POS Kasir</button>
-    </form>
-    <div id="loginError" style="color:#dc2626; font-size:12px; margin-top:12px; display:none;"></div>
-  </div>
-</div>
 
 <header>
   <a class="logo" href="index.html">
