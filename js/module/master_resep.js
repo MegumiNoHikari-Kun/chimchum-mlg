@@ -593,16 +593,91 @@ window.submitOrder = async function(e) {
     const notes = document.getElementById('order-notes').value;
 
     if (!supplierId) {
-        alert("Silakan pilih supplier terlebih dahulu.");
+        showModal("Perhatian", "Silakan pilih supplier terlebih dahulu.", "⚠️");
         return;
     }
 
-    // Simulasi penyimpanan order ke database atau cetak log/WhatsApp
-    const selectedSupplier = suppliersData.find(s => String(s.id) === String(supplierId));
-    console.log("Order dibuat ke supplier:", selectedSupplier, "Catatan:", notes);
+    const selectEl = document.getElementById('calc-product-select');
+    const batchInput = document.getElementById('calc-batch-input');
+    const productId = selectEl ? selectEl.value : '';
+    const batchMultiplier = batchInput ? (parseFloat(batchInput.value) || 1) : 1;
 
-    closeOrderModal();
-    showModal("Order Berhasil Dibuat!", `Pesanan restok berhasil dikirimkan ke supplier ${selectedSupplier?.name || ''}.`, "📦");
+    const prod = productsData.find(p => String(p.id) === String(productId));
+    const recipe = prod && prod.resep_id ? recipesData.find(r => String(r.id) === String(prod.resep_id)) : null;
+
+    if (!recipe) {
+        showModal("Perhatian", "Resep produk tidak ditemukan.", "⚠️");
+        return;
+    }
+
+    // Hitung item yang kurang dan susun data detail order
+    let orderItems = [];
+    let grandTotal = 0;
+
+    (recipe.items || []).forEach(item => {
+        const ing = ingredientsData.find(i => String(i.id) === String(item.ingredientId));
+        const totalNeeded = item.amount * batchMultiplier;
+        const currentStock = ing ? Number(ing.stock) : 0;
+        const shortage = Math.max(0, totalNeeded - currentStock);
+
+        if (shortage > 0) {
+            // Asumsi harga satuan diambil dari data bahan (ing.price) atau default 0 jika belum diset
+            const unitPrice = ing && ing.price ? Number(ing.price) : 0; 
+            const subtotal = shortage * unitPrice;
+            grandTotal += subtotal;
+
+            orderItems.push({
+                ingredient_id: ing ? ing.id : null,
+                ingredient_name: ing ? ing.name : 'Bahan',
+                quantity: shortage,
+                unit: ing ? ing.unit : '',
+                unit_price: unitPrice,
+                subtotal: subtotal
+            });
+        }
+    });
+
+    if (orderItems.length === 0) {
+        showModal("Informasi", "Tidak ada kekurangan bahan untuk di-order pada batch ini.", "ℹ️");
+        closeOrderModal();
+        return;
+    }
+
+    try {
+        if (supabaseClient && !isDemoMode) {
+            // 1. Simpan header order ke tabel purchase_orders
+            const { data: orderData, error: orderError } = await supabaseClient
+                .from('purchase_orders')
+                .insert([{
+                    supplier_id: supplierId,
+                    status: 'pending', // Status awal order
+                    total_amount: grandTotal,
+                    notes: notes
+                }])
+                .select()
+                .single();
+
+            if (orderError) throw orderError;
+
+            // 2. Masukkan ID order utama ke masing-masing item detail, lalu simpan ke purchase_order_items
+            const orderId = orderData.id;
+            const itemsWithId = orderItems.map(item => ({ ...item, order_id: orderId }));
+
+            const { error: itemsError } = await supabaseClient
+                .from('purchase_order_items')
+                .insert(itemsWithId);
+
+            if (itemsError) throw itemsError;
+        }
+
+        const selectedSupplier = suppliersData.find(s => String(s.id) === String(supplierId));
+        closeOrderModal();
+        showModal("Order Berhasil Disimpan!", `Pesanan ke ${selectedSupplier?.name || 'Supplier'} berhasil dicatat ke database dengan total estimasi Rp ${grandTotal.toLocaleString('id-ID')}.`, "✅");
+
+    } catch (err) {
+        console.error("❌ [DB ERROR] Gagal menyimpan order:", err);
+        showModal("Gagal", `Terjadi kesalahan saat menyimpan order: ${err.message}`, "❌");
+    }
 };
 
 window.editIngredient = function(id) {
