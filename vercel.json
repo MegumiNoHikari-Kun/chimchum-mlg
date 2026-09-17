@@ -5,7 +5,13 @@
     { "source": "/lacak/:orderId", "destination": "/lacak.html" },
     
     { "source": "/:path*", "destination": "/index.html" },
-    { "source": "/:path/supabase.js", "destination": "/index.html" }
-    { "source": "/js/app.js", "destination": "/index.html" }
+    {
+      "source": "/js/supabase.js",
+      "destination": "/404"
+    }
+    {
+      "source": "/js/app.js",
+      "destination": "/404"
+    }
   ]
 }
