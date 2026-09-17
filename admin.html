@@ -437,15 +437,7 @@
 
     </div>
 
-    <script>
-      // Memuat admin.js secara dinamis agar tidak terlihat di static View Source HTML
-      (function() {
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = './js/module/admin.js';
-        document.head.appendChild(script);
-      })();
-    </script>
+    <script type="module" src="/js/app.js"></script>
 
 </body>
 </html>
