@@ -166,47 +166,56 @@
         window.onload = async function() {
             try {
                 await authReady;
-                if (supabase) {
-                    supabaseClient = supabase;
-                } else {
+        
+                if (!supabase) {
                     throw new Error("Supabase client not initialized.");
                 }
+        
+                supabaseClient = supabase;
+                isDemoMode = false;
+        
                 await loadAllData();
+        
             } catch (err) {
-                console.warn("⚠️ Supabase connection failed, using demo mode:", err);
+                console.error("Supabase connection failed:", err);
+        
                 isDemoMode = true;
                 loadMockData();
+        
+                showModal(
+                    "Mode Demo",
+                    "Supabase tidak terhubung. Data yang tampil adalah data demo.",
+                    "⚠️"
+                );
             }
         };
 
         async function loadAllData() {
-            try {
-                const [supRes, ingRes, poRes, itemRes] = await Promise.all([
-                    supabaseClient.from('suppliers').select('*'),
-                    supabaseClient.from('ingredients').select('*'),
-                    supabaseClient.from('purchase_orders').select('*'),
-                    supabaseClient.from('purchase_order_items').select('*')
-                ]);
-
-                if (supRes.error) throw supRes.error;
-                if (ingRes.error) throw ingRes.error;
-                if (poRes.error) throw poRes.error;
-
-                suppliersData = supRes.data || [];
-                ingredientsData = ingRes.data || [];
-                const itemsData = itemRes.data || [];
-
-                purchaseOrdersData = (poRes.data || []).map(po => ({
-                    ...po,
-                    items: itemsData.filter(item => String(item.order_id) === String(po.id))
-                }));
-
-                renderPOTable();
-            } catch (e) {
-                console.warn("⚠️ Error querying Supabase tables, falling back to mock:", e);
-                isDemoMode = true;
-                loadMockData();
-            }
+            const [supRes, ingRes, poRes, itemRes] = await Promise.all([
+                supabaseClient.from('suppliers').select('*'),
+                supabaseClient.from('ingredients').select('*'),
+                supabaseClient.from('purchase_orders').select('*'),
+                supabaseClient.from('purchase_order_items').select('*')
+            ]);
+        
+            if (supRes.error) throw supRes.error;
+            if (ingRes.error) throw ingRes.error;
+            if (poRes.error) throw poRes.error;
+            if (itemRes.error) throw itemRes.error;
+        
+            suppliersData = supRes.data || [];
+            ingredientsData = ingRes.data || [];
+        
+            const itemsData = itemRes.data || [];
+        
+            purchaseOrdersData = (poRes.data || []).map(po => ({
+                ...po,
+                items: itemsData.filter(
+                    item => String(item.order_id) === String(po.id)
+                )
+            }));
+        
+            renderPOTable();
         }
 
         function loadMockData() {
@@ -415,7 +424,15 @@
                     } else {
                         const { error: updateErr } = await supabaseClient.from('purchase_orders').update(poPayload).eq('id', poId);
                         if (updateErr) throw updateErr;
-                        await supabaseClient.from('purchase_order_items').delete().eq('order_id', poId);
+                        const { error: deleteItemsError } =
+                            await supabaseClient
+                                .from('purchase_order_items')
+                                .delete()
+                                .eq('order_id', poId);
+                        
+                        if (deleteItemsError) {
+                            throw deleteItemsError;
+                        }
                     }
 
                     const itemsWithId = items.map(i => ({ ...i, order_id: poId }));
@@ -472,7 +489,21 @@
 
             try {
                 if (supabaseClient && !isDemoMode) {
-                    const { error } = await supabaseClient.from('purchase_orders').update({ status: newStatus }).eq('id', poId);
+                    const { data, error } = await supabaseClient
+                        .from('purchase_orders')
+                        .update({ status: newStatus })
+                        .eq('id', poId)
+                        .select();
+                    
+                    if (error) {
+                        throw error;
+                    }
+                    
+                    if (!data || data.length === 0) {
+                        throw new Error(
+                            `Tidak ada Purchase Order yang berubah. ID: ${poId}`
+                        );
+                    }
                     if (error) throw error;
                     await loadAllData();
                 } else {
@@ -493,7 +524,22 @@
                     const { error: itemErr } = await supabaseClient.from('purchase_order_items').delete().eq('order_id', poId);
                     if (itemErr) throw itemErr;
 
-                    const { error: poErr } = await supabaseClient.from('purchase_orders').delete().eq('id', poId);
+                    const { data: deletedPO, error: poErr } =
+                        await supabaseClient
+                            .from('purchase_orders')
+                            .delete()
+                            .eq('id', poId)
+                            .select();
+                    
+                    if (poErr) {
+                        throw poErr;
+                    }
+                    
+                    if (!deletedPO || deletedPO.length === 0) {
+                        throw new Error(
+                            `Purchase Order tidak ditemukan atau tidak dapat dihapus. ID: ${poId}`
+                        );
+                    }
                     if (poErr) throw poErr;
 
                     await loadAllData();
