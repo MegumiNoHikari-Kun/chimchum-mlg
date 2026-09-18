@@ -115,9 +115,11 @@ async function initKasirDashboard() {
 ========================================================= */
 
 window.loadProducts = async () => {
+    console.log("=== LOAD PRODUCTS START ===");
 
     await authReady;
 
+    console.log("authReady selesai");
     try {
 
         const {
@@ -126,6 +128,8 @@ window.loadProducts = async () => {
         } = await supabase
             .from("products")
             .select("*");
+            console.log("PRODUCT DATA:", data);
+            console.log("PRODUCT ERROR:", error)   
 
         if (error) {
             throw error;
