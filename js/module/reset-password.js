@@ -41,60 +41,34 @@ function showResetAlert(message, type = 'success') {
 // Proses Reset Password (Auth + Tabel usersetup)
 resetForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    console.log("1. Tombol submit ditekan, form dicegat."); // Cek apakah event jalan
+
     const email = $('resetEmail').value.trim();
-    const newPassword = $('resetNewPassword').value;
-
-    if (!email || !newPassword) {
-        showResetAlert('Email dan password baru wajib diisi.', 'error');
-        return;
-    }
-
-    if (newPassword.length < 6) {
-        showResetAlert('Password minimal harus 6 karakter.', 'error');
-        return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Memproses...';
+    console.log("2. Email yang dimasukkan:", email); // Cek apakah input terbaca
 
     try {
+        console.log("3. Menunggu authReady...");
         await authReady;
+        console.log("4. authReady selesai. Memanggil Supabase...");
 
-        // 1. Update password di Supabase Auth (Memerlukan Admin API / fungsi khusus backend, 
-        // tapi jika menggunakan frontend mandiri, kita lakukan update berdasarkan pencarian data tabel atau langsung update user aktif)
-        
-        // Cek apakah user ada di tabel usersetup terlebih dahulu
-        const { data: dbUser, error: dbError } = await supabase
-            .from('usersetup')
-            .select('*')
-            .ilike('username', email)
-            .maybeSingle();
+        // Panggil supabase
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.href
+        });
 
-        if (dbError) throw dbError;
+        console.log("5. Respon Supabase diterima:", { data, error });
 
-        if (!dbUser) {
-            throw new Error('Email atau username tidak ditemukan dalam sistem database.');
+        if (error) {
+            throw error;
         }
 
-        // 2. Update password langsung di tabel usersetup
-        const { error: updateTableError } = await supabase
-            .from('usersetup')
-            .update({ password: newPassword })
-            .eq('id', dbUser.id);
-
-        if (updateTableError) throw updateTableError;
-
-        showResetAlert('Password berhasil direset! Silakan login kembali.', 'success');
-        
-        setTimeout(() => {
-            closeModal();
-        }, 2000);
+        showResetAlert('Instruksi reset telah dikirim!', 'success');
 
     } catch (error) {
-        console.error('Reset password error:', error);
-        showResetAlert(error.message || 'Terjadi kesalahan saat mereset password.', 'error');
+        console.error("❌ ERROR TERTANGKAP:", error);
+        showResetAlert(error.message || 'Terjadi kesalahan sistem.', 'error');
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Reset Sekarang';
+        submitBtn.textContent = 'Kirim Instruksi ke Email';
     }
 });
