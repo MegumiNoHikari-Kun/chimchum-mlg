@@ -52,6 +52,22 @@ function formatWaktu(value) {
    (referenced by onclick in kasir.html but were missing)
 ========================================================= */
 
+let orderAutoRefreshInterval = null;
+
+function startOrderAutoRefresh() {
+    if (orderAutoRefreshInterval) return; // already running
+    orderAutoRefreshInterval = setInterval(() => {
+        window.loadOrders();
+    }, 30000);
+}
+
+function stopOrderAutoRefresh() {
+    if (orderAutoRefreshInterval) {
+        clearInterval(orderAutoRefreshInterval);
+        orderAutoRefreshInterval = null;
+    }
+}
+
 window.switchTab = function (tabId, btnEl) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -62,6 +78,10 @@ window.switchTab = function (tabId, btnEl) {
 
     if (tabId === 'tab-pesanan') {
         window.loadOrders();
+       console.log("load pesanan @30 detik");
+        startOrderAutoRefresh(); // refresh every 30s while this tab is open
+    } else {
+        stopOrderAutoRefresh(); // don't keep polling in the background
     }
 };
 
