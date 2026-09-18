@@ -452,17 +452,17 @@ function ensureStrukStyle() {
 }
 
 const logoShopeeFood = new URL(
-    './assets/img/shopeefood.png',
+    '../../assets/img/shopeefood.png',
     window.location.href
 ).href;
 
 const logoGrabFood = new URL(
-    './assets/img/grabfood.png',
+    '../../assets/img/grabfood.png',
     window.location.href
 ).href;
 
 const logoGoFood = new URL(
-    './assets/img/gofood.png',
+    '../../assets/img/gofood.png',
     window.location.href
 ).href;
 
