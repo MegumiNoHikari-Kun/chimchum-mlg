@@ -40,7 +40,7 @@ export async function requireAuth(allowedRoles = []) {
 
         const user = session.user;
 
-        console.log('✅ LOGIN USER:', user.email);
+        // console.log('✅ LOGIN USER:', user.email);
 
         // =========================================
         // 4. AMBIL DATA USERSETUP
@@ -86,8 +86,8 @@ export async function requireAuth(allowedRoles = []) {
             .trim()
             .toLowerCase();
 
-        console.log('👤 Username:', userSetup.username);
-        console.log('🔐 Role:', role);
+        // console.log('👤 Username:', userSetup.username);
+        // console.log('🔐 Role:', role);
 
         // =========================================
         // 7. ROLE KOSONG
@@ -125,7 +125,7 @@ export async function requireAuth(allowedRoles = []) {
             // KASIR → KASIR
             // -----------------------------------------
             if (role === 'kasir') {
-                console.log('➡️ Redirect ke kasir.html');
+                // console.log('➡️ Redirect ke kasir.html');
 
                 window.location.replace('/kasir.html');
                 return null;
@@ -135,7 +135,7 @@ export async function requireAuth(allowedRoles = []) {
             // ADMIN → ADMIN
             // -----------------------------------------
             if (role === 'admin') {
-                console.log('➡️ Redirect ke admin.html');
+                // console.log('➡️ Redirect ke admin.html');
 
                 window.location.replace('/admin.html');
                 return null;
@@ -158,7 +158,7 @@ export async function requireAuth(allowedRoles = []) {
         // =========================================
         // 10. AUTH & ROLE VALID
         // =========================================
-        console.log('✅ AUTH & ROLE VALID');
+        // console.log('✅ AUTH & ROLE VALID');
 
         return {
             session,
