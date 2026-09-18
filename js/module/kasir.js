@@ -94,7 +94,7 @@ window.logoutKasir = async function () {
     } catch (error) {
         console.error('❌ Error saat logout:', error);
     } finally {
-        window.location.href = 'index.html';
+        window.location.href = 'login.html';
     }
 };
 
@@ -453,14 +453,21 @@ function ensureStrukStyle() {
 
 function buildStrukHTML(order) {
     const tanggal = new Date(order.created_at).toLocaleString('id-ID', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
     });
 
     const itemsRows = order.items.map(i => {
         const subtotal = Number(i.harga) * Number(i.qty);
+
         return `
             <div class="struk-row">
-                <span class="struk-item-name">${escapeHtml(i.nama)} x${i.qty}</span>
+                <span class="struk-item-name">
+                    ${escapeHtml(i.nama)} x${i.qty}
+                </span>
                 <span>${rupiah(subtotal)}</span>
             </div>
         `;
@@ -468,8 +475,15 @@ function buildStrukHTML(order) {
 
     const bayarRows = order.payment_method === 'Cash'
         ? `
-            <div class="struk-row"><span>Tunai Diterima</span><span>${rupiah(order._uangBayar)}</span></div>
-            <div class="struk-row"><span>Kembalian</span><span>${rupiah(order._kembalian)}</span></div>
+            <div class="struk-row">
+                <span>Tunai Diterima</span>
+                <span>${rupiah(order._uangBayar)}</span>
+            </div>
+
+            <div class="struk-row">
+                <span>Kembalian</span>
+                <span>${rupiah(order._kembalian)}</span>
+            </div>
         `
         : '';
 
@@ -479,18 +493,64 @@ function buildStrukHTML(order) {
             Dimsum &amp; Snack<br>
             Sawojajar, Malang
         </div>
+
         <div class="struk-line"></div>
+
         <div>No: ${escapeHtml(order.order_id)}</div>
         <div>${escapeHtml(tanggal)}</div>
         <div>Meja/Nama: ${escapeHtml(order.customer_name)}</div>
+
         <div class="struk-line"></div>
+
         ${itemsRows}
+
         <div class="struk-line"></div>
-        <div class="struk-row"><strong><span>TOTAL</span><span>${rupiah(order.grand_total)}</span></strong></div>
-        <div class="struk-row"><span>Bayar</span><span>${escapeHtml(order.payment_method)}</span></div>
+
+        <div class="struk-row">
+            <strong>
+                <span>TOTAL</span>
+                <span>${rupiah(order.grand_total)}</span>
+            </strong>
+        </div>
+
+        <div class="struk-row">
+            <span>Bayar</span>
+            <span>${escapeHtml(order.payment_method)}</span>
+        </div>
+
         ${bayarRows}
+
         <div class="struk-line"></div>
-        <div class="struk-center">Terima kasih atas kunjungan Anda!</div>
+
+        <!-- DELIVERY PLATFORM -->
+        <div class="struk-center struk-delivery">
+            <div class="delivery-title">
+                Tersedia di
+            </div>
+
+            <div class="delivery-logos">
+                <img
+                    src="assets/img/shopeefood.png"
+                    alt="ShopeeFood"
+                >
+
+                <img
+                    src="assets/img/grabfood.png"
+                    alt="GrabFood"
+                >
+
+                <img
+                    src="assets/img/gofood.png"
+                    alt="GoFood"
+                >
+            </div>
+        </div>
+
+        <div class="struk-line"></div>
+
+        <div class="struk-center">
+            Terima kasih atas kunjungan Anda!
+        </div>
     `;
 }
 
@@ -559,7 +619,17 @@ window.submitKasirOrder = async function () {
             : 'Dine-In';
 
         const orderPayload = {
-            order_id: `DINEIN-${Date.now()}`,
+           const now = new Date();
+          const yy = String(now.getFullYear()).slice(-2);
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const dd = String(now.getDate()).padStart(2, '0');
+          const hh = String(now.getHours()).padStart(2, '0');
+          const min = String(now.getMinutes()).padStart(2, '0');
+          const ss = String(now.getSeconds()).padStart(2, '0');
+          
+          const randomNum = Math.floor(10 + Math.random() * 9000);
+          const order_id = `DINEIN-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
+            // order_id: `DINEIN-${Date.now()}`
             customer_name: namaMeja,
             phone: wa,
             address: addressNote,
