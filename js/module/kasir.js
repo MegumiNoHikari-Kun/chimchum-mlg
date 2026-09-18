@@ -397,7 +397,7 @@ window.setUangPas = function () {
    RECEIPT PRINTING
    window.print() was printing the entire visible page (menu
    grid, tabs, etc.) instead of an actual receipt. This builds
-   a proper 56mm thermal-style receipt in an isolated container
+   a proper 58mm thermal-style receipt in an isolated container
    and prints only that.
 ========================================================= */
 
@@ -412,7 +412,7 @@ function ensureStrukStyle() {
             body > *:not(#strukPrintArea) { display: none !important; }
             #strukPrintArea {
                 display: block !important;
-                width: 56mm;
+                width: 58mm;
                 margin: 0;
                 padding: 2mm;
                 font-family: 'Courier New', Courier, monospace;
