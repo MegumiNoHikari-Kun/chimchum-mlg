@@ -451,24 +451,7 @@ function ensureStrukStyle() {
     document.head.appendChild(style);
 }
 
-const logoShopeeFood = new URL(
-    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/menu/wonton_kuah.png',
-    window.location.href
-).href;
 
-const logoGrabFood = new URL(
-    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/img/grabfood.png',
-    window.location.href
-).href;
-
-const logoGoFood = new URL(
-    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/img/gofood.png',
-    window.location.href
-).href;
-
-console.log("URL ShopeeFood:", logoShopeeFood);
-console.log("URL GrabFood:", logoGrabFood);
-console.log("URL GoFood:", logoGoFood);
 
 function buildStrukHTML(order) {
     const tanggal = new Date(order.created_at).toLocaleString('id-ID', {
@@ -512,6 +495,11 @@ function buildStrukHTML(order) {
             Dimsum &amp; Snack<br>
             Sawojajar, Malang
         </div>
+        <div class="center">
+           <img src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
+                style="width:65px; height:65px;">
+         </div>
+      <div class="text-center bold" style="font-size:15px;">CHIMCHUM MALANG</div>
 
         <div class="struk-line"></div>
 
@@ -551,11 +539,9 @@ function buildStrukHTML(order) {
             SHOPEE FOOD | GRAB FOOD | GO FOOD
             
                 <div class="delivery-logos">
-                   <img
-                       src="${escapeHtml(logoShopeeFood)}"
-                       alt="ShopeeFood"
-                       onerror="console.error('Gagal memuat logo ShopeeFood dari:', this.src)"
-                   >
+                   <img src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
+                style="width:65px; height:65px;">
+         </div>
                    <img
                        src="${escapeHtml(logoGoFood)}"
                        alt="GrabFood"
