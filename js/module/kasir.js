@@ -451,6 +451,21 @@ function ensureStrukStyle() {
     document.head.appendChild(style);
 }
 
+const logoShopeeFood = new URL(
+    './assets/img/shopeefood.png',
+    window.location.href
+).href;
+
+const logoGrabFood = new URL(
+    './assets/img/grabfood.png',
+    window.location.href
+).href;
+
+const logoGoFood = new URL(
+    './assets/img/gofood.png',
+    window.location.href
+).href;
+
 function buildStrukHTML(order) {
     const tanggal = new Date(order.created_at).toLocaleString('id-ID', {
         day: '2-digit',
@@ -525,24 +540,28 @@ function buildStrukHTML(order) {
         <!-- DELIVERY PLATFORM -->
         <div class="struk-center struk-delivery">
             <div class="delivery-title">
-                Tersedia di
+                Tersedia juga di
             </div>
 
-            <div class="delivery-logos">
-                <img
-                    src="assets/img/shopeefood.png"
-                    alt="ShopeeFood"
-                >
-
-                <img
-                    src="assets/img/grabfood.png"
-                    alt="GrabFood"
-                >
-
-                <img
-                    src="assets/img/gofood.png"
-                    alt="GoFood"
-                >
+            <div class="struk-center struk-delivery">
+                <div style="font-size:10px;">Tersedia di</div>
+            
+                <div class="delivery-logos">
+                    <img
+                        src="${logoShopeeFood}"
+                        alt="ShopeeFood"
+                    >
+            
+                    <img
+                        src="${logoGrabFood}"
+                        alt="GrabFood"
+                    >
+            
+                    <img
+                        src="${logoGoFood}"
+                        alt="GoFood"
+                    >
+                </div>
             </div>
         </div>
 
