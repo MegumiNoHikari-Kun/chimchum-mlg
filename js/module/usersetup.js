@@ -1,12 +1,4 @@
-import {
-    supabase,
-    authReady
-} from './js/supabase.js';
-
-
-// =========================================================
-// STATE
-// =========================================================
+import { supabase, authReady } from '../supabase.js';
 
 let users = [];
 let usingLocalStorage = false;
