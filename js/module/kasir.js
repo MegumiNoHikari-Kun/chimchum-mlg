@@ -466,6 +466,10 @@ const logoGoFood = new URL(
     window.location.href
 ).href;
 
+console.log("URL ShopeeFood:", logoShopeeFood);
+console.log("URL GrabFood:", logoGrabFood);
+console.log("URL GoFood:", logoGoFood);
+
 function buildStrukHTML(order) {
     const tanggal = new Date(order.created_at).toLocaleString('id-ID', {
         day: '2-digit',
@@ -547,21 +551,23 @@ function buildStrukHTML(order) {
                 <div style="font-size:10px;">Tersedia di</div>
             
                 <div class="delivery-logos">
-                    <img
-                        src="${logoShopeeFood}"
-                        alt="ShopeeFood"
-                    >
-            
-                    <img
-                        src="${logoGrabFood}"
-                        alt="GrabFood"
-                    >
-            
-                    <img
-                        src="${logoGoFood}"
-                        alt="GoFood"
-                    >
-                </div>
+                   <img
+                       src="${logoShopeeFood}"
+                       alt="ShopeeFood"
+                       onerror="console.error('Gagal memuat logo ShopeeFood dari:', this.src)"
+                   >
+                   <img
+                       src="${logoGrabFood}"
+                       alt="GrabFood"
+                       onerror="console.error('Gagal memuat logo GrabFood dari:', this.src)"
+                   >
+                   <img
+                       src="${logoGoFood}"
+                       alt="GoFood"
+                       onerror="console.error('Gagal memuat logo GoFood dari:', this.src)"
+                   >
+               </div>
+               
             </div>
         </div>
 
@@ -584,8 +590,11 @@ function cetakStrukKasir(order) {
     }
 
     area.innerHTML = buildStrukHTML(order);
-
-    window.print();
+   // Beri jeda 200-500ms agar browser sempat memuat gambar logo
+    setTimeout(() => {
+        window.print();
+    }, 300);
+    // window.print();
 }
 
 window.addEventListener('afterprint', () => {
