@@ -452,7 +452,7 @@ function ensureStrukStyle() {
 }
 
 const logoShopeeFood = new URL(
-    'https://raw.githubusercontent.com/MegumiNoHikari-Kun/chimchum-mlg/refs/heads/main/assets/img/shopeefood.png',
+    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/menu/wonton_kuah.png',
     window.location.href
 ).href;
 
@@ -548,6 +548,7 @@ function buildStrukHTML(order) {
             </div>
 
             <div class="struk-center struk-delivery">
+            SHOPEE FOOD | GRAB FOOD | GO FOOD
             
                 <div class="delivery-logos">
                    <img
