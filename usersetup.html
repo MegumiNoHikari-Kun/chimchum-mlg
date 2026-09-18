@@ -279,23 +279,35 @@
     ====================================================== -->
 
     <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-sm">
-         <input
-                    type="text"
-                    id="u-search"
-                    placeholder="Cari username atau role..."
-                    autocomplete="off"
-                    class="bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                >
+         <div class="relative w-full lg:w-80">
+            <!-- Icon Kaca Pembesar -->
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        
+            <!-- Input Search -->
+            <input
+                type="text"
+                id="u-search"
+                placeholder="Cari username atau role..."
+                autocomplete="off"
+                class="bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-9 py-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+            >
+        
+            <!-- Tombol Clear (X) yang otomatis muncul saat diketik -->
+            <button
+                type="button"
+                id="btnClearSearch"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1"
+                title="Bersihkan pencarian"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
 
         <table class="w-full text-left border-collapse text-xs">
 
             <thead>
 
                 <tr class="bg-orange-50 text-slate-700 font-semibold">
-
-                    <th class="p-3.5 min-w-[90px]">
-                        ID
-                    </th>
 
                     <th class="p-3.5 min-w-[180px]">
                         Username
@@ -580,7 +592,7 @@ function renderTable(dataList) {
     };
 
     tbody.innerHTML = list.map(u => {
-        const id = u?.id ?? '';
+        // const id = u?.id ?? '';
         const username = u?.username ?? '-';
         const role = u?.role ?? 'staff';
         const roleClass = roleColors[role] || 'bg-slate-100 text-slate-600 border-slate-200';
@@ -589,10 +601,6 @@ function renderTable(dataList) {
 
         return `
             <tr class="hover:bg-slate-50 transition">
-                <td class="p-3 text-slate-400 font-mono text-[11px]">
-                    ${escapeHtml(shortId)}
-                </td>
-
                 <td class="p-3 font-semibold text-slate-800">
                     ${escapeHtml(username)}
                 </td>
