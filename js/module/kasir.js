@@ -452,17 +452,17 @@ function ensureStrukStyle() {
 }
 
 const logoShopeeFood = new URL(
-    '../../assets/img/shopeefood.png',
+    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/img/shopeefood.png',
     window.location.href
 ).href;
 
 const logoGrabFood = new URL(
-    '../../assets/img/grabfood.png',
+    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/img/grabfood.png',
     window.location.href
 ).href;
 
 const logoGoFood = new URL(
-    '../../assets/img/gofood.png',
+    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/img/gofood.png',
     window.location.href
 ).href;
 
