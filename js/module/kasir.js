@@ -452,7 +452,7 @@ function ensureStrukStyle() {
 }
 
 const logoShopeeFood = new URL(
-    'https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-mlg@main/assets/img/shopeefood.png',
+    'https://raw.githubusercontent.com/MegumiNoHikari-Kun/chimchum-mlg/refs/heads/main/assets/img/shopeefood.png',
     window.location.href
 ).href;
 
