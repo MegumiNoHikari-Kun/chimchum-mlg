@@ -1,5 +1,9 @@
 import { supabase, authReady } from '../supabase.js';
 
+/* =========================================================
+   STATE
+========================================================= */
+
 let cachedProducts = [];
 let cachedOrders = [];
 let kasirCart = {};
@@ -11,125 +15,64 @@ let currentFilterStatus = 'all';
    HELPER
 ========================================================= */
 
-function rupiah(n) {
-    return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+function rupiah(value) {
+    const number = Number(value) || 0;
+
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    }).format(number);
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 
-function getJakartaISOString() {
-    const now = new Date();
-    const jakartaOffset = 7 * 60;
-
-    const localTime = new Date(
-        now.getTime() +
-        (now.getTimezoneOffset() + jakartaOffset) * 60000
-    );
-
-    return localTime.toISOString().replace('Z', '+07:00');
-}
-
-
 /* =========================================================
-   LOGOUT
-========================================================= */
-
-window.logoutKasir = async function () {
-
-    if (!confirm("Keluar dari panel kasir?")) {
-        return;
-    }
-
-    try {
-
-        await authReady;
-
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-            throw error;
-        }
-
-        // Bersihkan session lama jika masih ada
-        sessionStorage.removeItem('kasir_logged_in');
-        sessionStorage.removeItem('kasir_user');
-
-        // Kembali ke halaman login
-        window.location.replace('./login.html');
-
-    } catch (error) {
-
-        console.error('Logout error:', error);
-
-        alert(
-            'Gagal logout.\n\n' +
-            (error.message || error)
-        );
-    }
-};
-
-
-/* =========================================================
-   TAB
-========================================================= */
-
-window.switchTab = (tabId, element) => {
-
-    document
-        .querySelectorAll('.tab-content')
-        .forEach(el => el.classList.remove('active'));
-
-    document
-        .querySelectorAll('.tab-btn')
-        .forEach(btn => btn.classList.remove('active'));
-
-    const tab = document.getElementById(tabId);
-
-    if (tab) {
-        tab.classList.add('active');
-    }
-
-    if (element) {
-        element.classList.add('active');
-    }
-
-    if (tabId === 'tab-pesanan') {
-        window.loadOrders();
-    }
-};
-
-
-/* =========================================================
-   INIT KASIR
+   INITIALIZE
 ========================================================= */
 
 async function initKasirDashboard() {
+    console.log('🚀 Start dashboard kasir...');
 
     await window.loadProducts();
     await window.loadOrders();
 
+    console.log('✅ Dashboard kasir siap.');
 }
 
 
 /* =========================================================
-   LOAD PRODUCTS
+   LOAD PRODUCTS FROM SUPABASE
 ========================================================= */
 
 window.loadProducts = async () => {
-    console.log("=== LOAD PRODUCTS START ===");
+    console.log('🟠 loadProducts() MULAI');
 
-    await authReady;
-
-    console.log("authReady selesai");
     try {
+        await authReady;
 
-        const {
-            data,
-            error
-        } = await supabase
-            .from("products")
-            .select("*");
-            console.log("PRODUCT DATA:", data);
-            console.log("PRODUCT ERROR:", error)   
+        console.log('🟢 authReady SELESAI');
+        console.log('🟢 Supabase:', supabase);
+
+        if (!supabase) {
+            throw new Error('Supabase tidak tersedia.');
+        }
+
+        const { data, error } = await supabase
+            .from('products')
+            .select('*');
+
+        console.log('📦 DATA PRODUCTS:', data);
+        console.log('🔴 ERROR PRODUCTS:', error);
+        console.log('📊 JUMLAH PRODUK:', (data || []).length);
 
         if (error) {
             throw error;
@@ -137,17 +80,20 @@ window.loadProducts = async () => {
 
         cachedProducts = data || [];
 
+        console.log('✅ cachedProducts:', cachedProducts);
 
-        /* ===============================
+        /* -----------------------------------------
            KATEGORI
-        =============================== */
+        ----------------------------------------- */
 
         const kategoriMap = new Map();
 
-        cachedProducts.forEach(p => {
-
-            const kategori =
-                (p.category || p.kategori || '').trim();
+        cachedProducts.forEach(product => {
+            const kategori = (
+                product.category ??
+                product.kategori ??
+                ''
+            ).toString().trim();
 
             if (!kategori) {
                 return;
@@ -158,354 +104,271 @@ window.loadProducts = async () => {
             if (!kategoriMap.has(key)) {
                 kategoriMap.set(key, kategori);
             }
-
         });
-
 
         updateKasirKategoriDropdown(
             new Set(kategoriMap.values())
         );
 
-
-        /* ===============================
-           RENDER PRODUK
-        =============================== */
+        /* -----------------------------------------
+           RENDER MENU
+        ----------------------------------------- */
 
         renderKasirMenu();
 
-    } catch (err) {
-
-        console.error("Error load produk:", err);
+    } catch (error) {
+        console.error('❌ Error load produk:', error);
 
         cachedProducts = [];
 
-        const list =
-            document.getElementById('kasirMenuList');
+        const list = document.getElementById('kasirMenuList');
 
         if (list) {
-
             list.innerHTML = `
-                <p style="color:#dc2626; padding:20px;">
-                    Gagal mengambil produk dari database.
+                <p style="
+                    color:#dc2626;
+                    padding:20px;
+                    background:#fef2f2;
+                    border-radius:10px;
+                ">
+                    <strong>Gagal mengambil produk dari database.</strong>
                     <br>
                     <small>
-                        ${err.message || err}
+                        ${escapeHtml(error?.message || error)}
                     </small>
                 </p>
             `;
-
         }
-
     }
 };
 
 
 /* =========================================================
-   KATEGORI DROPDOWN
+   UPDATE CATEGORY DROPDOWN
 ========================================================= */
 
-function updateKasirKategoriDropdown(kategoriSet) {
+function updateKasirKategoriDropdown(categories) {
+    const select = document.getElementById('filterKategoriKasir');
 
-    const el =
-        document.getElementById('filterKategoriKasir');
-
-    if (!el) {
+    if (!select) {
+        console.warn('⚠️ filterKategoriKasir tidak ditemukan.');
         return;
     }
 
-    el.innerHTML = `
-        <option value="Semua">Semua</option>
+    const currentValue = select.value;
 
-        ${Array.from(kategoriSet)
-            .sort((a, b) =>
-                a.localeCompare(b, 'id')
-            )
-            .map(k => `
-                <option value="${k}">
-                    ${k}
-                </option>
-            `)
-            .join('')}
+    select.innerHTML = `
+        <option value="all">Semua Kategori</option>
     `;
-}
 
+    [...categories]
+        .sort((a, b) =>
+            String(a).localeCompare(String(b), 'id')
+        )
+        .forEach(category => {
+            const option = document.createElement('option');
 
-/* =========================================================
-   FILTER PRODUK
-========================================================= */
+            option.value = category;
+            option.textContent = category;
 
-function jalankanFilterKasir() {
-
-    const searchEl =
-        document.getElementById('searchMenuKasir');
-
-    const kategoriEl =
-        document.getElementById('filterKategoriKasir');
-
-    if (!searchEl || !kategoriEl) {
-        return;
-    }
-
-    const kataKunci =
-        searchEl.value.toLowerCase();
-
-    const kategoriTerpilih =
-        kategoriEl.value;
-
-
-    document
-        .querySelectorAll('.kasir-item-card')
-        .forEach(card => {
-
-            const title =
-                card.querySelector('h4');
-
-            const nama =
-                title
-                    ? title.innerText.toLowerCase()
-                    : '';
-
-            const kat =
-                card.dataset.kategori || 'Umum';
-
-
-            const ok =
-                nama.includes(kataKunci) &&
-                (
-                    kategoriTerpilih === 'Semua' ||
-                    kat.trim().toLowerCase() ===
-                    kategoriTerpilih.trim().toLowerCase()
-                );
-
-
-            card.style.display =
-                ok ? 'block' : 'none';
-
+            select.appendChild(option);
         });
+
+    if (
+        [...select.options].some(
+            option => option.value === currentValue
+        )
+    ) {
+        select.value = currentValue;
+    }
 }
-
-
-/* =========================================================
-   FILTER EVENT
-========================================================= */
-
-const searchMenuKasir =
-    document.getElementById('searchMenuKasir');
-
-const filterKategoriKasir =
-    document.getElementById('filterKategoriKasir');
-
-if (searchMenuKasir) {
-    searchMenuKasir.addEventListener(
-        'input',
-        jalankanFilterKasir
-    );
-}
-
-if (filterKategoriKasir) {
-    filterKategoriKasir.addEventListener(
-        'change',
-        jalankanFilterKasir
-    );
-}
-
-
-/* =========================================================
-   PAYMENT
-========================================================= */
-
-window.toggleCashSection = () => {
-
-    const metode =
-        document.getElementById("kasirMetodeBayar");
-
-    const section =
-        document.getElementById("sectionKalkulatorCash");
-
-    if (!metode || !section) {
-        return;
-    }
-
-    section.style.display =
-        metode.value === "Cash"
-            ? "block"
-            : "none";
-
-    window.hitungKembalian();
-};
-
-
-window.hitungKembalian = () => {
-
-    const metode =
-        document.getElementById("kasirMetodeBayar");
-
-    const uangBayarEl =
-        document.getElementById("kasirUangBayar");
-
-    const kembalianEl =
-        document.getElementById("kasirKembalian");
-
-
-    if (!metode || !uangBayarEl || !kembalianEl) {
-        return;
-    }
-
-
-    if (metode.value !== "Cash") {
-        return;
-    }
-
-
-    const uangBayar =
-        Number(uangBayarEl.value) || 0;
-
-    const kembalian =
-        uangBayar - currentKasirGrandTotal;
-
-
-    if (uangBayar === 0) {
-
-        kembalianEl.innerText = "Rp 0";
-        kembalianEl.style.color = "var(--dark)";
-
-    } else if (kembalian < 0) {
-
-        kembalianEl.innerText =
-            "Uang Kurang!";
-
-        kembalianEl.style.color = "red";
-
-    } else {
-
-        kembalianEl.innerText =
-            rupiah(kembalian);
-
-        kembalianEl.style.color =
-            "var(--success)";
-    }
-};
-
-
-window.setUangCepat = (nominal) => {
-
-    const el =
-        document.getElementById("kasirUangBayar");
-
-    if (!el) {
-        return;
-    }
-
-    el.value = nominal;
-
-    window.hitungKembalian();
-};
-
-
-window.setUangPas = () => {
-
-    const el =
-        document.getElementById("kasirUangBayar");
-
-    if (!el) {
-        return;
-    }
-
-    el.value =
-        currentKasirGrandTotal;
-
-    window.hitungKembalian();
-};
 
 
 /* =========================================================
    RENDER MENU
 ========================================================= */
 
-function renderKasirMenu() {
-
-    const list =
-        document.getElementById('kasirMenuList');
+function renderKasirMenu(products = cachedProducts) {
+    const list = document.getElementById('kasirMenuList');
 
     if (!list) {
+        console.error(
+            '❌ Element #kasirMenuList tidak ditemukan.'
+        );
         return;
     }
 
+    console.log(
+        '🎨 renderKasirMenu() jumlah:',
+        products.length
+    );
 
-    if (cachedProducts.length === 0) {
-
-        list.innerHTML =
-            "<p style='color:#aaa; padding:20px;'>" +
-            "Produk belum tersedia." +
-            "</p>";
+    if (!products || products.length === 0) {
+        list.innerHTML = `
+            <p style="
+                color:#aaa;
+                padding:20px;
+                text-align:center;
+            ">
+                Produk belum tersedia.
+            </p>
+        `;
 
         return;
     }
 
+    list.innerHTML = products.map(product => {
 
-    list.innerHTML =
-        cachedProducts.map(p => {
+        const id = product.id;
 
-            const nama =
-                p.name || p.nama || '';
+        const nama = (
+            product.name ??
+            product.nama ??
+            ''
+        ).toString();
 
-            const harga =
-                p.price || p.harga || 0;
+        const harga = Number(
+            product.price ??
+            product.harga ??
+            0
+        );
 
-            const kategori =
-                p.category ||
-                p.kategori ||
-                'Umum';
+        const kategori = (
+            product.category ??
+            product.kategori ??
+            'Umum'
+        ).toString();
 
-            const foto =
-                p.image ||
-                p.foto ||
-                '';
+        const foto = (
+            product.image ??
+            product.foto ??
+            ''
+        ).toString();
 
-            const stok =
-                Number(p.stok) || 100;
+        /*
+         * Penting:
+         * Jangan gunakan Number(p.stok) || 100
+         * karena stok 0 akan dianggap false.
+         */
+        const stok = Number(
+            product.stok ?? 100
+        );
 
-            const habis =
-                stok <= 0;
+        const habis = stok <= 0;
 
+        /*
+         * JSON.stringify membuat nama produk
+         * lebih aman untuk inline onclick.
+         */
+        const safeId = JSON.stringify(id);
+        const safeNama = JSON.stringify(nama);
 
-            return `
-                <div
-                    class="kasir-item-card"
-                    data-kategori="${kategori}"
-                    style="${
-                        habis
-                            ? 'opacity:.45;pointer-events:none;'
-                            : ''
-                    }"
-                    onclick="addToKasirCart(
-                        '${p.id}',
-                        \`${nama}\`,
-                        ${harga},
-                        ${stok}
-                    )"
+        return `
+            <div
+                class="kasir-item-card"
+                data-kategori="${escapeHtml(kategori)}"
+                data-nama="${escapeHtml(nama.toLowerCase())}"
+                style="
+                    ${habis
+                        ? 'opacity:.45;pointer-events:none;'
+                        : ''
+                    }
+                "
+                onclick='addToKasirCart(
+                    ${safeId},
+                    ${safeNama},
+                    ${harga},
+                    ${stok}
+                )'
+            >
+
+                <img
+                    src="${escapeHtml(foto)}"
+                    alt="${escapeHtml(nama)}"
+                    onerror="this.src='https://placehold.co/150'"
                 >
 
-                    <img
-                        src="${foto}"
-                        onerror="this.src='https://placehold.co/150'"
-                    >
+                <h4>
+                    ${escapeHtml(nama)}
+                </h4>
 
-                    <h4>${nama}</h4>
+                <p style="
+                    margin-top:4px;
+                    font-size:13px;
+                ">
+                    ${rupiah(harga)}
+                </p>
 
-                    <p
-                        style="
-                            margin-top:4px;
-                            font-size:13px;
-                        "
-                    >
-                        ${rupiah(harga)}
-                    </p>
+                ${
+                    habis
+                        ? `
+                            <small style="
+                                color:#dc2626;
+                                font-weight:600;
+                            ">
+                                Stok habis
+                            </small>
+                        `
+                        : `
+                            <small style="
+                                color:#777;
+                            ">
+                                Stok: ${stok}
+                            </small>
+                        `
+                }
 
-                </div>
-            `;
+            </div>
+        `;
+    }).join('');
+}
 
-        }).join('');
+
+/* =========================================================
+   FILTER MENU
+========================================================= */
+
+function jalankanFilterKasir() {
+    const searchInput =
+        document.getElementById('searchMenuKasir');
+
+    const categorySelect =
+        document.getElementById('filterKategoriKasir');
+
+    const search = (
+        searchInput?.value || ''
+    ).trim().toLowerCase();
+
+    const category =
+        categorySelect?.value || 'all';
+
+    const filtered = cachedProducts.filter(product => {
+
+        const nama = (
+            product.name ??
+            product.nama ??
+            ''
+        ).toString().toLowerCase();
+
+        const kategori = (
+            product.category ??
+            product.kategori ??
+            'Umum'
+        ).toString();
+
+        const matchSearch =
+            !search ||
+            nama.includes(search);
+
+        const matchCategory =
+            category === 'all' ||
+            kategori.toLowerCase() ===
+                category.toLowerCase();
+
+        return matchSearch && matchCategory;
+    });
+
+    renderKasirMenu(filtered);
 }
 
 
@@ -513,1271 +376,261 @@ function renderKasirMenu() {
    CART
 ========================================================= */
 
-window.addToKasirCart = (
+window.addToKasirCart = function (
     id,
     nama,
     harga,
     stok
-) => {
+) {
+    const productId = String(id);
 
-    if (kasirCart[id]) {
+    harga = Number(harga) || 0;
+    stok = Number(stok ?? 100);
 
-        kasirCart[id].qty++;
-
-    } else {
-
-        kasirCart[id] = {
-            id,
-            nama,
-            harga,
-            qty: 1,
-            stok
-        };
-
-    }
-
-    updateKasirCartUI();
-};
-
-
-window.changeKasirQty = (
-    id,
-    delta
-) => {
-
-    if (!kasirCart[id]) {
+    if (stok <= 0) {
+        alert('Stok produk habis.');
         return;
     }
 
-    const next =
-        kasirCart[id].qty + delta;
-
-
-    if (next <= 0) {
-
-        delete kasirCart[id];
-
-    } else {
-
-        kasirCart[id].qty = next;
-
+    if (!kasirCart[productId]) {
+        kasirCart[productId] = {
+            id: productId,
+            nama: nama,
+            harga: harga,
+            qty: 0,
+            stok: stok
+        };
     }
 
-    updateKasirCartUI();
+    if (
+        kasirCart[productId].qty >=
+        kasirCart[productId].stok
+    ) {
+        alert('Jumlah melebihi stok.');
+        return;
+    }
+
+    kasirCart[productId].qty++;
+
+    renderKasirCart();
 };
 
 
 /* =========================================================
-   UPDATE CART UI
+   CHANGE CART QTY
 ========================================================= */
 
-function updateKasirCartUI() {
+window.changeKasirQty = function (
+    id,
+    perubahan
+) {
+    const productId = String(id);
 
-    const items =
-        Object.values(kasirCart);
-
-    const cartEl =
-        document.getElementById('kasirCartItems');
-
-    const totalEl =
-        document.getElementById("kasirGrandTotal");
-
-
-    if (!cartEl || !totalEl) {
+    if (!kasirCart[productId]) {
         return;
     }
 
+    const item = kasirCart[productId];
+
+    item.qty += Number(perubahan);
+
+    if (item.qty <= 0) {
+        delete kasirCart[productId];
+    }
+
+    if (item.qty > item.stok) {
+        item.qty = item.stok;
+        alert('Jumlah melebihi stok.');
+    }
+
+    renderKasirCart();
+};
+
+
+/* =========================================================
+   REMOVE CART ITEM
+========================================================= */
+
+window.removeFromKasirCart = function (id) {
+    const productId = String(id);
+
+    delete kasirCart[productId];
+
+    renderKasirCart();
+};
+
+
+/* =========================================================
+   CLEAR CART
+========================================================= */
+
+window.clearKasirCart = function () {
+    kasirCart = {};
+
+    renderKasirCart();
+};
+
+
+/* =========================================================
+   RENDER CART
+========================================================= */
+
+function renderKasirCart() {
+    const cartContainer =
+        document.getElementById('kasirCartList');
+
+    if (!cartContainer) {
+        console.warn(
+            '⚠️ #kasirCartList tidak ditemukan.'
+        );
+        return;
+    }
+
+    const items = Object.values(kasirCart);
 
     if (items.length === 0) {
-
-        cartEl.innerHTML = `
-            <p
-                style="
-                    text-align:center;
-                    color:#aaa;
-                    font-size:13px;
-                    padding:30px 0;
-                "
-            >
-                Belum ada item dipilih.
+        cartContainer.innerHTML = `
+            <p style="
+                color:#aaa;
+                padding:20px;
+                text-align:center;
+            ">
+                Keranjang masih kosong.
             </p>
         `;
 
-        totalEl.innerText =
-            rupiah(0);
-
-        currentKasirGrandTotal = 0;
-
-        window.hitungKembalian();
+        updateKasirTotal();
 
         return;
     }
 
+    cartContainer.innerHTML = items.map(item => {
 
-    let grandTotal = 0;
+        const subtotal =
+            item.harga * item.qty;
 
+        const safeId =
+            JSON.stringify(item.id);
 
-    cartEl.innerHTML =
-        items.map(item => {
+        return `
+            <div class="kasir-cart-item">
 
-            const subtotal =
-                item.qty * item.harga;
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:10px;
+                ">
 
-            grandTotal += subtotal;
+                    <div>
+                        <strong>
+                            ${escapeHtml(item.nama)}
+                        </strong>
 
-
-            return `
-                <div class="receipt-item">
-
-                    <div style="max-width:55%;">
-
-                        <div
-                            style="
-                                font-weight:600;
-                                font-size:13px;
-                            "
-                        >
-                            ${item.nama}
-                        </div>
-
-                        <div
-                            style="
-                                font-size:11px;
-                                color:var(--gray);
-                            "
-                        >
+                        <div style="
+                            font-size:13px;
+                            color:#777;
+                        ">
                             ${rupiah(item.harga)}
                         </div>
-
                     </div>
 
-
-                    <div
-                        class="receipt-qty-control"
-                        style="
-                            display:flex;
-                            align-items:center;
-                            gap:6px;
-                        "
-                    >
-
-                        <button
-                            onclick="
-                                changeKasirQty(
-                                    '${item.id}',
-                                    -1
-                                )
-                            "
-                        >
-                            −
-                        </button>
-
-                        <span
-                            style="
-                                font-weight:700;
-                                font-size:13px;
-                                min-width:15px;
-                                text-align:center;
-                            "
-                        >
-                            ${item.qty}
-                        </span>
-
-                        <button
-                            onclick="
-                                changeKasirQty(
-                                    '${item.id}',
-                                    1
-                                )
-                            "
-                        >
-                            +
-                        </button>
-
-                    </div>
-
-
-                    <div
-                        style="
-                            font-weight:600;
-                            font-size:13px;
-                            min-width:60px;
-                            text-align:right;
-                        "
-                    >
+                    <strong>
                         ${rupiah(subtotal)}
-                    </div>
+                    </strong>
 
                 </div>
-            `;
 
-        }).join('');
-
-
-    totalEl.innerText =
-        rupiah(grandTotal);
-
-    currentKasirGrandTotal =
-        grandTotal;
-
-    window.hitungKembalian();
-}
-
-
-/* =========================================================
-   CETAK STRUK
-========================================================= */
-
-function cetakStrukThermal(
-    noMeja,
-    waPelanggan,
-    items,
-    grandTotal,
-    metodeBayar,
-    uangBayar,
-    kembalian
-) {
-
-    const printWindow =
-        window.open(
-            '',
-            '_blank',
-            'width=350,height=600'
-        );
-
-    if (!printWindow) {
-
-        alert(
-            "Popup diblokir browser. " +
-            "Silakan izinkan popup untuk mencetak struk."
-        );
-
-        return;
-    }
-
-
-    const tgl =
-        new Date().toLocaleString(
-            'id-ID',
-            {
-                timeZone: 'Asia/Jakarta'
-            }
-        );
-
-
-    const itemsHtml =
-        items.map(i => `
-            <div
-                style="
+                <div style="
                     display:flex;
-                    justify-content:space-between;
-                    margin-bottom:5px;
-                    font-size:12px;
-                "
-            >
-
-                <span>
-                    ${i.nama || i.name}
-                    x${i.qty}
-                </span>
-
-                <span>
-                    ${rupiah(
-                        i.qty *
-                        (i.harga || i.price)
-                    )}
-                </span>
-
-            </div>
-        `).join('');
-
-
-    printWindow.document.write(`
-
-        <html>
-
-        <head>
-
-            <title>
-                Struk - ChimChum
-            </title>
-
-            <style>
-
-                @page {
-                    margin:0;
-                }
-
-                body {
-                    font-family:
-                        'Courier New',
-                        monospace;
-
-                    width:48mm;
-
-                    padding:2mm;
-
-                    color:#000;
-
-                    font-size:11px;
-                }
-
-                .center {
-                    text-align:center;
-                }
-
-                .line {
-                    border-top:
-                        1px dashed #000;
-
-                    margin:6px 0;
-                }
-
-                .bold {
-                    font-weight:bold;
-                }
-
-            </style>
-
-        </head>
-
-        <body>
-
-            <div
-                class="center bold"
-                style="font-size:14px;"
-            >
-                CHIMCHUM MALANG
-            </div>
-
-            <div
-                class="center"
-                style="font-size:10px;"
-            >
-                Dimsum Mentai & Crispy Chicken
-            </div>
-
-            <div class="line"></div>
-
-            <div
-                style="
-                    font-size:11px;
-                    line-height:1.4;
-                "
-            >
-                Waktu :
-                ${tgl}
-                <br>
-
-                Pelanggan :
-                ${noMeja}
-            </div>
-
-            <div class="line"></div>
-
-            ${itemsHtml}
-
-            <div class="line"></div>
-
-            <div
-                style="
-                    display:flex;
-                    justify-content:space-between;
-                    font-size:12px;
-                "
-                class="bold"
-            >
-                <span>TOTAL:</span>
-                <span>${rupiah(grandTotal)}</span>
-            </div>
-
-            <div class="line"></div>
-
-            <div
-                style="
-                    display:flex;
-                    justify-content:space-between;
-                    font-size:11px;
-                "
-            >
-                <span>
-                    Bayar (${metodeBayar}):
-                </span>
-
-                <span>
-                    ${rupiah(uangBayar)}
-                </span>
-            </div>
-
-            <div
-                style="
-                    display:flex;
-                    justify-content:space-between;
-                    font-size:11px;
-                "
-            >
-                <span>
-                    Kembalian:
-                </span>
-
-                <span>
-                    ${rupiah(kembalian)}
-                </span>
-            </div>
-
-            <div class="line"></div>
-
-            <div
-                class="center"
-                style="
-                    font-size:10px;
+                    align-items:center;
+                    gap:8px;
                     margin-top:8px;
-                "
-            >
-                Terima Kasih!
+                ">
+
+                    <button
+                        type="button"
+                        onclick='changeKasirQty(
+                            ${safeId},
+                            -1
+                        )'
+                    >
+                        −
+                    </button>
+
+                    <span>
+                        ${item.qty}
+                    </span>
+
+                    <button
+                        type="button"
+                        onclick='changeKasirQty(
+                            ${safeId},
+                            1
+                        )'
+                    >
+                        +
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick='removeFromKasirCart(
+                            ${safeId}
+                        )'
+                        style="
+                            margin-left:auto;
+                            color:#dc2626;
+                        "
+                    >
+                        Hapus
+                    </button>
+
+                </div>
+
             </div>
+        `;
+    }).join('');
 
-
-            <script>
-
-                window.onload = function() {
-
-                    window.print();
-
-                    setTimeout(
-                        () => window.close(),
-                        300
-                    );
-
-                }
-
-            <\/script>
-
-        </body>
-
-        </html>
-    `);
-
-    printWindow.document.close();
+    updateKasirTotal();
 }
 
 
 /* =========================================================
-   SUBMIT ORDER
+   CALCULATE TOTAL
 ========================================================= */
 
-window.submitKasirOrder = async () => {
-
-    const items =
-        Object.values(kasirCart);
-
-
-    if (items.length === 0) {
-
-        alert(
-            "Struk kasir kosong!"
-        );
-
-        return;
-    }
-
-
-    const noMejaEl =
-        document.getElementById(
-            "kasirNomorMeja"
-        );
-
-    const waEl =
-        document.getElementById(
-            "kasirWaPelanggan"
-        );
-
-    const metodeEl =
-        document.getElementById(
-            "kasirMetodeBayar"
-        );
-
-    const printEl =
-        document.getElementById(
-            "printStrukCheck"
-        );
-
-
-    const noMeja =
-        noMejaEl
-            ? noMejaEl.value.trim()
-            : '';
-
-
-    if (!noMeja) {
-
-        alert(
-            "Harap isi nama pelanggan / nomor meja!"
-        );
-
-        return;
-    }
-
-
-    const waPelanggan =
-        waEl
-            ? waEl.value.trim()
-            : '';
-
-
-    const metodeBayar =
-        metodeEl
-            ? metodeEl.value
-            : '';
-
-
-    const statusPrint =
-        printEl
-            ? printEl.checked
-            : false;
-
-
-    const grandTotal =
-        currentKasirGrandTotal;
-
-
-    let uangBayar =
-        grandTotal;
-
-    let kembalian =
-        0;
-
-
-    /* ===============================
-       CASH
-    =============================== */
-
-    if (metodeBayar === "Cash") {
-
-        const uangBayarEl =
-            document.getElementById(
-                "kasirUangBayar"
-            );
-
-        uangBayar =
-            Number(
-                uangBayarEl
-                    ? uangBayarEl.value
-                    : 0
-            ) || 0;
-
-
-        if (uangBayar < grandTotal) {
-
-            alert(
-                "Uang tunai kurang dari total tagihan!"
-            );
-
-            return;
-        }
-
-
-        kembalian =
-            uangBayar - grandTotal;
-    }
-
-
-    /* ===============================
-       ORDER ID
-    =============================== */
-
-    const orderId =
-        'KSR-' +
-        Math.floor(
-            1000 +
-            Math.random() * 9000
-        );
-
-
-    const jakartaISOString =
-        getJakartaISOString();
-
-
-    /* ===============================
-       ORDER DATA
-    =============================== */
-
-    const orderData = {
-
-        order_id:
-            orderId,
-
-        customer_name:
-            "Dine-In (" +
-            noMeja +
-            ")",
-
-        phone:
-            waPelanggan || "-",
-
-        address:
-            "Makan di Tempat",
-
-        items:
-            items.map(i => ({
-                nama: i.nama,
-                qty: i.qty,
-                harga: i.harga
-            })),
-
-        grand_total:
-            grandTotal,
-
-        payment_method:
-            metodeBayar,
-
-        status:
-            "new",
-
-        created_at:
-            jakartaISOString
-    };
-
-
-    /* ===============================
-       SAVE SUPABASE
-    =============================== */
-
-    try {
-
-        await authReady;
-
-
-        const {
-            data,
-            error
-        } = await supabase
-            .from("orders")
-            .insert([orderData])
-            .select()
-            .single();
-
-
-        if (error) {
-
-            console.error(
-                "Supabase insert error:",
-                error
-            );
-
-            alert(
-                "Gagal menyimpan pesanan ke database.\n\n" +
-                error.message
-            );
-
-            return;
-        }
-
-
-        console.log(
-            "Pesanan berhasil disimpan:",
-            data
-        );
-
-
-    } catch (err) {
-
-        console.error(
-            "Supabase order insert error:",
-            err
-        );
-
-        alert(
-            "Gagal menyimpan pesanan.\n\n" +
-            (err.message || err)
-        );
-
-        return;
-    }
-
-
-    /* ===============================
-       LOCAL BACKUP
-    =============================== */
-
-    let localOrders =
-        JSON.parse(
-            localStorage.getItem(
-                'local_orders'
-            ) || '[]'
-        );
-
-
-    localOrders.push(
-        orderData
-    );
-
-
-    localStorage.setItem(
-        'local_orders',
-        JSON.stringify(
-            localOrders
-        )
-    );
-
-
-    /* ===============================
-       SUCCESS
-    =============================== */
-
-    alert(
-        "🎉 Transaksi Kasir Berhasil Disimpan!"
-    );
-
-
-    /* ===============================
-       PRINT
-    =============================== */
-
-    if (statusPrint) {
-
-        cetakStrukThermal(
-            noMeja,
-            waPelanggan,
-            items,
-            grandTotal,
-            metodeBayar,
-            uangBayar,
-            kembalian
-        );
-    }
-
-
-    /* ===============================
-       RESET CART
-    =============================== */
-
-    kasirCart = {};
-
-
-    const fieldsToClear = [
-        "kasirNomorMeja",
-        "kasirWaPelanggan",
-        "kasirUangBayar"
+function calculateKasirTotal() {
+    return Object.values(kasirCart)
+        .reduce((total, item) => {
+            return total +
+                (Number(item.harga) *
+                 Number(item.qty));
+        }, 0);
+}
+
+
+/* =========================================================
+   UPDATE TOTAL
+========================================================= */
+
+function updateKasirTotal() {
+    currentKasirGrandTotal =
+        calculateKasirTotal();
+
+    const totalElements = [
+        'kasirGrandTotal',
+        'grandTotalKasir',
+        'totalKasir'
     ];
 
-
-    fieldsToClear.forEach(id => {
-
-        const el =
+    totalElements.forEach(id => {
+        const element =
             document.getElementById(id);
 
-        if (el) {
-            el.value = "";
+        if (element) {
+            element.textContent =
+                rupiah(currentKasirGrandTotal);
         }
-
     });
-
-
-    updateKasirCartUI();
-
-    await window.loadOrders();
-};
-
-
-/* =========================================================
-   ORDER SUMMARY
-========================================================= */
-
-function renderOrderSummary(list) {
-
-    const summaryEl =
-        document.getElementById(
-            "orderSummary"
-        );
-
-    if (!summaryEl) {
-        return;
-    }
-
-
-    const counts = {
-
-        all:
-            list.length,
-
-        new:
-            0,
-
-        disiapkan:
-            0,
-
-        dikirim:
-            0,
-
-        selesai:
-            0,
-
-        cancel:
-            0
-    };
-
-
-    list.forEach(o => {
-
-        const st =
-            (
-                o.status ||
-                'new'
-            ).toLowerCase();
-
-
-        if (
-            counts[st] !== undefined
-        ) {
-            counts[st]++;
-        }
-
-    });
-
-
-    const cards = [
-
-        {
-            key: 'all',
-            title: 'Semua',
-            count: counts.all,
-            color: '#475569'
-        },
-
-        {
-            key: 'new',
-            title: 'Baru',
-            count: counts.new,
-            color: '#f59e0b'
-        },
-
-        {
-            key: 'disiapkan',
-            title: 'Disiapkan',
-            count: counts.disiapkan,
-            color: '#3b82f6'
-        },
-
-        {
-            key: 'dikirim',
-            title: 'Dikirim',
-            count: counts.dikirim,
-            color: '#8b5cf6'
-        },
-
-        {
-            key: 'selesai',
-            title: 'Selesai',
-            count: counts.selesai,
-            color: '#10b981'
-        },
-
-        {
-            key: 'cancel',
-            title: 'Cancel',
-            count: counts.cancel,
-            color: '#ef4444'
-        }
-
-    ];
-
-
-    summaryEl.innerHTML =
-        cards.map(c => `
-
-            <div
-                onclick="
-                    filterOrdersByStatus(
-                        '${c.key}'
-                    )
-                "
-
-                style="
-                    background:white;
-                    padding:16px;
-                    border-radius:14px;
-                    box-shadow:
-                        0 1px 3px
-                        rgba(0,0,0,0.05);
-                    cursor:pointer;
-                    border:2px solid
-                        ${
-                            currentFilterStatus === c.key
-                                ? c.color
-                                : '#f1f5f9'
-                        };
-                    transition:all 0.2s;
-                "
-            >
-
-                <div
-                    style="
-                        font-size:12px;
-                        color:var(--gray);
-                        font-weight:500;
-                    "
-                >
-                    ${c.title}
-                </div>
-
-                <div
-                    style="
-                        font-size:24px;
-                        font-weight:700;
-                        color:${c.color};
-                        margin-top:2px;
-                    "
-                >
-                    ${c.count}
-                </div>
-
-            </div>
-
-        `).join('');
-}
-
-
-/* =========================================================
-   FILTER ORDER
-========================================================= */
-
-window.filterOrdersByStatus = (
-    status
-) => {
-
-    currentFilterStatus =
-        status;
-
-    renderOrderSummary(
-        cachedOrders
-    );
-
-    renderOrdersTable();
-};
-
-
-/* =========================================================
-   ORDER TABLE
-========================================================= */
-
-function renderOrdersTable() {
-
-    const tbody =
-        document.getElementById(
-            "orderTableBody"
-        );
-
-    if (!tbody) {
-        return;
-    }
-
-
-    let list =
-        [...cachedOrders];
-
-
-    if (
-        currentFilterStatus !== 'all'
-    ) {
-
-        list =
-            list.filter(o =>
-                (
-                    o.status ||
-                    'new'
-                ).toLowerCase() ===
-                currentFilterStatus
-            );
-
-    }
-
-
-    if (list.length === 0) {
-
-        tbody.innerHTML = `
-            <tr>
-
-                <td
-                    colspan="8"
-                    style="
-                        text-align:center;
-                        padding:35px;
-                        color:#aaa;
-                    "
-                >
-                    Tidak ada pesanan
-                    dalam status ini.
-                </td>
-
-            </tr>
-        `;
-
-        return;
-    }
-
-
-    tbody.innerHTML =
-        list.map(o => {
-
-            const tgl =
-                o.created_at
-                    ? new Date(
-                        o.created_at
-                    ).toLocaleString(
-                        'id-ID',
-                        {
-                            timeZone:
-                                'Asia/Jakarta'
-                        }
-                    )
-                    : '-';
-
-
-            const items =
-                o.items || [];
-
-
-            const itemsStr =
-                Array.isArray(items)
-                    ? items.map(i =>
-                        `${i.nama || i.name} (${i.qty}x)`
-                    ).join(', ')
-                    : '-';
-
-
-            const currentStatus =
-                (
-                    o.status ||
-                    'new'
-                ).toLowerCase();
-
-
-            const recordKey =
-                o.id ||
-                o.order_id;
-
-
-            return `
-
-                <tr>
-
-                    <td
-                        style="
-                            font-size:12px;
-                            color:var(--gray);
-                        "
-                    >
-                        ${tgl}
-                    </td>
-
-
-                    <td>
-
-                        <b>
-                            ${o.customer_name || '-'}
-                        </b>
-
-                        <br>
-
-                        <span
-                            style="
-                                font-size:11px;
-                                color:#94a3b8;
-                            "
-                        >
-                            ID:
-                            ${o.order_id || '-'}
-                        </span>
-
-                    </td>
-
-
-                    <td>
-                        ${o.phone || '-'}
-                    </td>
-
-
-                    <td>
-
-                        <span
-                            style="
-                                font-weight:500;
-                                font-size:12px;
-                            "
-                        >
-                            ${o.address || '-'}
-                        </span>
-
-                    </td>
-
-
-                    <td>
-
-                        <select
-
-                            onchange="
-                                updateOrderStatus(
-                                    '${recordKey}',
-                                    this.value
-                                )
-                            "
-
-                            style="
-                                padding:6px 10px;
-                                font-size:12px;
-                                border-radius:8px;
-                                font-weight:600;
-                                margin:0;
-                            "
-                        >
-
-                            <option
-                                value="new"
-                                ${
-                                    currentStatus === 'new'
-                                        ? 'selected'
-                                        : ''
-                                }
-                            >
-                                New
-                            </option>
-
-
-                            <option
-                                value="disiapkan"
-                                ${
-                                    currentStatus === 'disiapkan'
-                                        ? 'selected'
-                                        : ''
-                                }
-                            >
-                                Disiapkan
-                            </option>
-
-
-                            <option
-                                value="dikirim"
-                                ${
-                                    currentStatus === 'dikirim'
-                                        ? 'selected'
-                                        : ''
-                                }
-                            >
-                                Dikirim
-                            </option>
-
-
-                            <option
-                                value="selesai"
-                                ${
-                                    currentStatus === 'selesai'
-                                        ? 'selected'
-                                        : ''
-                                }
-                            >
-                                Selesai
-                            </option>
-
-
-                            <option
-                                value="cancel"
-                                ${
-                                    currentStatus === 'cancel'
-                                        ? 'selected'
-                                        : ''
-                                }
-                            >
-                                Cancel
-                            </option>
-
-                        </select>
-
-                    </td>
-
-
-                    <td
-                        style="
-                            font-size:13px;
-                            max-width:250px;
-                        "
-                    >
-                        ${itemsStr}
-                    </td>
-
-
-                    <td
-                        style="
-                            color:var(--success);
-                            font-weight:700;
-                        "
-                    >
-                        ${rupiah(
-                            o.grand_total || 0
-                        )}
-                    </td>
-
-
-                    <td>
-
-                        <div
-                            style="
-                                display:flex;
-                                gap:6px;
-                            "
-                        >
-
-                            <button
-                                onclick="
-                                    reprintOrder(
-                                        '${recordKey}'
-                                    )
-                                "
-
-                                style="
-                                    padding:6px 10px;
-                                    font-size:12px;
-                                    background:#f1f5f9;
-                                    color:var(--dark);
-                                "
-
-                                title="Cetak Struk"
-                            >
-                                🖨️
-                            </button>
-
-
-                            <button
-
-                                onclick="
-                                    deleteOrder(
-                                        '${recordKey}'
-                                    )
-                                "
-
-                                class="btn-delete"
-
-                                style="
-                                    padding:6px 10px;
-                                    font-size:12px;
-                                "
-
-                                title="Hapus"
-                            >
-                                <i
-                                    class="fa-solid fa-trash"
-                                ></i>
-                            </button>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-            `;
-
-        }).join('');
 }
 
 
@@ -1786,411 +639,238 @@ function renderOrdersTable() {
 ========================================================= */
 
 window.loadOrders = async () => {
-
-    await authReady;
-
-    let list = [];
-
+    console.log('🟠 loadOrders() MULAI');
 
     try {
+        await authReady;
 
-        const {
-            data,
-            error
-        } = await supabase
-            .from("orders")
-            .select("*")
-            .order(
-                'created_at',
-                {
-                    ascending: false
-                }
+        if (!supabase) {
+            throw new Error(
+                'Supabase tidak tersedia.'
             );
+        }
 
+        /*
+         * Jika tabel orders kamu mempunyai
+         * struktur berbeda, bagian ini bisa
+         * disesuaikan.
+         */
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', {
+                ascending: false
+            });
+
+        console.log('📦 DATA ORDERS:', data);
+        console.log('🔴 ERROR ORDERS:', error);
 
         if (error) {
             throw error;
         }
 
+        cachedOrders = data || [];
 
-        if (data) {
-            list = data;
-        }
-
-
-    } catch (e) {
-
-        console.error(
-            "Supabase load orders error:",
-            e
+        console.log(
+            '📊 JUMLAH ORDERS:',
+            cachedOrders.length
         );
 
+        renderKasirOrders();
+
+    } catch (error) {
+        console.error(
+            '❌ Error load orders:',
+            error
+        );
+
+        cachedOrders = [];
+
+        renderKasirOrders();
     }
-
-
-    /* ===============================
-       LOCAL FALLBACK
-    =============================== */
-
-    if (list.length === 0) {
-
-        list =
-            JSON.parse(
-                localStorage.getItem(
-                    'local_orders'
-                ) || '[]'
-            );
-
-    }
-
-
-    cachedOrders =
-        list;
-
-
-    renderOrderSummary(
-        cachedOrders
-    );
-
-    renderOrdersTable();
 };
 
 
 /* =========================================================
-   UPDATE ORDER STATUS
+   RENDER ORDERS
 ========================================================= */
 
-window.updateOrderStatus =
-    async function (
-        key,
-        newStatus
-    ) {
+function renderKasirOrders() {
+    /*
+     * Cari beberapa kemungkinan ID container
+     * agar kompatibel dengan HTML yang sudah ada.
+     */
+    const container =
+        document.getElementById('kasirOrderList') ||
+        document.getElementById('kasirOrdersList');
 
-        try {
-
-            await authReady;
-
-
-            const isUUID =
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-                    .test(
-                        String(key)
-                    );
-
-
-            const column =
-                isUUID
-                    ? "id"
-                    : "order_id";
-
-
-            const {
-                data,
-                error
-            } = await supabase
-                .from("orders")
-                .update({
-                    status:
-                        newStatus
-                })
-                .eq(
-                    column,
-                    key
-                )
-                .select(
-                    "id, order_id, status"
-                );
-
-
-            if (error) {
-                throw error;
-            }
-
-
-            /* ===============================
-               UPDATE LOCAL
-            =============================== */
-
-            let localOrders =
-                JSON.parse(
-                    localStorage.getItem(
-                        "local_orders"
-                    ) || "[]"
-                );
-
-
-            localOrders =
-                localOrders.map(
-                    order => {
-
-                        if (
-                            String(order.id) ===
-                                String(key) ||
-
-                            String(order.order_id) ===
-                                String(key)
-                        ) {
-
-                            return {
-                                ...order,
-                                status:
-                                    newStatus
-                            };
-
-                        }
-
-
-                        return order;
-                    }
-                );
-
-
-            localStorage.setItem(
-                "local_orders",
-                JSON.stringify(
-                    localOrders
-                )
-            );
-
-
-            await window.loadOrders();
-
-
-            alert(
-                "Status pesanan berhasil diperbarui!"
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "GAGAL UPDATE STATUS:",
-                error
-            );
-
-
-            alert(
-                "Status gagal disimpan ke database Supabase.\n\n" +
-                error.message
-            );
-
-        }
-    };
-
-
-/* =========================================================
-   REPRINT
-========================================================= */
-
-window.reprintOrder = (
-    key
-) => {
-
-    const order =
-        cachedOrders.find(
-            o =>
-                String(o.id) ===
-                    String(key) ||
-
-                String(o.order_id) ===
-                    String(key)
+    if (!container) {
+        console.warn(
+            '⚠️ Container order kasir tidak ditemukan.'
         );
+        return;
+    }
 
+    let orders = [...cachedOrders];
 
-    if (!order) {
+    if (currentFilterStatus !== 'all') {
+        orders = orders.filter(order => {
 
-        alert(
-            "Pesanan tidak ditemukan."
-        );
+            const status = String(
+                order.status ?? ''
+            )
+                .trim()
+                .toLowerCase();
+
+            return status ===
+                currentFilterStatus.toLowerCase();
+        });
+    }
+
+    if (orders.length === 0) {
+        container.innerHTML = `
+            <p style="
+                color:#aaa;
+                padding:20px;
+                text-align:center;
+            ">
+                Belum ada pesanan.
+            </p>
+        `;
 
         return;
     }
 
+    container.innerHTML = orders.map(order => {
 
-    cetakStrukThermal(
+        const id = order.id ?? '-';
 
-        order.customer_name,
+        const status = String(
+            order.status ?? 'pending'
+        );
 
-        order.phone,
+        const total = Number(
+            order.total ??
+            order.grand_total ??
+            order.total_harga ??
+            0
+        );
 
-        order.items,
+        return `
+            <div class="kasir-order-card">
 
-        order.grand_total,
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:10px;
+                ">
 
-        order.payment_method ||
-            'Online',
+                    <strong>
+                        Order #${escapeHtml(id)}
+                    </strong>
 
-        order.grand_total,
+                    <span>
+                        ${escapeHtml(status)}
+                    </span>
 
-        0
+                </div>
 
-    );
+                <div style="
+                    margin-top:8px;
+                    font-weight:600;
+                ">
+                    ${rupiah(total)}
+                </div>
+
+            </div>
+        `;
+    }).join('');
+}
+
+
+/* =========================================================
+   FILTER ORDER STATUS
+========================================================= */
+
+window.filterKasirOrders = function(status) {
+    currentFilterStatus =
+        String(status || 'all');
+
+    renderKasirOrders();
 };
 
 
 /* =========================================================
-   DELETE ORDER
+   EVENT LISTENERS
 ========================================================= */
 
-window.deleteOrder =
-    async function (
-        key
-    ) {
+function setupKasirEvents() {
+    const searchMenuKasir =
+        document.getElementById(
+            'searchMenuKasir'
+        );
 
-        if (
-            !confirm(
-                "Hapus pesanan ini?"
-            )
-        ) {
-            return;
-        }
+    const filterKategoriKasir =
+        document.getElementById(
+            'filterKategoriKasir'
+        );
 
+    if (searchMenuKasir) {
+        searchMenuKasir.addEventListener(
+            'input',
+            jalankanFilterKasir
+        );
+    }
 
-        try {
+    if (filterKategoriKasir) {
+        filterKategoriKasir.addEventListener(
+            'change',
+            jalankanFilterKasir
+        );
+    }
 
-            await authReady;
-
-
-            let query =
-                supabase
-                    .from("orders")
-                    .delete();
-
-
-            const isUUID =
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-                    .test(
-                        String(key)
-                    );
-
-
-            if (isUUID) {
-
-                query =
-                    query.eq(
-                        "id",
-                        key
-                    );
-
-            } else {
-
-                query =
-                    query.eq(
-                        "order_id",
-                        key
-                    );
-
-            }
-
-
-            const {
-                error
-            } = await query;
-
-
-            if (error) {
-                throw error;
-            }
-
-
-            /* ===============================
-               UPDATE CACHE
-            =============================== */
-
-            cachedOrders =
-                cachedOrders.filter(
-                    o =>
-                        String(o.id) !==
-                            String(key) &&
-
-                        String(o.order_id) !==
-                            String(key)
-                );
-
-
-            /* ===============================
-               UPDATE LOCAL STORAGE
-            =============================== */
-
-            let localOrders =
-                JSON.parse(
-                    localStorage.getItem(
-                        "local_orders"
-                    ) || "[]"
-                );
-
-
-            localOrders =
-                localOrders.filter(
-                    o =>
-                        String(o.id) !==
-                            String(key) &&
-
-                        String(o.order_id) !==
-                            String(key)
-                );
-
-
-            localStorage.setItem(
-                "local_orders",
-                JSON.stringify(
-                    localOrders
-                )
-            );
-
-
-            renderOrderSummary(
-                cachedOrders
-            );
-
-            renderOrdersTable();
-
-
-            alert(
-                "Pesanan berhasil dihapus."
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "DELETE ORDER ERROR:",
-                error
-            );
-
-
-            alert(
-                "Gagal menghapus pesanan.\n\n" +
-                (
-                    error.message ||
-                    "Unknown error"
-                )
-            );
-
-        }
-    };
+    console.log(
+        '✅ Event listener kasir terpasang.'
+    );
+}
 
 
 /* =========================================================
    START KASIR
 ========================================================= */
 
-document.addEventListener(
-    'DOMContentLoaded',
-    async () => {
+async function startKasir() {
+    try {
+        console.log(
+            '🚀 START KASIR MODULE'
+        );
 
-        try {
+        setupKasirEvents();
 
-            await initKasirDashboard();
+        await initKasirDashboard();
 
-        } catch (error) {
+        console.log(
+            '✅ KASIR MODULE SELESAI'
+        );
 
-            console.error(
-                "Gagal initialize kasir:",
-                error
-            );
-
-        }
-
+    } catch (error) {
+        console.error(
+            '❌ Gagal initialize kasir:',
+            error
+        );
     }
-);
+}
+
+if (document.readyState === 'loading') {
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        startKasir,
+        { once: true }
+    );
+
+} else {
+
+    startKasir();
+
+}
