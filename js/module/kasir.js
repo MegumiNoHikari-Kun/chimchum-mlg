@@ -557,21 +557,50 @@ function buildStrukHTML(order) {
 }
 
 function cetakStrukKasir(order) {
-    ensureStrukStyle();
+    const printWindow = window.open('', '_blank', 'width=350,height=600');
 
-    let area = document.getElementById('strukPrintArea');
-    if (!area) {
-        area = document.createElement('div');
-        area.id = 'strukPrintArea';
-        document.body.appendChild(area);
+    if (!printWindow) {
+        alert('Popup diblokir browser. Izinkan popup untuk mencetak struk.');
+        return;
     }
 
-    area.innerHTML = buildStrukHTML(order);
-   // Beri jeda 200-500ms agar browser sempat memuat gambar logo
-    setTimeout(() => {
-        window.print();
-    }, 300);
-    // window.print();
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Struk Belanja - ChimChum</title>
+            <style>
+                @page { margin: 0; size: 58mm auto; }
+                body {
+                    font-family: 'Courier New', Courier, monospace;
+                    width: 58mm;
+                    margin: 0;
+                    padding: 2mm;
+                    font-size: 11px;
+                    line-height: 1.4;
+                    color: #000;
+                }
+                .struk-center,
+                .center,
+                .text-center { text-align: center; }
+                .bold { font-weight: bold; }
+                .struk-line { border-top: 1px dashed #000; margin: 4px 0; }
+                .struk-row { display: flex; justify-content: space-between; gap: 6px; }
+                .struk-item-name { flex: 1; word-break: break-word; }
+            </style>
+        </head>
+        <body>
+            ${buildStrukHTML(order)}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 300);
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+
+    printWindow.document.close();
 }
 
 window.addEventListener('afterprint', () => {
