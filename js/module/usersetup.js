@@ -1,7 +1,7 @@
 import {
     supabase,
     authReady
-} from './js/supabase.js';
+} from '../supabase.js';
 
 
 // =========================================================
