@@ -467,7 +467,7 @@ async function initAdmin() {
         // =========================================
 
         loadModule(
-            'pesanan'
+            // 'pesanan'
         );
 
 
