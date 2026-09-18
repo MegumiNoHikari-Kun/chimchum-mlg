@@ -435,13 +435,34 @@ tr:last-child td { border-bottom: none; }
 
 </div><!-- /container -->
 
-<script type="module">
+<!-- <script type="module">
     import { requireAuth } from './js/module/auth-guard.js';
 
     const auth = await requireAuth(['kasir']);
 
     if (auth) {
         await import('./js/module/kasir.js');
+    }
+</script> -->
+
+  <script type="module">
+    import { requireAuth } from './js/module/auth-guard.js';
+
+    try {
+        const auth = await requireAuth(['kasir']);
+
+        console.log('AUTH KASIR:', auth);
+
+        if (auth) {
+            console.log('Memuat kasir.js...');
+            await import('./js/module/kasir.js');
+            console.log('kasir.js berhasil dimuat');
+        } else {
+            console.error('AUTH GAGAL');
+        }
+
+    } catch (error) {
+        console.error('ERROR AUTH / IMPORT KASIR:', error);
     }
 </script>
 
