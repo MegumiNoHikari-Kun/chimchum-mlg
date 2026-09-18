@@ -542,16 +542,7 @@ function buildStrukHTML(order) {
                    <img src="https://meguminohikari-kun.github.io/chimchum-malang/assets/logo-transparan.jpg"
                 style="width:65px; height:65px;">
          </div>
-                   <img
-                       src="${escapeHtml(logoGoFood)}"
-                       alt="GrabFood"
-                       onerror="console.error('Gagal memuat logo GrabFood dari:', this.src)"
-                   >
-                   <img
-                       src="${escapeHtml(logoGoFood)}"
-                       alt="GoFood"
-                       onerror="console.error('Gagal memuat logo GoFood dari:', this.src)"
-                   >
+                   
                </div>
                
             </div>
