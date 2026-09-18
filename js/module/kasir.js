@@ -548,16 +548,15 @@ function buildStrukHTML(order) {
             </div>
 
             <div class="struk-center struk-delivery">
-                <div style="font-size:10px;">Tersedia di</div>
             
                 <div class="delivery-logos">
                    <img
-                       src="${logoShopeeFood}"
+                       src="./../../assets/img/ShopeeFood.png"
                        alt="ShopeeFood"
                        onerror="console.error('Gagal memuat logo ShopeeFood dari:', this.src)"
                    >
                    <img
-                       src="${logoGrabFood}"
+                       src="../../assets/img/ShopeeFood.png"
                        alt="GrabFood"
                        onerror="console.error('Gagal memuat logo GrabFood dari:', this.src)"
                    >
