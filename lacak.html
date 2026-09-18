@@ -292,49 +292,49 @@
             // =====================================================
             let proofDisplay = '';
 
-            if (
-                foundOrder.payment_proof &&
-                foundOrder.payment_proof !== 'Pending / Cash'
-            ) {
-                const proofUrl = String(foundOrder.payment_proof);
-                const isDataImage = proofUrl.startsWith('data:image');
-                const isImageUrl = /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(proofUrl);
-            
-                if (isDataImage || isImageUrl) {
-            
-                    proofDisplay = `
-                        <div class="pt-2">
-                            <p class="text-xs text-slate-500 mb-1 font-semibold">
-                                Bukti Pembayaran:
-                            </p>
-            
-                            <a href="${proofUrl}" target="_blank" rel="noopener noreferrer">
-                                <img
-                                    src="${proofUrl}"
-                                    class="w-32 h-32 object-cover rounded-xl border border-slate-200"
-                                    alt="Bukti Pembayaran"
-                                    onerror="this.closest('div').innerHTML = '<a href=&quot;${proofUrl}&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot; class=&quot;text-xs text-brand-600 underline font-semibold&quot;>Lihat Bukti Pembayaran ↗</a>'"
+                if (
+                    foundOrder.payment_proof &&
+                    foundOrder.payment_proof !== 'Pending / Cash'
+                ) {
+                    const proofUrl = String(foundOrder.payment_proof);
+                    const isDataImage = proofUrl.startsWith('data:image');
+                    const isImageUrl = /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(proofUrl);
+                
+                    if (isDataImage || isImageUrl) {
+                
+                        proofDisplay = `
+                            <div class="pt-2">
+                                <p class="text-xs text-slate-500 mb-1 font-semibold">
+                                    Bukti Pembayaran:
+                                </p>
+                
+                                <a href="${proofUrl}" target="_blank" rel="noopener noreferrer">
+                                    <img
+                                        src="${proofUrl}"
+                                        class="w-32 h-32 object-cover rounded-xl border border-slate-200"
+                                        alt="Bukti Pembayaran"
+                                        onerror="this.closest('div').innerHTML = '<a href=&quot;${proofUrl}&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot; class=&quot;text-xs text-brand-600 underline font-semibold&quot;>Lihat Bukti Pembayaran ↗</a>'"
+                                    >
+                                </a>
+                            </div>
+                        `;
+                
+                    } else {
+                
+                        proofDisplay = `
+                            <div class="pt-2">
+    
+                                    href="${proofUrl}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-xs text-brand-600 underline font-semibold"
                                 >
-                            </a>
-                        </div>
-                    `;
-            
-                } else {
-            
-                    proofDisplay = `
-                        <div class="pt-2">
-                            
-                                href="${proofUrl}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="text-xs text-brand-600 underline font-semibold"
-                            >
-                                Lihat Bukti Pembayaran ↗
-                            </a>
-                        </div>
-                    `;
+                                    Lihat Bukti Pembayaran ↗
+                                </a>
+                            </div>
+                        `;
+                    }
                 }
-            }
     
     
                 // =================================================
