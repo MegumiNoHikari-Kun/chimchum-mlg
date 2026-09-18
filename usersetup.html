@@ -347,10 +347,28 @@
 <script type="module">
     import { requireAuth } from './js/module/auth-guard.js';
 
+    // Memeriksa apakah user yang login memiliki role 'admin'
     const auth = await requireAuth(['admin']);
 
     if (auth) {
+        // Jika admin, load script logika CRUD user
         await import('./js/module/usersetup.js');
+    } else {
+        // Jika bukan admin, tampilkan pesan atau arahkan keluar
+        document.body.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-screen text-center p-6">
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-2xl mb-4">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h2 class="font-bold text-lg text-slate-800 mb-1">Akses Ditolak</h2>
+                <p class="text-xs text-slate-500 max-w-sm mb-4">
+                    Halaman ini khusus untuk Administrator. Akun Anda tidak memiliki hak akses ke menu ini.
+                </p>
+                <a href="index.html" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">
+                    Kembali ke Beranda
+                </a>
+            </div>
+        `;
     }
 </script>
 
