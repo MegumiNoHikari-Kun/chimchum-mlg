@@ -546,7 +546,7 @@ window.submitKasirOrder = async function () {
             items: items.map(i => ({ id: i.id, nama: i.nama, harga: i.harga, qty: i.qty })),
             grand_total: currentKasirGrandTotal,
             payment_method: metodeBayar,
-            status: 'selesai',
+            status: 'new',
             created_at: new Date().toISOString(),
             payment_proof: null
         };
@@ -649,32 +649,28 @@ function renderOrderSummary() {
     if (!container) return;
 
     const total = cachedOrders.length;
-    const baru = cachedOrders.filter(o => String(o.status).toLowerCase() === 'new').length;
-    const delivery = cachedOrders.filter(o => String(o.status).toLowerCase() === 'delivery').length;
-    const selesai = cachedOrders.filter(o => String(o.status).toLowerCase() === 'selesai').length;
     const revenue = cachedOrders
         .filter(o => String(o.status).toLowerCase() === 'selesai')
         .reduce((sum, o) => sum + Number(o.grand_total ?? 0), 0);
 
     const cardStyle = 'background:white;border-radius:16px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.05);border:1px solid #f1f5f9;';
 
+    const statusCardsHTML = STATUS_LIST.map(s => {
+        const count = cachedOrders.filter(o => String(o.status).toLowerCase() === s.value).length;
+        return `
+            <div style="${cardStyle}">
+                <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">${s.label}</div>
+                <div style="font-size:22px;font-weight:700;margin-top:4px;color:${s.color};">${count}</div>
+            </div>
+        `;
+    }).join('');
+
     container.innerHTML = `
         <div style="${cardStyle}">
             <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Total Pesanan</div>
             <div style="font-size:22px;font-weight:700;margin-top:4px;">${total}</div>
         </div>
-        <div style="${cardStyle}">
-            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">New</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:${statusColorOf('new')};">${baru}</div>
-        </div>
-        <div style="${cardStyle}">
-            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Delivery</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:${statusColorOf('delivery')};">${delivery}</div>
-        </div>
-        <div style="${cardStyle}">
-            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Selesai</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:${statusColorOf('selesai')};">${selesai}</div>
-        </div>
+        ${statusCardsHTML}
         <div style="${cardStyle}">
             <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Revenue (Selesai)</div>
             <div style="font-size:22px;font-weight:700;margin-top:4px;color:var(--primary);">${rupiah(revenue)}</div>
