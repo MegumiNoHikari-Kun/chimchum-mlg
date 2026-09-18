@@ -274,8 +274,8 @@ window.proceedToPayment = function() {
     const min = String(now.getMinutes()).padStart(2, '0');
     const ss = String(now.getSeconds()).padStart(2, '0');
     
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderId = `ORD-${yy}${mm}${dd}${hh}${min}${ss}-${randomNum}`;
+    const randomNum = Math.floor(100 + Math.random() * 9000);
+    const orderId = `ORD-${yy}${mm}${dd}${hh}${min}$-${randomNum}`;
     const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     const grandTotal = subtotal;
 
