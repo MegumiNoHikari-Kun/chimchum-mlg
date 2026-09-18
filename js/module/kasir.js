@@ -620,6 +620,27 @@ window.loadOrders = async () => {
 
 
 /* =========================================================
+   ORDER STATUS DEFINITIONS
+========================================================= */
+
+const STATUS_LIST = [
+    { value: 'new', label: 'New', color: '#d97706' },
+    { value: 'proses', label: 'Proses', color: '#2563eb' },
+    { value: 'delivery', label: 'Delivery', color: '#7c3aed' },
+    { value: 'selesai', label: 'Selesai', color: '#059669' },
+    { value: 'batal', label: 'Batal', color: '#dc2626' }
+];
+
+function statusLabel(value) {
+    return STATUS_LIST.find(s => s.value === value.toLowerCase())?.label || value;
+}
+
+function statusColorOf(value) {
+    return STATUS_LIST.find(s => s.value === value.toLowerCase())?.color || '#64748b';
+}
+
+
+/* =========================================================
    RENDER ORDER SUMMARY CARDS (#orderSummary)
 ========================================================= */
 
@@ -628,7 +649,8 @@ function renderOrderSummary() {
     if (!container) return;
 
     const total = cachedOrders.length;
-    const pending = cachedOrders.filter(o => String(o.status).toLowerCase() === 'pending').length;
+    const baru = cachedOrders.filter(o => String(o.status).toLowerCase() === 'new').length;
+    const delivery = cachedOrders.filter(o => String(o.status).toLowerCase() === 'delivery').length;
     const selesai = cachedOrders.filter(o => String(o.status).toLowerCase() === 'selesai').length;
     const revenue = cachedOrders
         .filter(o => String(o.status).toLowerCase() === 'selesai')
@@ -642,18 +664,68 @@ function renderOrderSummary() {
             <div style="font-size:22px;font-weight:700;margin-top:4px;">${total}</div>
         </div>
         <div style="${cardStyle}">
-            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Pending</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:#d97706;">${pending}</div>
+            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">New</div>
+            <div style="font-size:22px;font-weight:700;margin-top:4px;color:${statusColorOf('new')};">${baru}</div>
+        </div>
+        <div style="${cardStyle}">
+            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Delivery</div>
+            <div style="font-size:22px;font-weight:700;margin-top:4px;color:${statusColorOf('delivery')};">${delivery}</div>
         </div>
         <div style="${cardStyle}">
             <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Selesai</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:var(--success);">${selesai}</div>
+            <div style="font-size:22px;font-weight:700;margin-top:4px;color:${statusColorOf('selesai')};">${selesai}</div>
         </div>
         <div style="${cardStyle}">
             <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Revenue (Selesai)</div>
             <div style="font-size:22px;font-weight:700;margin-top:4px;color:var(--primary);">${rupiah(revenue)}</div>
         </div>
     `;
+}
+
+
+/* =========================================================
+   ORDER STATUS FILTER BAR
+   filterKasirOrders() existed before but had no visible UI to
+   trigger it — this injects a row of filter buttons above the
+   orders table (once), wired to that function.
+========================================================= */
+
+function renderOrderFilterBar() {
+    if (document.getElementById('orderFilterBar')) return;
+
+    const summaryEl = document.getElementById('orderSummary');
+    if (!summaryEl) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'orderFilterBar';
+    bar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;';
+
+    const allBtn = { value: 'all', label: 'Semua', color: '#334155' };
+    [allBtn, ...STATUS_LIST].forEach(s => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.statusFilter = s.value;
+        btn.textContent = s.label;
+        btn.style.cssText = `
+            padding:8px 16px;border-radius:9999px;font-size:12px;font-weight:600;
+            border:1px solid ${s.color};background:white;color:${s.color};cursor:pointer;
+        `;
+        btn.onclick = () => {
+            window.filterKasirOrders(s.value);
+            bar.querySelectorAll('button').forEach(b => {
+                const active = b.dataset.statusFilter === s.value;
+                b.style.background = active ? b.dataset.color || s.color : 'white';
+                b.style.color = active ? 'white' : (STATUS_LIST.find(x => x.value === b.dataset.statusFilter)?.color || '#334155');
+            });
+        };
+        if (s.value === 'all') {
+            btn.style.background = '#334155';
+            btn.style.color = 'white';
+        }
+        bar.appendChild(btn);
+    });
+
+    summaryEl.insertAdjacentElement('afterend', bar);
 }
 
 
@@ -665,6 +737,8 @@ function renderOrderSummary() {
 ========================================================= */
 
 function renderKasirOrders() {
+    renderOrderFilterBar();
+
     const tbody = document.getElementById('orderTableBody');
     if (!tbody) {
         console.warn('⚠️ #orderTableBody tidak ditemukan.');
@@ -692,17 +766,15 @@ function renderKasirOrders() {
 
     tbody.innerHTML = orders.map(order => {
         const id = order.id ?? '-';
-        const status = String(order.status ?? 'pending');
+        const status = String(order.status ?? 'new');
         const total = Number(order.grand_total ?? 0);
         const items = Array.isArray(order.items) ? order.items : [];
         const itemsText = items.map(i => `${escapeHtml(i.nama ?? i.name ?? '')} x${i.qty ?? 1}`).join(', ') || '-';
 
-        const statusColor = {
-            pending: '#d97706',
-            proses: '#2563eb',
-            selesai: '#059669',
-            batal: '#dc2626'
-        }[status.toLowerCase()] || '#64748b';
+        const statusColor = statusColorOf(status);
+        const statusOptionsHTML = STATUS_LIST.map(s =>
+            `<option value="${s.value}" ${status.toLowerCase() === s.value ? 'selected' : ''}>${s.label}</option>`
+        ).join('');
 
         return `
             <tr>
@@ -710,15 +782,12 @@ function renderKasirOrders() {
                 <td>${escapeHtml(order.customer_name ?? order.nama ?? '-')}</td>
                 <td>${escapeHtml(order.phone ?? order.wa ?? '-')}</td>
                 <td>${escapeHtml(order.address ?? '-')} / ${escapeHtml(order.payment_method ?? '-')}</td>
-                <td><span style="color:${statusColor};font-weight:600;">${escapeHtml(status)}</span></td>
+                <td><span style="color:${statusColor};font-weight:600;">${escapeHtml(statusLabel(status))}</span></td>
                 <td style="max-width:220px;">${itemsText}</td>
                 <td>${rupiah(total)}</td>
                 <td>
                     <select onchange="updateOrderStatus('${id}', this.value)" style="margin:0;padding:6px 8px;font-size:12px;width:auto;">
-                        <option value="pending" ${status.toLowerCase() === 'pending' ? 'selected' : ''}>Pending</option>
-                        <option value="proses" ${status.toLowerCase() === 'proses' ? 'selected' : ''}>Proses</option>
-                        <option value="selesai" ${status.toLowerCase() === 'selesai' ? 'selected' : ''}>Selesai</option>
-                        <option value="batal" ${status.toLowerCase() === 'batal' ? 'selected' : ''}>Batal</option>
+                        ${statusOptionsHTML}
                     </select>
                     <button type="button" class="btn-delete" style="margin-top:4px;" onclick="deleteKasirOrder('${id}')">Hapus</button>
                 </td>
