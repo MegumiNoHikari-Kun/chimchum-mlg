@@ -551,17 +551,17 @@ function buildStrukHTML(order) {
             
                 <div class="delivery-logos">
                    <img
-                       src="./../../assets/img/ShopeeFood.png"
+                       src="${escapeHtml(logoShopeeFood)}"
                        alt="ShopeeFood"
                        onerror="console.error('Gagal memuat logo ShopeeFood dari:', this.src)"
                    >
                    <img
-                       src="../../assets/img/ShopeeFood.png"
+                       src="${escapeHtml(logoGoFood)}"
                        alt="GrabFood"
                        onerror="console.error('Gagal memuat logo GrabFood dari:', this.src)"
                    >
                    <img
-                       src="${logoGoFood}"
+                       src="${escapeHtml(logoGoFood)}"
                        alt="GoFood"
                        onerror="console.error('Gagal memuat logo GoFood dari:', this.src)"
                    >
