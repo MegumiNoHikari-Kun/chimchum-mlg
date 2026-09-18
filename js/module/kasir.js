@@ -394,6 +394,108 @@ window.setUangPas = function () {
 
 
 /* =========================================================
+   RECEIPT PRINTING
+   window.print() was printing the entire visible page (menu
+   grid, tabs, etc.) instead of an actual receipt. This builds
+   a proper 56mm thermal-style receipt in an isolated container
+   and prints only that.
+========================================================= */
+
+function ensureStrukStyle() {
+    if (document.getElementById('strukPrintStyle')) return;
+
+    const style = document.createElement('style');
+    style.id = 'strukPrintStyle';
+    style.textContent = `
+        #strukPrintArea { display: none; }
+        @media print {
+            body > *:not(#strukPrintArea) { display: none !important; }
+            #strukPrintArea {
+                display: block !important;
+                width: 56mm;
+                margin: 0;
+                padding: 2mm;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 11px;
+                line-height: 1.4;
+                color: #000;
+            }
+            #strukPrintArea * { color: #000 !important; }
+            #strukPrintArea .struk-center { text-align: center; }
+            #strukPrintArea .struk-line { border-top: 1px dashed #000; margin: 4px 0; }
+            #strukPrintArea .struk-row { display: flex; justify-content: space-between; gap: 6px; }
+            #strukPrintArea .struk-item-name { flex: 1; word-break: break-word; }
+            @page { margin: 0; size: 58mm auto; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function buildStrukHTML(order) {
+    const tanggal = new Date(order.created_at).toLocaleString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const itemsRows = order.items.map(i => {
+        const subtotal = Number(i.harga) * Number(i.qty);
+        return `
+            <div class="struk-row">
+                <span class="struk-item-name">${escapeHtml(i.nama)} x${i.qty}</span>
+                <span>${rupiah(subtotal)}</span>
+            </div>
+        `;
+    }).join('');
+
+    const bayarRows = order.payment_method === 'Cash'
+        ? `
+            <div class="struk-row"><span>Tunai Diterima</span><span>${rupiah(order._uangBayar)}</span></div>
+            <div class="struk-row"><span>Kembalian</span><span>${rupiah(order._kembalian)}</span></div>
+        `
+        : '';
+
+    return `
+        <div class="struk-center">
+            <strong>ChimChum Malang</strong><br>
+            Dimsum &amp; Snack<br>
+            Sawojajar, Malang
+        </div>
+        <div class="struk-line"></div>
+        <div>No: ${escapeHtml(order.order_id)}</div>
+        <div>${escapeHtml(tanggal)}</div>
+        <div>Meja/Nama: ${escapeHtml(order.customer_name)}</div>
+        <div class="struk-line"></div>
+        ${itemsRows}
+        <div class="struk-line"></div>
+        <div class="struk-row"><strong><span>TOTAL</span><span>${rupiah(order.grand_total)}</span></strong></div>
+        <div class="struk-row"><span>Bayar</span><span>${escapeHtml(order.payment_method)}</span></div>
+        ${bayarRows}
+        <div class="struk-line"></div>
+        <div class="struk-center">Terima kasih atas kunjungan Anda!</div>
+    `;
+}
+
+function cetakStrukKasir(order) {
+    ensureStrukStyle();
+
+    let area = document.getElementById('strukPrintArea');
+    if (!area) {
+        area = document.createElement('div');
+        area.id = 'strukPrintArea';
+        document.body.appendChild(area);
+    }
+
+    area.innerHTML = buildStrukHTML(order);
+
+    window.print();
+}
+
+window.addEventListener('afterprint', () => {
+    const area = document.getElementById('strukPrintArea');
+    if (area) area.innerHTML = '';
+});
+
+
+/* =========================================================
    SUBMIT ORDER (CREATE)
    Was referenced by kasir.html onclick but never implemented —
    this is the actual missing "write" half of the CRUD.
@@ -459,7 +561,11 @@ window.submitKasirOrder = async function () {
         console.log('✅ Order tersimpan:', data);
 
         if (printStruk) {
-            window.print();
+            cetakStrukKasir({
+                ...orderPayload,
+                _uangBayar: uangBayar,
+                _kembalian: kembalian
+            });
         }
 
         alert('Transaksi berhasil disimpan.');
