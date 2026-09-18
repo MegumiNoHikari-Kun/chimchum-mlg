@@ -618,27 +618,34 @@ window.submitKasirOrder = async function () {
             ? `Dine-In | Uang diterima: ${rupiah(uangBayar)} | Kembalian: ${rupiah(kembalian)}`
             : 'Dine-In';
 
+        const now = new Date();
+
+        const yy = String(now.getFullYear()).slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        
+        const randomNum = Math.floor(10 + Math.random() * 9000);
+        
+        const order_id = `DINEIN-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
+        
         const orderPayload = {
-          const now = new Date()
-          const yy = String(now.getFullYear()).slice(-2);
-          const mm = String(now.getMonth() + 1).padStart(2, '0');
-          const dd = String(now.getDate()).padStart(2, '0');
-          const hh = String(now.getHours()).padStart(2, '0');
-          const min = String(now.getMinutes()).padStart(2, '0');
-          // const ss = String(now.getSeconds()).padStart(2, '0');
-          
-          const randomNum = Math.floor(10 + Math.random() * 9000);
-          const order_id = `DINEIN-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
-            // order_id: `DINEIN-${Date.now()}`
-            customer_name: namaMeja,
-            phone: wa,
-            address: addressNote,
-            items: items.map(i => ({ id: i.id, nama: i.nama, harga: i.harga, qty: i.qty })),
-            grand_total: currentKasirGrandTotal,
-            payment_method: metodeBayar,
-            status: 'new',
-            created_at: new Date().toISOString(),
-            payment_proof: null
+         order_id: order_id,
+         customer_name: namaMeja,
+         phone: wa,
+         address: addressNote,
+         items: items.map(i => ({
+             id: i.id,
+             nama: i.nama,
+             harga: i.harga,
+             qty: i.qty
+         })),
+         grand_total: currentKasirGrandTotal,
+         payment_method: metodeBayar,
+         status: 'new',
+         created_at: new Date().toISOString(),
+         payment_proof: null
         };
 
         const { data, error } = await supabase
