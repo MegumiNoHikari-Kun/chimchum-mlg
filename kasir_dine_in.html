@@ -1,279 +1,409 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Dine-In - ChimChum</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>body { font-family: 'Poppins', sans-serif; }</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard KASIR - ChimChum</title>
+<link rel="icon" type="image/jpeg" href="./assets/logo-transparan.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<!-- Supabase JS Client via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --primary:#ff6b35;
+  --secondary:#fff5f0;
+  --dark:#1e293b;
+  --gray:#64748b;
+  --white:#fff;
+  --success:#10b981;
+}
+
+*{
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+  margin: 0; padding: 0;
+}
+
+body{
+  background: #f8fafc;
+  color: var(--dark);
+}
+
+
+
+/* HEADER */
+header {
+  background: white;
+  padding: 16px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+header .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+header .logo img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+header h2 {
+  font-size: 17px;
+  color: var(--dark);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+header h2 span {
+  color: var(--primary);
+}
+
+header .status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #a7f3d0;
+}
+
+/* TABS */
+.tabs-nav {
+  display: flex;
+  gap: 10px;
+  padding: 16px 28px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--gray);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab-btn:hover {
+  background: #e2e8f0;
+  color: var(--dark);
+}
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255,107,53,0.25);
+}
+.btn-logout {
+  margin-left: auto;
+  background: #fee2e2;
+  color: #dc2626;
+}
+.btn-logout:hover {
+  background: #fca5a5;
+  color: #b91c1c;
+}
+
+/* CONTAINER & SECTIONS */
+.container { padding: 28px; max-width: 1440px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* CARD */
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
+}
+
+/* FORM CONTROL */
+input, textarea, select {
+  width: 100%;
+  padding: 11px 14px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  outline: none;
+  font-size: 13px;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,53,0.1); }
+
+/* BUTTONS */
+button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-delete { background: #fee2e2; color: #dc2626; }
+.btn-delete:hover { background: #fca5a5; }
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
+  margin-top: 10px;
+}
+th, td {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  font-size: 13px;
+}
+th { background: #f8fafc; font-weight: 600; color: var(--gray); text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+
+/* KASIR DINE-IN */
+.kasir-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
+}
+.kasir-menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
+}
+.kasir-item-card {
+  background: white;
+  border-radius: 16px;
+  padding: 14px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  cursor: pointer;
+  border: 2px solid #f1f5f9;
+  transition: all 0.2s;
+}
+.kasir-item-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+.kasir-item-card img {
+  width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;
+}
+.kasir-item-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--dark); }
+.kasir-item-card p { font-size: 13px; color: var(--primary); font-weight: 700; }
+
+.kasir-receipt {
+  background: white; padding: 24px; border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
+  height: fit-content; position: sticky; top: 90px;
+}
+.receipt-items {
+  max-height: 260px; overflow-y: auto; margin: 16px 0;
+  border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; padding: 12px 0;
+}
+.receipt-item {
+  display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 12px;
+}
+.receipt-qty-control button { padding: 4px 8px; font-size: 11px; background: #f1f5f9; color: var(--dark); border-radius: 6px; }
+
+@media(max-width: 1024px){
+  .kasir-grid { grid-template-columns: 1fr; }
+}
+@media(max-width: 768px){
+  .tabs-nav { flex-wrap: wrap; }
+  .btn-logout { margin-left: 0; width: 100%; text-align: center; justify-content: center; }
+  .container { padding: 16px; }
+}
+</style>
 </head>
-<body class="bg-white p-6 overflow-y-auto">
-    <div class="max-w-6xl mx-auto">
-        <div class="flex gap-4 mb-6 flex-wrap bg-slate-50 p-4 rounded-2xl border border-slate-100 items-center">
-            <div class="flex-1 min-w-[240px]">
-                <input type="text" id="searchMenu" placeholder="🔍 Cari nama menu atau produk..." class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500" oninput="filterMenu()">
-            </div>
-            <div class="w-48">
-                <select id="filterKat" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500 cursor-pointer" onchange="filterMenu()">
-                    <option value="Semua">All Kategori</option>
-                </select>
-            </div>
-        </div>
+<body>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2">
-                <div id="menuList" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
-            </div>
 
-            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-5 h-fit sticky top-4 shadow-sm">
-                <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar text-orange-500"></i> Struk Kasir Dine-In</h3>
-                
-                <div id="cartItems" class="max-h-60 overflow-y-auto border-t border-dashed border-slate-200 py-3 space-y-3">
-                    <p class="text-center text-xs text-slate-400 py-6">Belum ada item dipilih.</p>
-                </div>
+<header>
+  <a class="logo" href="index.html">
+    <img src="./assets/logo-transparan.png"
+         alt="ChimChum Malang Logo" onerror="this.style.display='none'">
+    <h2>ChimChum <span>Kasir POS</span></h2>
+  </a>
+  <span class="status-badge">
+    <i class="fa-solid fa-signal"></i> Terautentikasi
+  </span>
+</header>
 
-                <div class="border-t border-slate-200 pt-3 flex justify-between font-bold text-sm text-slate-800 mb-4">
-                    <span>Total Tagihan:</span>
-                    <span id="grandTotal" class="text-orange-600">Rp 0</span>
-                </div>
+<div class="tabs-nav">
+  <button class="tab-btn active" onclick="switchTab('tab-kasir', this)">
+    <i class="fa-solid fa-cash-register"></i> Kasir Dine-In / POS
+  </button>
+  <button class="tab-btn" onclick="switchTab('tab-pesanan', this)">
+    <i class="fa-solid fa-receipt"></i> Riwayat Pesanan Masuk (Online & Dine-In)
+  </button>
+  <button class="tab-btn btn-logout" onclick="logoutKasir()">
+    <i class="fa-solid fa-right-from-bracket"></i> Keluar
+  </button>
+</div>
 
-                <div class="bg-white p-4 rounded-xl border border-orange-100 space-y-3 mb-4">
-                    <h4 class="text-xs font-bold text-slate-700">📋 Data Pelanggan</h4>
-                    <div>
-                        <label class="text-[10px] font-semibold text-slate-500 block mb-1">Nama / Meja *</label>
-                        <input type="text" id="mejaInput" placeholder="Meja 01 / Budi" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs outline-none">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-slate-500 block mb-1">WhatsApp</label>
-                        <input type="text" id="waInput" placeholder="08123..." class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs outline-none">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-slate-500 block mb-1">Pembayaran *</label>
-                        <select id="metodeBayar" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs outline-none cursor-pointer" onchange="toggleCash()">
-                            <option value="Cash">Cash (Tunai)</option>
-                            <option value="QRIS">QRIS</option>
-                            <option value="Transfer">Transfer Bank</option>
-                        </select>
-                    </div>
+<div class="container">
 
-                    <div id="cashBox" class="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                        <label class="text-[10px] font-semibold text-slate-600 block mb-1">Uang Tunai Diterima (Rp)</label>
-                        <input type="number" id="uangBayar" placeholder="100000" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs outline-none mb-2" oninput="calcChange()">
-                        <div class="flex gap-1 mb-2">
-                            <button type="button" onclick="setCash(20000)" class="bg-white border text-[10px] px-2 py-1 rounded font-medium shadow-sm">20rb</button>
-                            <button type="button" onclick="setCash(50000)" class="bg-white border text-[10px] px-2 py-1 rounded font-medium shadow-sm">50rb</button>
-                            <button type="button" onclick="setCash(100000)" class="bg-white border text-[10px] px-2 py-1 rounded font-medium shadow-sm">100rb</button>
-                            <button type="button" onclick="setExact()" class="bg-orange-500 text-white text-[10px] px-2 py-1 rounded font-medium ml-auto">Pas</button>
-                        </div>
-                        <div class="flex justify-between text-xs font-bold text-slate-700">
-                            <span>Kembalian:</span>
-                            <span id="kembalian" class="text-emerald-600">Rp 0</span>
-                        </div>
-                    </div>
-
-                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
-                        <input type="checkbox" id="printCheck" checked class="w-4 h-4 accent-orange-500 rounded cursor-pointer"> 🖨️ Otomatis Print Struk Thermal
-                    </label>
-                </div>
-
-                <button onclick="submitPOS()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-sm">
-                    <i class="fa-solid fa-circle-check"></i> Simpan &amp; Proses Transaksi
-                </button>
-            </div>
-        </div>
+  <!-- ===== TAB KASIR DINE-IN ===== -->
+  <div id="tab-kasir" class="tab-content active">
+    <div style="display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap;
+                background:white; padding:18px; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border:1px solid #f1f5f9;">
+      <div style="flex:1; min-width:250px;">
+        <input type="text" id="searchMenuKasir"
+               placeholder="🔍 Cari nama menu atau produk..."
+               style="margin:0;">
+      </div>
+      <div style="width:220px;">
+        <select id="filterKategoriKasir" style="margin:0; cursor:pointer;">
+          <option value="Semua">All Kategori</option>
+        </select>
+      </div>
     </div>
 
-    <script type="module">
-        import { supabase, authReady } from './js/supabase.js';
-        let products = [];
-        let cart = {};
-        let grandTotal = 0;
+    <div class="kasir-grid">
+      <div>
+        <div class="card" style="padding:16px; margin-bottom:16px; background:#fff7ed; border-color:#ffedd5;">
+          <p style="font-size:13px; font-weight:500; color:#c2410c;">
+            <i class="fa-solid fa-store"></i> Klik menu untuk memasukkan ke dalam struk belanja:
+          </p>
+        </div>
+        <div class="kasir-menu-list" id="kasirMenuList"></div>
+      </div>
 
-        function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
+      <div class="kasir-receipt">
+        <h3 style="font-size:16px; font-weight:700; margin-bottom:4px;"><i class="fa-solid fa-file-invoice-dollar" style="color:var(--primary)"></i> Struk Kasir Dine-In</h3>
+        <p style="font-size:12px; color:var(--gray);">Daftar item belanjaan pelanggan saat ini.</p>
+        
+        <div class="receipt-items" id="kasirCartItems">
+          <p style="text-align:center; color:#aaa; font-size:13px; padding:30px 0;">
+            Belum ada item dipilih.
+          </p>
+        </div>
 
-        window.loadPOSMenu = async function() {
-            await authReady;
-            try {
-                const { data } = await supabase.from('products').select('*');
-                if (data) products = data;
-            } catch (e) { console.warn(e); }
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px; margin:15px 0;">
+          <span>Total Tagihan:</span>
+          <span id="kasirGrandTotal" style="color:var(--primary)">Rp 0</span>
+        </div>
 
-            const cats = new Set();
-            products.forEach(p => { if (p.kategori || p.category) cats.add((p.kategori || p.category).toLowerCase()); });
-            document.getElementById('filterKat').innerHTML = `<option value="Semua">All Kategori</option>` + Array.from(cats).map(c => `<option value="${c}">${c}</option>`).join('');
-            renderGrid(products);
-        };
+        <div style="background:#f8fafc; padding:18px; border-radius:14px;
+                    margin-top:16px; border:1px solid #e2e8f0;">
+          <h4 style="font-size:13px; margin-bottom:12px; color:var(--dark); font-weight:600;">
+            📋 Data Pelanggan / Meja
+          </h4>
 
-        function renderGrid(items) {
-            const list = document.getElementById('menuList');
-            if (items.length === 0) {
-                list.innerHTML = `<p class="col-span-full text-center text-slate-400 py-10 text-xs">Belum ada menu produk.</p>`;
-                return;
-            }
-            list.innerHTML = items.map(p => {
-                const nama = p.nama || p.name || '';
-                const harga = Number(p.harga || p.price || 0);
-                const foto = p.foto || p.image || 'https://placehold.co/150';
-                const stok = Number(p.stok ?? 0);
-                const habis = stok <= 0;
+          <div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:130px;">
+              <label style="font-size:11px; font-weight:600; color:var(--gray); display:block; margin-bottom:4px;">
+                Nama / Meja *
+              </label>
+              <input type="text" id="kasirNomorMeja" placeholder="Meja 01 / Budi" style="margin:0;">
+            </div>
+            <div style="flex:1; min-width:130px;">
+              <label style="font-size:11px; font-weight:600; color:var(--gray); display:block; margin-bottom:4px;">
+                WhatsApp
+              </label>
+              <input type="text" id="kasirWaPelanggan" placeholder="08123..." style="margin:0;">
+            </div>
+          </div>
 
-                return `
-                    <div class="bg-white border border-slate-100 rounded-2xl p-3 text-center shadow-sm cursor-pointer hover:border-orange-500 transition ${habis ? 'opacity-40 pointer-events-none' : ''}" onclick="addToCart('${p.id}', \`${nama}\`, ${harga})">
-                        <img src="${foto}" class="w-full h-24 object-cover rounded-xl mb-2" onerror="this.src='https://placehold.co/150'">
-                        <h4 class="font-semibold text-xs text-slate-800 mb-1 truncate">${nama}</h4>
-                        <p class="font-bold text-xs text-orange-600">${rupiah(harga)}</p>
-                    </div>
-                `;
-            }).join('');
-        }
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--gray); display:block; margin-bottom:4px;">
+              Metode Pembayaran *
+            </label>
+            <select id="kasirMetodeBayar" style="margin:0;" onchange="window.toggleCashSection()">
+              <option value="Cash">Cash (Tunai)</option>
+              <option value="QRIS">QRIS</option>
+              <option value="Transfer">Transfer Bank</option>
+            </select>
+          </div>
 
-        window.filterMenu = function() {
-            const kw = document.getElementById('searchMenu').value.toLowerCase().trim();
-            const cat = document.getElementById('filterKat').value.toLowerCase();
-            const filtered = products.filter(p => {
-                const nama = (p.nama || p.name || '').toLowerCase();
-                const pCat = (p.kategori || p.category || '').toLowerCase();
-                return nama.includes(kw) && (cat === 'semua' || pCat === cat);
-            });
-            renderGrid(filtered);
-        };
+          <div id="sectionKalkulatorCash"
+               style="background:white; padding:12px; border-radius:10px;
+                      border:1px solid #cbd5e1; margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--gray); display:block; margin-bottom:4px;">
+              Uang Tunai Diterima (Rp)
+            </label>
+            <input type="number" id="kasirUangBayar" placeholder="Contoh: 100000"
+                   style="margin-bottom:8px;"
+                   oninput="window.hitungKembalian()">
+            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
+              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f5f9; color:#222;" onclick="window.setUangCepat(20000)">20.000</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f5f9; color:#222;" onclick="window.setUangCepat(50000)">50.000</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:#f1f5f9; color:#222;" onclick="window.setUangCepat(100000)">100.000</button>
+              <button type="button" style="padding:4px 8px; font-size:11px; background:var(--primary); color:white;" onclick="window.setUangPas()">Uang Pas</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600;">
+              <span>Kembalian:</span>
+              <span id="kasirKembalian" style="color:var(--success);">Rp 0</span>
+            </div>
+          </div>
 
-        window.addToCart = function(id, nama, harga) {
-            if (cart[id]) cart[id].qty++;
-            else cart[id] = { id, nama, harga, qty: 1 };
-            updateCartUI();
-        };
+          <div style="border-top:1px dashed #cbd5e1; padding-top:12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600;
+                          font-size:12px; cursor:pointer; color:var(--dark);">
+              <input type="checkbox" id="printStrukCheck"
+                     style="width:16px; height:16px; accent-color:#ff6b35; cursor:pointer; margin:0;" checked>
+              🖨️ Otomatis Print Struk Belanja
+            </label>
+          </div>
+        </div>
 
-        window.changeQty = function(id, delta) {
-            if (!cart[id]) return;
-            cart[id].qty += delta;
-            if (cart[id].qty <= 0) delete cart[id];
-            updateCartUI();
-        };
+        <button class="btn-primary"
+                style="width:100%; padding:14px; background:var(--success); margin-top:16px; font-size:14px;"
+                onclick="submitKasirOrder()">
+          <i class="fa-solid fa-circle-check"></i> Proses &amp; Simpan Transaksi
+        </button>
+      </div>
+    </div>
+  </div>
 
-        function updateCartUI() {
-            const items = Object.values(cart);
-            const container = document.getElementById('cartItems');
-            const totalEl = document.getElementById('grandTotal');
-            if (items.length === 0) {
-                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">Belum ada item dipilih.</p>`;
-                totalEl.innerText = rupiah(0);
-                grandTotal = 0;
-                return;
-            }
-            let total = 0;
-            container.innerHTML = items.map(i => {
-                const sub = i.qty * i.harga;
-                total += sub;
-                return `
-                    <div class="flex justify-between items-center text-xs">
-                        <div>
-                            <div class="font-semibold text-slate-800">${i.nama}</div>
-                            <div class="text-[10px] text-slate-400">${rupiah(i.harga)}</div>
-                        </div>
-                        <div class="flex items-center gap-1.5 bg-white border px-2 py-1 rounded-lg">
-                            <button onclick="changeQty('${i.id}', -1)" class="font-bold px-1">-</button>
-                            <span class="font-bold w-4 text-center">${i.qty}</span>
-                            <button onclick="changeQty('${i.id}', 1)" class="font-bold px-1">+</button>
-                        </div>
-                        <div class="font-bold text-slate-700 text-right">${rupiah(sub)}</div>
-                    </div>
-                `;
-            }).join('');
-            totalEl.innerText = rupiah(total);
-            grandTotal = total;
-            calcChange();
-        }
+  
 
-        window.toggleCash = function() {
-            const m = document.getElementById('metodeBayar').value;
-            document.getElementById('cashBox').style.display = m === 'Cash' ? 'block' : 'none';
-        };
+</div><!-- /container -->
 
-        window.calcChange = function() {
-            if (document.getElementById('metodeBayar').value !== 'Cash') return;
-            const bayar = Number(document.getElementById('uangBayar').value) || 0;
-            const kembali = bayar - grandTotal;
-            const el = document.getElementById('kembalian');
-            if (bayar === 0) el.innerText = rupiah(0);
-            else if (kembali < 0) el.innerText = 'Uang Kurang!';
-            else el.innerText = rupiah(kembali);
-        };
+<!-- <script type="module">
+    import { requireAuth } from './js/module/auth-guard.js';
 
-        window.setCash = function(n) {
-            document.getElementById('uangBayar').value = n;
-            calcChange();
-        };
+    const auth = await requireAuth(['kasir']);
 
-        window.setExact = function() {
-            document.getElementById('uangBayar').value = grandTotal;
-            calcChange();
-        };
+    if (auth) {
+        await import('./js/module/kasir.js');
+    }
+</script> -->
 
-        window.submitPOS = async function() {
-            const items = Object.values(cart);
-            if (items.length === 0) { alert('Struk kasir kosong!'); return; }
-            const meja = document.getElementById('mejaInput').value.trim();
-            if (!meja) { alert('Harap isi Nama / Meja pelanggan!'); return; }
-            const wa = document.getElementById('waInput').value.trim();
-            const metode = document.getElementById('metodeBayar').value;
-            const autoPrint = document.getElementById('printCheck').checked;
+  <script type="module" src="./js/module/kasir.js"></script>
 
-            let bayar = grandTotal, kembali = 0;
-            if (metode === 'Cash') {
-                bayar = Number(document.getElementById('uangBayar').value) || 0;
-                if (bayar < grandTotal) { alert('Uang tunai kurang!'); return; }
-                kembali = bayar - grandTotal;
-            }
-
-            const orderId = 'KSR-' + Math.floor(1000 + Math.random() * 9000);
-            const orderData = {
-                order_id: orderId,
-                customer_name: `Dine-In (${meja})`,
-                phone: wa || '-',
-                address: 'Makan di Tempat',
-                items: items.map(i => ({ nama: i.nama, qty: i.qty, harga: i.harga })),
-                grand_total: grandTotal,
-                payment_method: metode,
-                status: 'new',
-                created_at: new Date().toISOString()
-            };
-
-            await authReady;
-            try { await supabase.from('orders').insert([orderData]); } catch(e) { console.warn(e); }
-            let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-            localOrders.push(orderData);
-            localStorage.setItem('local_orders', JSON.stringify(localOrders));
-
-            alert('Transaksi Dine-In berhasil disimpan!');
-            if (autoPrint) printThermal(meja, items, grandTotal, metode, bayar, kembali);
-
-            cart = {};
-            document.getElementById('mejaInput').value = '';
-            document.getElementById('waInput').value = '';
-            document.getElementById('uangBayar').value = '';
-            updateCartUI();
-        };
-
-        function printThermal(meja, items, total, metode, bayar, kembali) {
-            const w = window.open('', '_blank', 'width=350,height=600');
-            const tgl = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-            const list = items.map(i => `<div>${i.nama} x${i.qty} - ${rupiah(i.qty * i.harga)}</div>`).join('');
-            w.document.write(`<html><head><style>body{font-family:monospace;width:48mm;font-size:11px;padding:2mm;}</style></head><body>
-                <div style="text-align:center;font-weight:bold;font-size:13px;">CHIMCHUM MALANG</div>
-                <div style="text-align:center;">Dine-In Struk</div><hr>
-                Waktu: ${tgl}<br>Meja: ${meja}<hr>${list}<hr>
-                <b>TOTAL: ${rupiah(total)}</b><br>Bayar: ${rupiah(bayar)}<br>Kembali: ${rupiah(kembali)}<hr>
-                <div style="text-align:center;">Terima Kasih!</div>
-                <script>window.onload=()=>window.print();<\/script>
-            </body></html>`);
-            w.document.close();
-        }
-
-        loadPOSMenu();
-    </script>
 </body>
 </html>
