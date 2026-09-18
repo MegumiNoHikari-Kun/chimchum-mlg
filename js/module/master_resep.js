@@ -93,12 +93,12 @@ async function loadDataFromSupabase() {
 }
 
 function loadMockData() {
-    ingredientsData = [
-        { id: 'ing1', name: 'Ayam Fillet Dada', stock: 5000, unit: 'gram' },
-        { id: 'ing2', name: 'Udang Kupas', stock: 2000, unit: 'gram' },
-        { id: 'ing3', name: 'Tepung Tapioka', stock: 1500, unit: 'gram' },
-        { id: 'ing4', name: 'Kulit Dimsum', stock: 300, unit: 'pcs' },
-        { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml' }
+   ingredientsData = [
+        { id: 'ing1', name: 'Ayam Fillet Dada', stock: 5000, unit: 'gram', price: 35000 },
+        { id: 'ing2', name: 'Udang Kupas', stock: 2000, unit: 'gram', price: 80000 },
+        { id: 'ing3', name: 'Tepung Tapioka', stock: 1500, unit: 'gram', price: 12000 },
+        { id: 'ing4', name: 'Kulit Dimsum', stock: 300, unit: 'pcs', price: 500 },
+        { id: 'ing5', name: 'Minyak Wijen', stock: 500, unit: 'ml', price: 45000 }
     ];
     productsData = [
         { id: 'prod_1', name: 'Lumpia Ayam Goreng', qty: 8, unit: 'pcs', stok: 10, resep_id: 'rec_1', foto: 'https://placehold.co/40' },
@@ -420,7 +420,8 @@ window.handleIngredientSubmit = async function(e) {
     const name = document.getElementById('ing-name').value;
     const stock = parseFloat(document.getElementById('ing-stock').value);
     const unit = document.getElementById('ing-unit').value;
-    const payload = { id, name, stock, unit };
+    const price = parseFloat(document.getElementById('ing-price').value) || 0;
+    const payload = { id, name, stock, unit, price };
 
     if (supabaseClient && !isDemoMode) {
         const { error } = await supabaseClient.from('ingredients').upsert([payload]);
@@ -446,7 +447,7 @@ window.renderIngredientsTable = function() {
 
     const filtered = ingredientsData.filter(i => i.name.toLowerCase().includes(query));
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada data bahan baku.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada data bahan baku.</td></tr>`;
         return;
     }
 
@@ -455,6 +456,7 @@ window.renderIngredientsTable = function() {
             <td class="p-3 font-medium text-slate-800">${escapeHtml(ing.name)}</td>
             <td class="p-3 text-slate-600 font-semibold">${ing.stock}</td>
             <td class="p-3 text-slate-500">${ing.unit}</td>
+            <td class="p-3 text-slate-600">Rp ${(ing.price || 0).toLocaleString('id-ID')}</td>
             <td class="p-3 text-right space-x-2">
                 <button onclick="editIngredient('${ing.id}')" class="text-orange-600 hover:text-orange-800 font-semibold px-2.5 py-1 bg-orange-50 rounded-lg">Edit</button>
                 <button onclick="deleteIngredient('${ing.id}')" class="text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1 bg-rose-50 rounded-lg">Hapus</button>
@@ -718,6 +720,7 @@ window.editIngredient = function(id) {
     document.getElementById('ing-name').value = ing.name;
     document.getElementById('ing-stock').value = ing.stock;
     document.getElementById('ing-unit').value = ing.unit;
+    document.getElementById('ing-price').value = ing.price || 0;
     document.getElementById('ingredient-form-title').innerText = "Edit Bahan Baku";
     switchTab('ingredients');
 }
