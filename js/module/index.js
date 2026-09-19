@@ -652,6 +652,15 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
     }, 1200);
 };
 
+
+document.getElementById('closeSuccessModal')?.addEventListener('click', async () => {
+    // Tutup modal
+    document.getElementById('successModal')?.classList.add('hidden');
+
+    // Refresh stok produk dari Supabase
+    await loadProductsFromSupabase();
+});
+
 window.fetchOrderStatus = async function() {
     const inputEl = document.getElementById('tracker-order-id');
     const resultDiv = document.getElementById('tracker-result');
