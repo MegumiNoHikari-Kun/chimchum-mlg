@@ -111,8 +111,8 @@ function renderSummary(orders) {
                     <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
                     <div class="text-lg font-bold mt-1">${c.count}</div>
                 </div>
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center ${card.iconClass}">
-                    <i class="fa-solid ${card.icon}"></i>
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center ${c.iconClass}">
+                    <i class="fa-solid ${c.icon}"></i>
                 </div>
             `;
         }).join('');
