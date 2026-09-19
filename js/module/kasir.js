@@ -845,52 +845,23 @@ function renderOrderSummary() {
     updateOrderSummaryActiveState();
 }
 
+function updateOrderSummaryActiveState() {
+    document
+        .querySelectorAll('.order-summary-card')
+        .forEach(card => {
+            const isActive =
+                String(card.dataset.statusFilter).toLowerCase() ===
+                String(currentFilterStatus).toLowerCase();
 
-/* =========================================================
-   ORDER STATUS FILTER BAR
-   filterKasirOrders() existed before but had no visible UI to
-   trigger it — this injects a row of filter buttons above the
-   orders table (once), wired to that function.
-========================================================= */
+            card.style.borderColor = isActive
+                ? '#334155'
+                : '#f1f5f9';
 
-function renderOrderFilterBar() {
-    if (document.getElementById('orderFilterBar')) return;
-
-    const summaryEl = document.getElementById('orderSummary');
-    if (!summaryEl) return;
-
-    const bar = document.createElement('div');
-    bar.id = 'orderFilterBar';
-    bar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;';
-
-    const allBtn = { value: 'all', label: 'Semua', color: '#334155' };
-    [allBtn, ...STATUS_LIST].forEach(s => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.dataset.statusFilter = s.value;
-        btn.textContent = s.label;
-        btn.style.cssText = `
-            padding:8px 16px;border-radius:9999px;font-size:12px;font-weight:600;
-            border:1px solid ${s.color};background:white;color:${s.color};cursor:pointer;
-        `;
-        btn.onclick = () => {
-            window.filterKasirOrders(s.value);
-            bar.querySelectorAll('button').forEach(b => {
-                const active = b.dataset.statusFilter === s.value;
-                b.style.background = active ? b.dataset.color || s.color : 'white';
-                b.style.color = active ? 'white' : (STATUS_LIST.find(x => x.value === b.dataset.statusFilter)?.color || '#334155');
-            });
-        };
-        if (s.value === 'all') {
-            btn.style.background = '#334155';
-            btn.style.color = 'white';
-        }
-        bar.appendChild(btn);
-    });
-
-    summaryEl.insertAdjacentElement('afterend', bar);
+            card.style.boxShadow = isActive
+                ? '0 0 0 2px rgba(51,65,85,.12)'
+                : '0 1px 3px rgba(0,0,0,0.05)';
+        });
 }
-
 
 /* =========================================================
    RENDER ORDERS TABLE (#orderTableBody)
@@ -1187,8 +1158,10 @@ window.deleteKasirOrder = async function (id) {
 };
 
 window.filterKasirOrders = function (status) {
-    currentFilterStatus = String(status || 'all');
+    currentFilterStatus = String(status || 'all').toLowerCase();
+
     renderKasirOrders();
+    updateOrderSummaryActiveState();
 };
 
 
