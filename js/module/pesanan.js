@@ -110,10 +110,11 @@ function renderSummary(orders) {
                 <div onclick="filterStatus('${c.key}')" class="rounded-xl p-3 cursor-pointer transition ${activeStyle}">
                     <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
                     <div class="text-lg font-bold mt-1">${c.count}</div>
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center ${c.iconClass}">
+                        <i class="fa-solid ${c.icon}"></i>
+                    </div>
                 </div>
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center ${c.iconClass}">
-                    <i class="fa-solid ${c.icon}"></i>
-                </div>
+                
             `;
         }).join('');
     }
