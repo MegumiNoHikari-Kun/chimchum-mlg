@@ -195,17 +195,14 @@
     <!-- Toast -->
     <div id="toast" class="toast"></div>
 
-   <script type="module">
+    <script type="module">
         import { requireAuth } from './js/module/auth-guard.js';
-    
         const auth = await requireAuth(['admin']);
-    
         if (auth) {
             await import('./js/module/purchase_order.js');
         }
     </script>
-    
-
-</script>
+</body>
+</html>
 </body>
 </html>
