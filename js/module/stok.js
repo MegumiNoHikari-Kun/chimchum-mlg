@@ -1,281 +1,414 @@
 import { supabase, authReady } from '../supabase.js';
 
 // =========================================================
-// STATE & VARIABLES
+// KONFIGURASI
+// =========================================================
+const ITEMS_PER_PAGE = 5;
+const LOW_STOCK_MAX = 10;        // 1..10 = menipis
+const SEARCH_DEBOUNCE_MS = 250;
+
+// true  -> kartu ringkasan mengikuti pencarian + kategori (bukan status)
+// false -> kartu ringkasan selalu menghitung seluruh produk
+const SUMMARY_FOLLOWS_FILTER = true;
+
+// =========================================================
+// STATE (satu sumber kebenaran)
 // =========================================================
 let products = [];
 let filteredProducts = [];
-let filterStatus = 'all'; // Status: 'all', 'aman', 'menipis', 'habis'
-let selectedKategori = 'all';
+const state = {
+    search: '',
+    kategori: 'all',
+    status: 'all', // all | aman | menipis | habis
+    page: 1,
+};
 
-// State Pagination
-let currentPage = 1;
-const itemsPerPage = 5;
+let toastTimer = null;
+let searchTimer = null;
 
 // =========================================================
-// HELPER: NOTIFICATION
+// HELPER
 // =========================================================
-window.showStatus = function(message, type = 'error') {
-    let box = document.getElementById('statusBox');
-    if (!box) {
-        box = document.createElement('div');
-        box.id = 'statusBox';
-        document.body.appendChild(box);
-    }
+const $ = (id) => document.getElementById(id);
 
-    box.className = 'fixed top-6 right-6 z-50 rounded-xl px-4 py-3 text-sm border flex items-center justify-between shadow-xl transition-all font-medium bg-white';
-    
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]
+));
+
+const getName  = (p) => String(p.nama || p.name || '');
+const getCat   = (p) => String(p.kategori || p.category || '').trim();
+const getStock = (p) => Math.max(0, Number(p.stok) || 0);
+const getStatus = (p) => {
+    const s = getStock(p);
+    if (s <= 0) return 'habis';
+    if (s <= LOW_STOCK_MAX) return 'menipis';
+    return 'aman';
+};
+
+// =========================================================
+// NOTIFIKASI (memakai #statusBox & #statusMessage di HTML)
+// =========================================================
+window.showStatus = function (message, type = 'error') {
+    const box = $('statusBox');
+    const msg = $('statusMessage');
+    if (!box || !msg) return;
+
+    box.classList.remove(
+        'hidden', 'bg-red-50', 'border-red-200', 'text-red-700',
+        'bg-emerald-50', 'border-emerald-200', 'text-emerald-700'
+    );
+
     if (type === 'error') {
         box.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
-        box.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-2"></i> ${message}`;
+        msg.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-500 text-sm"></i><span class="font-medium">${esc(message)}</span>`;
     } else {
         box.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
-        box.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+        msg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i><span class="font-medium">${esc(message)}</span>`;
     }
 
-    setTimeout(() => { box.remove(); }, 3500);
+    // restart animasi
+    box.classList.remove('toast-enter');
+    void box.offsetWidth;
+    box.classList.add('toast-enter');
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(window.hideStatus, 3500);
+};
+
+window.hideStatus = function () {
+    const box = $('statusBox');
+    if (box) box.classList.add('hidden');
+};
+
+function setConnection(ok) {
+    const el = $('connectionStatus');
+    if (!el) return;
+    el.className = ok
+        ? 'text-[10px] text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200'
+        : 'text-[10px] text-rose-600 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200';
+    el.innerHTML = ok
+        ? '<i class="fa-solid fa-circle mr-1 text-[6px] align-middle"></i> Terhubung'
+        : '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Gagal terhubung';
 }
 
 // =========================================================
 // LOAD DATA
 // =========================================================
-window.loadStok = async function() {
+window.loadStok = async function () {
     try {
         await authReady;
         const { data, error } = await supabase.from('products').select('*');
         if (error) throw error;
-        if (data) products = data;
-    } catch(e) { 
-        console.warn('Gagal memuat dari Supabase:', e); 
+        products = data || [];
+        setConnection(true);
+    } catch (e) {
+        console.warn('Gagal memuat dari Supabase:', e);
+        setConnection(false);
         window.showStatus('Gagal memuat data dari server.', 'error');
     }
-    
-    extractCategories();
-    window.filterData();
+
+    renderCategoryOptions();
+    refresh({ resetPage: true });
 };
 
 // =========================================================
-// KATEGORI & FILTERING
+// PIPELINE FILTER  (search + kategori -> status -> pagination)
 // =========================================================
-function extractCategories() {
-    const select = document.getElementById('kategoriFilter');
-    if (!select) return;
+const matchSearch   = (p) => !state.search || getName(p).toLowerCase().includes(state.search);
+const matchCategory = (p) => state.kategori === 'all' || getCat(p) === state.kategori;
+const matchStatus   = (p) => state.status === 'all' || getStatus(p) === state.status;
 
-    const categories = new Set();
-    products.forEach(p => {
-        const cat = String(p.kategori || p.category || '').trim();
-        if (cat) categories.add(cat);
-    });
+// Produk setelah search + kategori (dasar untuk kartu ringkasan)
+const getBaseProducts = () => products.filter((p) => matchSearch(p) && matchCategory(p));
 
-    const currentVal = select.value;
-    select.innerHTML = '<option value="all">Semua Kategori</option>';
-    
-    Array.from(categories).sort().forEach(cat => {
-        select.innerHTML += `<option value="${cat}">${cat}</option>`;
-    });
-    
-    if (categories.has(currentVal)) select.value = currentVal;
+/**
+ * Satu-satunya pintu untuk memperbarui tampilan.
+ * resetPage: true  -> dipakai saat search/kategori/status berubah
+ * resetPage: false -> dipakai saat update stok (halaman tetap)
+ */
+function refresh({ resetPage = false } = {}) {
+    filteredProducts = getBaseProducts().filter(matchStatus);
+
+    if (resetPage) state.page = 1;
+
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
+    state.page = Math.min(Math.max(1, state.page), totalPages);
+
+    renderSummary();
+    renderTable();
+    renderPagination(totalPages);
 }
 
 // =========================================================
-// RENDER SUMMARY (Disesuaikan dengan Filter Search & Kategori)
+// KATEGORI
+// =========================================================
+function renderCategoryOptions() {
+    const select = $('kategoriFilter');
+    if (!select) return;
+
+    const cats = [...new Set(products.map(getCat).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id'));
+
+    select.innerHTML = '';
+    select.add(new Option('Semua Kategori', 'all'));
+    cats.forEach((c) => select.add(new Option(c, c)));
+
+    // kategori terpilih sudah tidak ada -> kembali ke "all"
+    if (state.kategori !== 'all' && !cats.includes(state.kategori)) state.kategori = 'all';
+    select.value = state.kategori;
+}
+
+// =========================================================
+// RENDER: SUMMARY
 // =========================================================
 function renderSummary() {
-    const summaryContainer = document.getElementById('stokSummary');
-    if(!summaryContainer) return;
+    const box = $('stokSummary');
+    if (!box) return;
 
-    const searchInput = document.getElementById('stokSearch');
-    const kw = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const catSelect = document.getElementById('kategoriFilter');
-    const currentCat = catSelect ? catSelect.value : 'all';
+    const source = SUMMARY_FOLLOWS_FILTER ? getBaseProducts() : products;
+    const count = { aman: 0, menipis: 0, habis: 0 };
+    source.forEach((p) => { count[getStatus(p)]++; });
+    const total = source.length;
 
-    // Base products hanya terpengaruh search dan kategori, mengabaikan status tab
-    const baseProducts = products.filter(p => {
-        const nameMatch = String(p.nama || p.name || '').toLowerCase().includes(kw);
-        const cat = String(p.kategori || p.category || '').trim();
-        const catMatch = currentCat === 'all' || cat === currentCat;
-        return nameMatch && catMatch;
-    });
+    const cls = (target) => state.status === target
+        ? 'ring-2 ring-orange-400 bg-white shadow-md'
+        : 'bg-white hover:bg-slate-50 opacity-80 hover:opacity-100';
 
-    let total = baseProducts.length, aman = 0, menipis = 0, habis = 0;
-    
-    baseProducts.forEach(p => {
-        const st = Number(p.stok) || 0;
-        if (st <= 0) habis++;
-        else if (st <= 10) menipis++;
-        else aman++;
-    });
-
-    const activeClass = (target) => filterStatus === target 
-        ? 'ring-2 ring-orange-500 bg-orange-50/30 shadow-md' 
-        : 'border-slate-200 bg-white hover:bg-slate-50 opacity-80 hover:opacity-100';
-
-    summaryContainer.innerHTML = `
-        <div onclick="window.setStatusFilter('all')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('all')}">
-            <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Produk</div>
-            <div class="text-2xl font-bold text-slate-800 mt-1">${total}</div>
+    box.innerHTML = `
+        <div onclick="setFilter('all')" class="border border-slate-200 rounded-2xl p-4 cursor-pointer transition ${cls('all')}">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Produk</div>
+                    <div class="text-2xl font-bold text-slate-800 mt-1">${total}</div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><i class="fa-solid fa-boxes-stacked text-xs"></i></div>
+            </div>
         </div>
-        <div onclick="window.setStatusFilter('aman')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('aman')}">
-            <div class="text-[11px] font-semibold text-emerald-600/80 uppercase tracking-wide">Stok Aman</div>
-            <div class="text-2xl font-bold text-emerald-600 mt-1">${aman}</div>
+        <div onclick="setFilter('aman')" class="border border-emerald-200 rounded-2xl p-4 cursor-pointer transition ${cls('aman')}">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-[11px] font-semibold text-emerald-600/80 uppercase tracking-wide">Stok Aman</div>
+                    <div class="text-2xl font-bold text-emerald-600 mt-1">${count.aman}</div>
+                    <div class="text-[9px] text-emerald-600/60 font-medium mt-1">Lebih dari ${LOW_STOCK_MAX} porsi</div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500"><i class="fa-solid fa-check text-xs"></i></div>
+            </div>
         </div>
-        <div onclick="window.setStatusFilter('menipis')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('menipis')}">
-            <div class="text-[11px] font-semibold text-amber-600/80 uppercase tracking-wide">Menipis</div>
-            <div class="text-2xl font-bold text-amber-600 mt-1">${menipis}</div>
+        <div onclick="setFilter('menipis')" class="border border-amber-200 rounded-2xl p-4 cursor-pointer transition ${cls('menipis')}">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-[11px] font-semibold text-amber-600/80 uppercase tracking-wide">Menipis</div>
+                    <div class="text-2xl font-bold text-amber-600 mt-1">${count.menipis}</div>
+                    <div class="text-[9px] text-amber-600/60 font-medium mt-1">1 - ${LOW_STOCK_MAX} porsi</div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-500"><i class="fa-solid fa-triangle-exclamation text-xs"></i></div>
+            </div>
         </div>
-        <div onclick="window.setStatusFilter('habis')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('habis')}">
-            <div class="text-[11px] font-semibold text-rose-600/80 uppercase tracking-wide">Stok Habis</div>
-            <div class="text-2xl font-bold text-rose-600 mt-1">${habis}</div>
+        <div onclick="setFilter('habis')" class="border border-rose-200 rounded-2xl p-4 cursor-pointer transition ${cls('habis')}">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-[11px] font-semibold text-rose-600/80 uppercase tracking-wide">Stok Habis</div>
+                    <div class="text-2xl font-bold text-rose-600 mt-1">${count.habis}</div>
+                    <div class="text-[9px] text-rose-600/60 font-medium mt-1">0 porsi (Kosong)</div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-500"><i class="fa-solid fa-xmark text-xs"></i></div>
+            </div>
         </div>
     `;
 }
 
 // =========================================================
-// LOGIKA UTAMA FILTER (Pencarian + Kategori + Status)
+// RENDER: TABEL
 // =========================================================
-window.filterData = function() {
-    const searchInput = document.getElementById('stokSearch');
-    const kw = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    
-    const catSelect = document.getElementById('kategoriFilter');
-    selectedKategori = catSelect ? catSelect.value : 'all';
-
-    filteredProducts = products.filter(p => {
-        const nameMatch = String(p.nama || p.name || '').toLowerCase().includes(kw);
-        const cat = String(p.kategori || p.category || '').trim();
-        const catMatch = selectedKategori === 'all' || cat === selectedKategori;
-        
-        const st = Number(p.stok) || 0;
-        let statusMatch = true;
-        if (filterStatus === 'habis') statusMatch = st <= 0;
-        else if (filterStatus === 'menipis') statusMatch = st > 0 && st <= 10;
-        else if (filterStatus === 'aman') statusMatch = st > 10;
-
-        return nameMatch && catMatch && statusMatch;
-    });
-
-    currentPage = 1; // Reset ke halaman 1 setiap filter/pencarian berubah
-    renderSummary();
-    window.renderTable();
+const BADGES = {
+    aman:    '<span class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]"><i class="fa-solid fa-check mr-1"></i>Aman</span>',
+    menipis: '<span class="bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Menipis</span>',
+    habis:   '<span class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]"><i class="fa-solid fa-xmark mr-1"></i>Habis</span>',
 };
 
-window.setStatusFilter = function(status) {
-    filterStatus = status;
-    window.filterData();
-};
+function renderTable() {
+    const tbody = $('stokTableBody');
+    if (!tbody) return;
 
-// =========================================================
-// PAGINATION & TABLE RENDERING
-// =========================================================
-window.changePage = function(direction) {
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
-    if (direction === 'prev' && currentPage > 1) currentPage--;
-    else if (direction === 'next' && currentPage < totalPages) currentPage++;
-    window.renderTable();
-};
-
-window.goToPage = function(page) {
-    currentPage = page;
-    window.renderTable();
-};
-
-window.renderTable = function() {
-    const tbody = document.getElementById('stokTableBody');
-    if(!tbody) return;
-
-    const totalItems = filteredProducts.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
-    if (currentPage > totalPages) currentPage = totalPages;
-
-    const tableInfo = document.getElementById('tableInfo');
-    if (tableInfo) tableInfo.textContent = `${totalItems} produk ditemukan`;
-
-    if (totalItems === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-400">Tidak ada produk yang cocok dengan filter.</td></tr>`;
-    } else {
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const paginatedData = filteredProducts.slice(startIdx, startIdx + itemsPerPage);
-
-        tbody.innerHTML = paginatedData.map(p => {
-            const st = Number(p.stok) || 0;
-            let badge = `<span class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]">Aman</span>`;
-            if (st <= 0) badge = `<span class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]">Habis</span>`;
-            else if (st <= 10) badge = `<span class="bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]">Menipis</span>`;
-
-            return `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3"><img src="${p.foto || p.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-xl border border-slate-100 shadow-sm"></td>
-                    <td class="p-3 font-semibold text-slate-800">${p.nama || p.name}</td>
-                    <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-medium">${p.kategori || p.category || '-'}</span></td>
-                    <td class="p-3 font-bold text-center text-slate-700">${st}</td>
-                    <td class="p-3 text-center">${badge}</td>
-                    <td class="p-3">
-                        <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="modStock('${p.id}', ${st - 1})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-red-500 transition font-bold shadow-sm">-</button>
-                            <input type="number" value="${st}" id="stok-${p.id}" class="w-14 text-center text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-1.5 outline-none focus:border-orange-400 focus:bg-white transition" onchange="inputStock('${p.id}')">
-                            <button onclick="modStock('${p.id}', ${st + 1})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-500 transition font-bold shadow-sm">+</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+    if (filteredProducts.length === 0) {
+        const hasFilter = state.search || state.kategori !== 'all' || state.status !== 'all';
+        tbody.innerHTML = `
+            <tr><td colspan="6" class="text-center py-16">
+                <div class="flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3"><i class="fa-solid fa-box-open text-slate-300 text-xl"></i></div>
+                    <p class="text-xs font-semibold text-slate-500">Tidak ada produk yang cocok.</p>
+                    ${hasFilter ? '<button onclick="resetFilters()" class="mt-3 text-xs font-semibold text-orange-500 hover:text-orange-600 transition">Reset filter</button>' : ''}
+                </div>
+            </td></tr>`;
+        return;
     }
 
-    // Render Pagination Controls
-    const container = document.getElementById('paginationContainer') || document.querySelector('.border-t.border-slate-100.mt-5');
-    if (container && totalItems > 0) {
-        const startNum = ((currentPage - 1) * itemsPerPage) + 1;
-        const endNum = Math.min(currentPage * itemsPerPage, totalItems);
-        
-        let pagesHTML = '';
-        let startP = Math.max(1, currentPage - 2);
-        let endP = Math.min(totalPages, startP + 4);
-        if (endP - startP < 4 && startP > 1) startP = Math.max(1, endP - 4);
+    const start = (state.page - 1) * ITEMS_PER_PAGE;
+    const rows = filteredProducts.slice(start, start + ITEMS_PER_PAGE);
 
+    tbody.innerHTML = rows.map((p) => {
+        const st = getStock(p);
+        const id = esc(p.id);
+        return `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-3">
+                    <img src="${esc(p.foto || p.image || 'https://placehold.co/80')}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-100" onerror="this.onerror=null;this.src='https://placehold.co/80?text=Error'">
+                </td>
+                <td class="p-3 font-semibold text-slate-800">${esc(getName(p))}</td>
+                <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-medium">${esc(getCat(p) || '-')}</span></td>
+                <td class="p-3 text-center font-bold text-slate-700 text-base">${st}</td>
+                <td class="p-3 text-center">${BADGES[getStatus(p)]}</td>
+                <td class="p-3">
+                    <div class="flex items-center justify-center gap-1.5">
+                        <button onclick="stepStock('${id}', -1)" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-red-500 transition font-bold shadow-sm" title="Kurangi 1">-</button>
+                        <input type="number" min="0" value="${st}" id="stok-${id}" class="w-14 text-center text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-1.5 outline-none focus:border-orange-400 focus:bg-white transition" onchange="inputStock('${id}')">
+                        <button onclick="stepStock('${id}', 1)" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-500 transition font-bold shadow-sm" title="Tambah 1">+</button>
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+// =========================================================
+// RENDER: PAGINATION (memakai elemen yang sudah ada di HTML)
+// =========================================================
+function renderPagination(totalPages) {
+    const total = filteredProducts.length;
+    const startNum = total === 0 ? 0 : (state.page - 1) * ITEMS_PER_PAGE + 1;
+    const endNum = Math.min(state.page * ITEMS_PER_PAGE, total);
+
+    const info = $('tableInfo');
+    if (info) info.textContent = `${total} produk ditemukan`;
+
+    const text = $('paginationInfoText');
+    if (text) {
+        text.innerHTML = `Menampilkan <span class="font-medium text-slate-700">${startNum}</span> - <span class="font-medium text-slate-700">${endNum}</span> dari <span class="font-medium text-slate-700">${total}</span> produk`;
+    }
+
+    const mobile = $('pageInfoMobile');
+    if (mobile) mobile.textContent = `Page ${state.page} of ${totalPages}`;
+
+    const prev = $('btnPrevPage');
+    const next = $('btnNextPage');
+    if (prev) prev.disabled = state.page <= 1;
+    if (next) next.disabled = total === 0 || state.page >= totalPages;
+
+    const numbers = $('pageNumbers');
+    if (numbers) {
+        let startP = Math.max(1, state.page - 2);
+        const endP = Math.min(totalPages, startP + 4);
+        startP = Math.max(1, endP - 4);
+
+        let html = '';
         for (let i = startP; i <= endP; i++) {
-            if (i === currentPage) {
-                pagesHTML += `<button class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-medium shadow-sm">${i}</button>`;
-            } else {
-                pagesHTML += `<button onclick="goToPage(${i})" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">${i}</button>`;
-            }
+            html += i === state.page
+                ? `<button class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-medium shadow-sm">${i}</button>`
+                : `<button onclick="goToPage(${i})" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">${i}</button>`;
         }
-
-        container.innerHTML = `
-            <div class="text-[11px] text-slate-500">Menampilkan <span class="font-bold text-slate-700">${startNum}-${endNum}</span> dari <span class="font-bold text-slate-700">${totalItems}</span> produk</div>
-            <div class="flex items-center gap-1">
-                <button onclick="changePage('prev')" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition">Prev</button>
-                <div class="flex gap-1 hidden sm:flex">${pagesHTML}</div>
-                <button onclick="changePage('next')" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition">Next</button>
-            </div>
-        `;
+        numbers.innerHTML = total === 0 ? '' : html;
     }
+}
+
+// =========================================================
+// AKSI FILTER & PAGINATION
+// =========================================================
+window.setFilter = function (status) {
+    state.status = status;
+    refresh({ resetPage: true });
+};
+
+window.resetFilters = function () {
+    state.search = '';
+    state.kategori = 'all';
+    state.status = 'all';
+    const s = $('stokSearch');
+    const k = $('kategoriFilter');
+    if (s) s.value = '';
+    if (k) k.value = 'all';
+    refresh({ resetPage: true });
+};
+
+window.changePage = function (direction) {
+    if (direction === 'prev') state.page--;
+    else if (direction === 'next') state.page++;
+    refresh(); // clamp halaman dilakukan di refresh()
+};
+
+window.goToPage = function (page) {
+    state.page = Number(page) || 1;
+    refresh();
 };
 
 // =========================================================
-// UPDATE STOCK DB
+// UPDATE STOK
 // =========================================================
-window.modStock = async function(id, val) {
-    val = Math.max(0, Number(val) || 0);
-    
-    products = products.map(p => String(p.id) === String(id) ? { ...p, stok: val } : p);
-    window.filterData();
+async function updateStock(id, newVal) {
+    const target = products.find((p) => String(p.id) === String(id));
+    if (!target) return;
+
+    newVal = Math.max(0, Math.floor(Number(newVal)) || 0);
+    const oldVal = getStock(target);
+
+    // tidak ada perubahan / input tidak valid -> kembalikan tampilan input
+    if (newVal === oldVal) { refresh(); return; }
+
+    const setLocal = (val) => {
+        products = products.map((p) => (String(p.id) === String(id) ? { ...p, stok: val } : p));
+    };
+
+    // Optimistis. Halaman TIDAK di-reset supaya admin tetap di posisi yang sama.
+    setLocal(newVal);
+    refresh();
 
     try {
         await authReady;
-        const { error } = await supabase.from('products').update({ stok: val }).eq('id', id);
+        const { error } = await supabase.from('products').update({ stok: newVal }).eq('id', id);
         if (error) throw error;
         window.showStatus('Stok berhasil diperbarui', 'success');
-    } catch(e) { 
-        window.showStatus('Gagal update stok di server: ' + e.message, 'error'); 
+    } catch (e) {
+        // rollback hanya jika belum ada perubahan lain sesudahnya
+        const now = products.find((p) => String(p.id) === String(id));
+        if (now && getStock(now) === newVal) { setLocal(oldVal); refresh(); }
+        window.showStatus('Gagal update stok di server: ' + (e.message || e), 'error');
     }
+}
+
+window.modStock = (id, val) => updateStock(id, val);
+
+window.stepStock = function (id, delta) {
+    const p = products.find((x) => String(x.id) === String(id));
+    if (p) updateStock(id, getStock(p) + delta);
 };
 
-window.inputStock = function(id) {
-    const el = document.getElementById(`stok-${id}`);
-    if (el) window.modStock(id, Number(el.value));
+window.inputStock = function (id) {
+    const el = $(`stok-${id}`);
+    if (el) updateStock(id, el.value);
 };
 
-// Event listener pencarian otomatis
-const searchEl = document.getElementById('stokSearch');
-if(searchEl) searchEl.oninput = window.fiterData;
+// =========================================================
+// INIT
+// =========================================================
+function bindEvents() {
+    const search = $('stokSearch');
+    const kategori = $('kategoriFilter');
+
+    if (search) {
+        state.search = search.value.toLowerCase().trim(); // jika browser mengisi ulang nilai
+        search.addEventListener('input', (e) => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                state.search = e.target.value.toLowerCase().trim();
+                refresh({ resetPage: true });
+            }, SEARCH_DEBOUNCE_MS);
+        });
+    }
+
+    if (kategori) {
+        kategori.addEventListener('change', (e) => {
+            state.kategori = e.target.value;
+            refresh({ resetPage: true });
+        });
+    }
+}
+
+bindEvents();
+window.loadStok();
