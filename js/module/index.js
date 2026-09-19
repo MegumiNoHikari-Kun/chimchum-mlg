@@ -342,6 +342,79 @@ window.closePaymentModal = function() {
     if (paymentModal) paymentModal.classList.add('hidden');
 };
 
+
+async function compressImage(file, maxWidth = 1600, quality = 0.75) {
+    // Bukan gambar → jangan diproses
+    if (!file.type.startsWith('image/')) {
+        return file;
+    }
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            const img = new Image();
+
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                // Batasi ukuran maksimal
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+
+                // Background putih untuk format seperti JPG
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) {
+                            reject(new Error('Gagal mengompres gambar.'));
+                            return;
+                        }
+
+                        const compressedFile = new File(
+                            [blob],
+                            file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+                            {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            }
+                        );
+
+                        console.log(
+                            `📦 Compress: ${(file.size / 1024).toFixed(0)} KB → ${(compressedFile.size / 1024).toFixed(0)} KB`
+                        );
+
+                        resolve(compressedFile);
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            };
+
+            img.onerror = () => reject(new Error('Gagal membaca gambar.'));
+            img.src = e.target.result;
+        };
+
+        reader.onerror = () => reject(new Error('Gagal membaca file.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+
+
 window.confirmAndSubmitOrder = async function() {
     const submitBtn = document.getElementById('confirm-btn');
     const fileInput = document.getElementById('payment-proof-file');
@@ -363,36 +436,57 @@ window.confirmAndSubmitOrder = async function() {
     try {
         await authReady;
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
-            const file = fileInput.files[0];
+            const originalFile = fileInput.files[0];
+
+            // Compress gambar sebelum upload
+            const file = await compressImage(
+                originalFile,
+                1600, // maksimal lebar 1600px
+                0.75  // kualitas JPEG 75%
+            );
+            
             const fileExt = file.name.split('.').pop().toLowerCase();
             const fileName = `${pendingOrderData.order_id}_${Date.now()}.${fileExt}`;
-
+            
             const reader = new FileReader();
+            
             proofReference = await new Promise((resolve, reject) => {
                 reader.onload = async (e) => {
                     const base64Data = e.target.result;
+            
                     try {
-                        const { data: uploadData, error: uploadError } = await supabase.storage
-                            .from('payment-proofs')
-                            .upload(fileName, file, { cacheControl: '3600', upsert: true });
-
-                        if (!uploadError) {
-                            const { data: publicUrlData } = supabase.storage
+                        const { data: uploadData, error: uploadError } =
+                            await supabase.storage
                                 .from('payment-proofs')
-                                .getPublicUrl(fileName);
-                            if (publicUrlData && publicUrlData.publicUrl) {
+                                .upload(fileName, file, {
+                                    cacheControl: '3600',
+                                    upsert: true,
+                                    contentType: file.type
+                                });
+            
+                        if (!uploadError) {
+                            const { data: publicUrlData } =
+                                supabase.storage
+                                    .from('payment-proofs')
+                                    .getPublicUrl(fileName);
+            
+                            if (publicUrlData?.publicUrl) {
                                 resolve(publicUrlData.publicUrl);
                                 return;
                             }
                         }
-                        resolve(base64Data);
+            
+                        console.error('Upload gagal:', uploadError);
+                        resolve(base64Data);            
                     } catch (err) {
+                        console.error('Storage error:', err);
                         resolve(base64Data);
                     }
-                };
+                };            
                 reader.onerror = (err) => reject(err);
+                // Dipakai hanya sebagai fallback kalau upload gagal
                 reader.readAsDataURL(file);
-            });
+            });                           
         }
     } catch (storageErr) {
         console.warn("Storage warning, using base64 reference:", storageErr);
