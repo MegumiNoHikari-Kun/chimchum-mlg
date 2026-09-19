@@ -1,111 +1,145 @@
 import { supabase, authReady } from '../supabase.js';
 
 // =========================================================
-// STATE
+// STATE & VARIABLES
 // =========================================================
 let products = [];
-let filterStatus = 'all'; // 'all', 'aman', 'menipis', 'habis'
+let filterStatus = 'all'; // Status: 'all', 'aman', 'menipis', 'habis'
 let selectedKategori = 'all';
 
 // State Pagination
 let currentPage = 1;
 const itemsPerPage = 5;
-let filteredProductsCache = []; // Menyimpan hasil filter untuk pagination
+let filteredProductsCache = []; 
 
 // =========================================================
-// HELPER: STATUS NOTIFICATION
+// HELPER: NOTIFICATION (Pengganti Alert)
 // =========================================================
-function showStatus(message, type = 'error') {
-    const box = document.getElementById('statusBox');
-    const msgContainer = document.getElementById('statusMessage');
+window.showStatus = function(message, type = 'error') {
+    let box = document.getElementById('statusBox');
     
-    if (!box || !msgContainer) {
-        // Fallback to alert if UI element is missing
-        if (type === 'error') alert("Error: " + message);
-        return;
+    // Auto-inject UI Notifikasi jika tidak ada di HTML
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'statusBox';
+        document.body.appendChild(box);
     }
 
-    box.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700', 'bg-amber-50', 'border-amber-200', 'text-amber-700');
+    box.className = 'fixed top-6 right-6 z-50 rounded-xl px-4 py-3 text-sm border flex items-center justify-between shadow-xl transition-all font-medium';
     
-    let icon = '';
     if (type === 'error') {
         box.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
-        icon = '<i class="fa-solid fa-circle-exclamation text-red-500 text-sm"></i>';
-    } else if (type === 'success') {
-        box.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
-        icon = '<i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>';
+        box.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-2"></i> ${message}`;
     } else {
-        box.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-700');
-        icon = '<i class="fa-solid fa-triangle-exclamation text-amber-500 text-sm"></i>';
+        box.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+        box.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
     }
 
-    msgContainer.innerHTML = `${icon} <span class="font-medium">${message}</span>`;
-    box.classList.remove('hidden');
-
-    // Auto hide after 4 seconds
-    setTimeout(() => { box.classList.add('hidden'); }, 4000);
-}
-
-window.hideStatus = function() {
-    const box = document.getElementById('statusBox');
-    if(box) box.classList.add('hidden');
+    // Auto hapus setelah 3.5 detik
+    setTimeout(() => { box.remove(); }, 3500);
 }
 
 // =========================================================
 // LOAD DATA
 // =========================================================
 window.loadStok = async function() {
-    const connStatus = document.getElementById('connectionStatus');
-    
     try {
         await authReady;
         const { data, error } = await supabase.from('products').select('*');
         if (error) throw error;
         
         if (data) products = data;
-        
-        if(connStatus) {
-            connStatus.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> Terhubung';
-            connStatus.classList.replace('text-amber-600', 'text-emerald-600');
-            connStatus.classList.replace('bg-amber-50', 'bg-emerald-50');
-            connStatus.classList.replace('border-amber-200', 'border-emerald-200');
-        }
-
     } catch(e) { 
         console.warn('Gagal memuat dari Supabase:', e); 
-        showStatus('Gagal memuat data stok dari server.', 'error');
-        if(connStatus) {
-            connStatus.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500 mr-1"></i> Gagal';
-            connStatus.classList.replace('text-amber-600', 'text-red-600');
-            connStatus.classList.replace('bg-amber-50', 'bg-red-50');
-            connStatus.classList.replace('border-amber-200', 'border-red-200');
-        }
+        window.showStatus('Gagal memuat data dari server.', 'error');
     }
-
+    
     extractCategories();
-    applyFiltersAndRender();
+    renderSummary(); // Summary selalu pakai global data
+    window.applyFiltersAndRender();
 };
 
 // =========================================================
 // KATEGORI & FILTERING
 // =========================================================
 function extractCategories() {
-    const select = document.getElementById('kategoriFilter');
-    if(!select) return;
+    let select = document.getElementById('kategoriFilter');
+    
+    // Auto-inject Dropdown Kategori ke HTML jika belum ada
+    if (!select) {
+        const searchInput = document.getElementById('stokSearch');
+        if (searchInput) {
+            select = document.createElement('select');
+            select.id = 'kategoriFilter';
+            select.className = 'bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none cursor-pointer focus:border-orange-400 focus:bg-white transition w-full md:w-auto mb-3 md:mb-0 mr-0 md:mr-3';
+            select.onchange = window.applyFiltersAndRender;
+            searchInput.parentNode.insertBefore(select, searchInput);
+        } else {
+            return;
+        }
+    }
 
+    // Ekstrak kategori unik dari data Supabase
     const categories = new Set();
     products.forEach(p => {
-        const cat = (p.kategori || p.category || '').trim();
+        const cat = String(p.kategori || p.category || '').trim();
         if (cat) categories.add(cat);
     });
 
+    const currentVal = select.value;
     select.innerHTML = '<option value="all">Semua Kategori</option>';
+    
     Array.from(categories).sort().forEach(cat => {
         select.innerHTML += `<option value="${cat}">${cat}</option>`;
     });
+    
+    if (categories.has(currentVal)) select.value = currentVal;
 }
 
-// Terpicu ketika user mengetik pencarian, mengubah filter box, atau dropdown kategori
+// =========================================================
+// RENDER SUMMARY (SELALU GLOBAL)
+// =========================================================
+function renderSummary() {
+    const summaryContainer = document.getElementById('stokSummary');
+    if(!summaryContainer) return;
+
+    // Menghitung SELURUH produk, mengabaikan pencarian & dropdown kategori
+    let total = products.length, aman = 0, menipis = 0, habis = 0;
+    
+    products.forEach(p => {
+        const st = Number(p.stok) || 0;
+        if (st <= 0) habis++;
+        else if (st <= 10) menipis++;
+        else aman++;
+    });
+
+    const activeClass = (target) => filterStatus === target 
+        ? 'ring-2 ring-orange-500 bg-orange-50/30 shadow-md' 
+        : 'border-slate-200 bg-white hover:bg-slate-50 opacity-80 hover:opacity-100';
+
+    summaryContainer.innerHTML = `
+        <div onclick="setFilter('all')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('all')}">
+            <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Produk</div>
+            <div class="text-2xl font-bold text-slate-800 mt-1">${total}</div>
+        </div>
+        <div onclick="setFilter('aman')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('aman')}">
+            <div class="text-[11px] font-semibold text-emerald-600/80 uppercase tracking-wide">Stok Aman</div>
+            <div class="text-2xl font-bold text-emerald-600 mt-1">${aman}</div>
+        </div>
+        <div onclick="setFilter('menipis')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('menipis')}">
+            <div class="text-[11px] font-semibold text-amber-600/80 uppercase tracking-wide">Menipis</div>
+            <div class="text-2xl font-bold text-amber-600 mt-1">${menipis}</div>
+        </div>
+        <div onclick="setFilter('habis')" class="border rounded-2xl p-4 cursor-pointer transition ${activeClass('habis')}">
+            <div class="text-[11px] font-semibold text-rose-600/80 uppercase tracking-wide">Stok Habis</div>
+            <div class="text-2xl font-bold text-rose-600 mt-1">${habis}</div>
+        </div>
+    `;
+}
+
+// =========================================================
+// LOGIKA FILTER TABEL
+// =========================================================
 window.applyFiltersAndRender = function() {
     const searchInput = document.getElementById('stokSearch');
     const kw = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -113,155 +147,69 @@ window.applyFiltersAndRender = function() {
     const catSelect = document.getElementById('kategoriFilter');
     selectedKategori = catSelect ? catSelect.value : 'all';
 
-    // Filter berdasarkan Kategori & Pencarian (untuk Summary)
-    const baseFiltered = products.filter(p => {
-        const matchName = (p.nama || p.name || '').toLowerCase().includes(kw);
-        const matchCat = selectedKategori === 'all' || (p.kategori || p.category) === selectedKategori;
-        return matchName && matchCat;
-    });
-
-    renderSummary(baseFiltered);
-
-    // Filter tambahan berdasarkan Status Stok (untuk Tabel)
-    filteredProductsCache = baseFiltered.filter(p => {
+    // Filter KHUSUS untuk TABEL berdasarkan gabungan Ketiganya
+    filteredProductsCache = products.filter(p => {
+        // 1. Cek Pencarian (Nama)
+        const nameMatch = String(p.nama || p.name || '').toLowerCase().includes(kw);
+        
+        // 2. Cek Dropdown Kategori
+        const cat = String(p.kategori || p.category || '').trim();
+        const catMatch = selectedKategori === 'all' || cat === selectedKategori;
+        
+        // 3. Cek Status (Aman/Menipis/Habis)
         const st = Number(p.stok) || 0;
-        if (filterStatus === 'habis') return st <= 0;
-        if (filterStatus === 'menipis') return st > 0 && st <= 10;
-        if (filterStatus === 'aman') return st > 10;
-        return true;
+        let statusMatch = true;
+        if (filterStatus === 'habis') statusMatch = st <= 0;
+        else if (filterStatus === 'menipis') statusMatch = st > 0 && st <= 10;
+        else if (filterStatus === 'aman') statusMatch = st > 10;
+
+        return nameMatch && catMatch && statusMatch;
     });
 
-    // Reset ke halaman 1 setiap kali filter berubah
+    // Reset halaman ke 1 tiap kali parameter pencarian berubah
     currentPage = 1;
     renderTable();
 };
 
-// Terpicu ketika user klik kotak Ringkasan (Aman/Menipis/Habis)
 window.setFilter = function(st) {
     filterStatus = st;
-    applyFiltersAndRender();
+    renderSummary(); // Hanya memperbarui styling kotak klik
+    window.applyFiltersAndRender(); // Update isi tabel
 };
 
 // =========================================================
-// RENDER SUMMARY (KOTAK ATAS)
+// PAGINATION UI & LOGIC
 // =========================================================
-function renderSummary(baseData) {
-    const summaryContainer = document.getElementById('stokSummary');
-    if(!summaryContainer) return;
-
-    let total = baseData.length, aman = 0, menipis = 0, habis = 0;
-    baseData.forEach(p => {
-        const st = Number(p.stok) || 0;
-        if (st <= 0) habis++;
-        else if (st <= 10) menipis++;
-        else aman++;
-    });
-
-    const activeClass = (target) => filterStatus === target ? 'ring-2 ring-orange-400 bg-white shadow-md' : 'bg-white hover:bg-slate-50 opacity-80 hover:opacity-100';
-
-    summaryContainer.innerHTML = `
-        <div onclick="setFilter('all')" class="border border-slate-200 rounded-2xl p-4 cursor-pointer transition ${activeClass('all')}">
-            <div class="flex justify-between items-start">
-                <div>
-                    <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Produk</div>
-                    <div class="text-2xl font-bold text-slate-800 mt-1">${total}</div>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><i class="fa-solid fa-boxes-stacked text-xs"></i></div>
-            </div>
-        </div>
-
-        <div onclick="setFilter('aman')" class="border border-emerald-200 rounded-2xl p-4 cursor-pointer transition ${activeClass('aman')}">
-            <div class="flex justify-between items-start">
-                <div>
-                    <div class="text-[11px] font-semibold text-emerald-600/80 uppercase tracking-wide">Stok Aman</div>
-                    <div class="text-2xl font-bold text-emerald-600 mt-1">${aman}</div>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500"><i class="fa-solid fa-check text-xs"></i></div>
-            </div>
-        </div>
-
-        <div onclick="setFilter('menipis')" class="border border-amber-200 rounded-2xl p-4 cursor-pointer transition ${activeClass('menipis')}">
-            <div class="flex justify-between items-start">
-                <div>
-                    <div class="text-[11px] font-semibold text-amber-600/80 uppercase tracking-wide">Menipis</div>
-                    <div class="text-2xl font-bold text-amber-600 mt-1">${menipis}</div>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-500"><i class="fa-solid fa-triangle-exclamation text-xs"></i></div>
-            </div>
-        </div>
-
-        <div onclick="setFilter('habis')" class="border border-rose-200 rounded-2xl p-4 cursor-pointer transition ${activeClass('habis')}">
-            <div class="flex justify-between items-start">
-                <div>
-                    <div class="text-[11px] font-semibold text-rose-600/80 uppercase tracking-wide">Stok Habis</div>
-                    <div class="text-2xl font-bold text-rose-600 mt-1">${habis}</div>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-500"><i class="fa-solid fa-xmark text-xs"></i></div>
-            </div>
-        </div>
-    `;
-}
-
-// =========================================================
-// PAGINATION CONTROLS
-// =========================================================
-window.changePage = function(direction) {
-    const totalPages = Math.ceil(filteredProductsCache.length / itemsPerPage) || 1;
-    
-    if (direction === 'prev' && currentPage > 1) {
-        currentPage--;
-        renderTable();
-    } else if (direction === 'next' && currentPage < totalPages) {
-        currentPage++;
-        renderTable();
+function ensurePaginationUI() {
+    let container = document.getElementById('paginationContainer');
+    // Auto-inject UI Pagination di bawah tabel jika HTML belum memilikinya
+    if (!container) {
+        const tableBody = document.getElementById('stokTableBody');
+        if (tableBody) {
+            const wrapper = tableBody.closest('.overflow-x-auto') || tableBody.parentNode;
+            container = document.createElement('div');
+            container.id = 'paginationContainer';
+            container.className = 'flex flex-col sm:flex-row justify-between items-center gap-4 mt-5 pt-4 border-t border-slate-100';
+            wrapper.parentNode.insertBefore(container, wrapper.nextSibling);
+        }
     }
+    return container;
 }
+
+window.changePage = function(direction) {
+    const totalPages = Math.ceil(filteredProductsCache.length / itemsPerPage);
+    if (direction === 'prev' && currentPage > 1) currentPage--;
+    else if (direction === 'next' && currentPage < totalPages) currentPage++;
+    window.renderTable();
+};
 
 window.goToPage = function(page) {
     currentPage = page;
-    renderTable();
-}
-
-function renderPaginationUI(totalItems, totalPages) {
-    // Info Texts
-    const tableInfo = document.getElementById('tableInfo');
-    const paginationInfoText = document.getElementById('paginationInfoText');
-    const pageInfoMobile = document.getElementById('pageInfoMobile');
-    
-    const startIdx = totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1;
-    const endIdx = Math.min(currentPage * itemsPerPage, totalItems);
-
-    if (tableInfo) tableInfo.textContent = `${totalItems} produk ditemukan`;
-    if (paginationInfoText) paginationInfoText.innerHTML = `Menampilkan <span class="font-medium text-slate-700">${startIdx}</span> - <span class="font-medium text-slate-700">${endIdx}</span> dari <span class="font-medium text-slate-700">${totalItems}</span> produk`;
-    if (pageInfoMobile) pageInfoMobile.textContent = `Page ${currentPage} of ${totalPages}`;
-
-    // Buttons Disable/Enable State
-    const btnPrev = document.getElementById('btnPrevPage');
-    const btnNext = document.getElementById('btnNextPage');
-    if (btnPrev) btnPrev.disabled = currentPage === 1;
-    if (btnNext) btnNext.disabled = currentPage === totalPages || totalItems === 0;
-
-    // Generate Page Numbers
-    const pageNumbersContainer = document.getElementById('pageNumbers');
-    if (pageNumbersContainer) {
-        let buttonsHTML = '';
-        let startP = Math.max(1, currentPage - 2);
-        let endP = Math.min(totalPages, startP + 4);
-        if (endP - startP < 4 && startP > 1) startP = Math.max(1, endP - 4);
-
-        for (let i = startP; i <= endP; i++) {
-            if (i === currentPage) {
-                buttonsHTML += `<button class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-medium shadow-sm">${i}</button>`;
-            } else {
-                buttonsHTML += `<button onclick="goToPage(${i})" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">${i}</button>`;
-            }
-        }
-        pageNumbersContainer.innerHTML = buttonsHTML;
-    }
-}
+    window.renderTable();
+};
 
 // =========================================================
-// RENDER TABLE
+// RENDER TABEL UTAMA
 // =========================================================
 window.renderTable = function() {
     const tbody = document.getElementById('stokTableBody');
@@ -270,85 +218,106 @@ window.renderTable = function() {
     const totalItems = filteredProductsCache.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
-    // Ensure valid page if filter causes data to shrink
+    // Mencegah bug out-of-bounds saat filter mempersempit jumlah halaman
     if (currentPage > totalPages) currentPage = totalPages;
 
-    renderPaginationUI(totalItems, totalPages);
-
+    // RENDER DATA
     if (totalItems === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-16"><div class="flex flex-col items-center"><div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3"><i class="fa-solid fa-box-open text-slate-300 text-xl"></i></div><p class="text-xs font-semibold text-slate-500">Tidak ada produk ditemukan.</p></div></td></tr>`;
-        return;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-400">Tidak ada produk yang cocok dengan filter.</td></tr>`;
+    } else {
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const paginatedData = filteredProductsCache.slice(startIdx, startIdx + itemsPerPage);
+
+        tbody.innerHTML = paginatedData.map(p => {
+            const st = Number(p.stok) || 0;
+            let badge = `<span class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]">Aman</span>`;
+            if (st <= 0) badge = `<span class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]">Habis</span>`;
+            else if (st <= 10) badge = `<span class="bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]">Menipis</span>`;
+
+            return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3"><img src="${p.foto || p.image || 'https://placehold.co/40'}" class="w-10 h-10 object-cover rounded-xl border border-slate-100 shadow-sm"></td>
+                    <td class="p-3 font-semibold text-slate-800">${p.nama || p.name}</td>
+                    <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-medium">${p.kategori || p.category || '-'}</span></td>
+                    <td class="p-3 font-bold text-center text-slate-700">${st}</td>
+                    <td class="p-3 text-center">${badge}</td>
+                    <td class="p-3">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="modStock('${p.id}', ${st - 1})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-red-500 transition font-bold shadow-sm">-</button>
+                            <input type="number" value="${st}" id="stok-${p.id}" class="w-14 text-center text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-1.5 outline-none focus:border-orange-400 focus:bg-white transition" onchange="inputStock('${p.id}')">
+                            <button onclick="modStock('${p.id}', ${st + 1})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-500 transition font-bold shadow-sm">+</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
-    // SLICE DATA FOR PAGINATION
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = filteredProductsCache.slice(startIndex, startIndex + itemsPerPage);
+    // RENDER PAGINATION
+    const container = ensurePaginationUI();
+    if (container) {
+        if (totalItems === 0) {
+            container.innerHTML = ''; // Sembunyikan pagination jika kosong
+        } else {
+            const startNum = ((currentPage - 1) * itemsPerPage) + 1;
+            const endNum = Math.min(currentPage * itemsPerPage, totalItems);
+            
+            let pagesHTML = '';
+            let startP = Math.max(1, currentPage - 2);
+            let endP = Math.min(totalPages, startP + 4);
+            if (endP - startP < 4 && startP > 1) startP = Math.max(1, endP - 4);
 
-    tbody.innerHTML = paginatedData.map(p => {
-        const st = Number(p.stok) || 0;
-        let badge = `<span class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]"><i class="fa-solid fa-check mr-1"></i>Aman</span>`;
-        if (st <= 0) badge = `<span class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]"><i class="fa-solid fa-xmark mr-1"></i>Habis</span>`;
-        else if (st <= 10) badge = `<span class="bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded-lg font-semibold text-[10px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Menipis</span>`;
+            for (let i = startP; i <= endP; i++) {
+                if (i === currentPage) {
+                    pagesHTML += `<button class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-medium shadow-sm">${i}</button>`;
+                } else {
+                    pagesHTML += `<button onclick="goToPage(${i})" class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">${i}</button>`;
+                }
+            }
 
-        // Escape HTML for safety
-        const safeName = String(p.nama || p.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safeCat = String(p.kategori || p.category || '-').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safeImg = p.foto || p.image || 'https://placehold.co/80';
-
-        return `
-            <tr class="hover:bg-slate-50 transition">
-                <td class="p-3"><img src="${safeImg}" class="w-10 h-10 object-cover rounded-xl shadow-sm border border-slate-100" onerror="this.src='https://placehold.co/80?text=Error'"></td>
-                <td class="p-3 font-semibold text-slate-800">${safeName}</td>
-                <td class="p-3"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-medium">${safeCat}</span></td>
-                <td class="p-3 text-center font-bold text-slate-700 text-base">${st}</td>
-                <td class="p-3 text-center">${badge}</td>
-                <td class="p-3">
-                    <div class="flex items-center justify-center gap-1.5">
-                        <button onclick="modStock('${p.id}', ${st - 1})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-red-500 transition font-bold shadow-sm" title="Kurangi 1">-</button>
-                        <input type="number" value="${st}" id="stok-${p.id}" class="w-14 text-center text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-1.5 outline-none focus:border-orange-400 focus:bg-white transition" onchange="inputStock('${p.id}')">
-                        <button onclick="modStock('${p.id}', ${st + 1})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-500 transition font-bold shadow-sm" title="Tambah 1">+</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
+            container.innerHTML = `
+                <div class="text-[11px] text-slate-500">Menampilkan <span class="font-bold text-slate-700">${startNum}-${endNum}</span> dari <span class="font-bold text-slate-700">${totalItems}</span> produk</div>
+                <div class="flex items-center gap-1">
+                    <button onclick="changePage('prev')" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition">Prev</button>
+                    <div class="flex gap-1 hidden sm:flex">${pagesHTML}</div>
+                    <button onclick="changePage('next')" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition">Next</button>
+                </div>
+            `;
+        }
+    }
 };
 
 // =========================================================
-// UPDATE STOCK
+// UPDATE STOCK DB
 // =========================================================
 window.modStock = async function(id, val) {
     val = Math.max(0, Number(val) || 0);
     
-    // Optimistic UI Update (Update layar dulu biar terasa cepat)
-    const originalProducts = [...products]; 
+    // Update Optimistis agar UI tidak terasa lemot/lag
     products = products.map(p => String(p.id) === String(id) ? { ...p, stok: val } : p);
-    applyFiltersAndRender(); 
+    renderSummary(); 
+    window.applyFiltersAndRender();
 
     try {
         await authReady;
         const { error } = await supabase.from('products').update({ stok: val }).eq('id', id);
-        
         if (error) throw error;
-        showStatus('Stok berhasil diperbarui.', 'success');
-
+        window.showStatus('Stok berhasil diperbarui', 'success');
     } catch(e) { 
-        // Jika gagal, kembalikan ke state awal
-        products = originalProducts;
-        applyFiltersAndRender();
-        
-        console.warn('Gagal update stok:', e);
-        showStatus('Gagal mengupdate stok di database.', 'error'); 
+        window.showStatus('Gagal update stok di server: ' + e.message, 'error'); 
     }
 };
 
-window.inputStock = async function(id) {
-    const inputEl = document.getElementById(`stok-${id}`);
-    if(inputEl) {
-        const v = Number(inputEl.value);
-        await modStock(id, v);
-    }
+window.inputStock = function(id) {
+    const v = Number(document.getElementById(`stok-${id}`).value);
+    window.modStock(id, v);
 };
 
-// INITIALIZE
+// =========================================================
+// INIT
+// =========================================================
+// Memaksa Input Search memanggil applyFiltersAndRender bukan renderTable langsung
+const searchEl = document.getElementById('stokSearch');
+if(searchEl) searchEl.oninput = window.applyFiltersAndRender;
+
 loadStok();
