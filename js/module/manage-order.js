@@ -2766,75 +2766,75 @@ function getStoragePath(
 }
 
 
-function getStoragePath(value, bucketName) {
-  if (!value) return null;
+// function getStoragePath(value, bucketName) {
+//   if (!value) return null;
 
-  const raw = String(value).trim();
+//   const raw = String(value).trim();
 
-  if (!raw) return null;
+//   if (!raw) return null;
 
-  // Data URI bukan file Storage
-  if (raw.startsWith('data:image/')) {
-    return null;
-  }
+//   // Data URI bukan file Storage
+//   if (raw.startsWith('data:image/')) {
+//     return null;
+//   }
 
-  // Kalau payment_proof sudah berupa path:
-  // contoh:
-  // ORD-123.jpg
-  // 2026/ORD-123.jpg
-  if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
-    return raw.replace(/^\/+/, '');
-  }
+//   // Kalau payment_proof sudah berupa path:
+//   // contoh:
+//   // ORD-123.jpg
+//   // 2026/ORD-123.jpg
+//   if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+//     return raw.replace(/^\/+/, '');
+//   }
 
-  try {
-    const url = new URL(raw);
-    const pathname = decodeURIComponent(url.pathname);
+//   try {
+//     const url = new URL(raw);
+//     const pathname = decodeURIComponent(url.pathname);
 
-    /*
-      Contoh URL Supabase:
+//     /*
+//       Contoh URL Supabase:
 
-      /storage/v1/object/public/payment-proofs/ORD-123.jpg
+//       /storage/v1/object/public/payment-proofs/ORD-123.jpg
 
-      /storage/v1/object/sign/payment-proofs/ORD-123.jpg
+//       /storage/v1/object/sign/payment-proofs/ORD-123.jpg
 
-      /storage/v1/object/authenticated/payment-proofs/ORD-123.jpg
-    */
+//       /storage/v1/object/authenticated/payment-proofs/ORD-123.jpg
+//     */
 
-    const marker = `/storage/v1/object/`;
+//     const marker = `/storage/v1/object/`;
 
-    const markerIndex = pathname.indexOf(marker);
+//     const markerIndex = pathname.indexOf(marker);
 
-    if (markerIndex === -1) {
-      return null;
-    }
+//     if (markerIndex === -1) {
+//       return null;
+//     }
 
-    let afterMarker = pathname.substring(
-      markerIndex + marker.length
-    );
+//     let afterMarker = pathname.substring(
+//       markerIndex + marker.length
+//     );
 
-    // Hapus tipe akses:
-    // public/
-    // sign/
-    // authenticated/
-    afterMarker = afterMarker.replace(
-      /^(public|sign|authenticated)\//,
-      ''
-    );
+//     // Hapus tipe akses:
+//     // public/
+//     // sign/
+//     // authenticated/
+//     afterMarker = afterMarker.replace(
+//       /^(public|sign|authenticated)\//,
+//       ''
+//     );
 
-    // Pastikan URL memang menuju bucket yang kita targetkan
-    if (!afterMarker.startsWith(`${bucketName}/`)) {
-      return null;
-    }
+//     // Pastikan URL memang menuju bucket yang kita targetkan
+//     if (!afterMarker.startsWith(`${bucketName}/`)) {
+//       return null;
+//     }
 
-    return afterMarker.substring(
-      bucketName.length + 1
-    );
+//     return afterMarker.substring(
+//       bucketName.length + 1
+//     );
 
-  } catch (error) {
-    console.error('Gagal membaca payment_proof:', error);
-    return null;
-  }
-}
+//   } catch (error) {
+//     console.error('Gagal membaca payment_proof:', error);
+//     return null;
+//   }
+// }
 
 
 
