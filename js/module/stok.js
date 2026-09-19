@@ -36,7 +36,33 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => (
 ));
 
 const getName  = (p) => String(p.nama || p.name || '');
-const getCat   = (p) => String(p.kategori || p.category || '').trim();
+// Kategori: "dimsum", "Dimsum", " DIMSUM " dianggap satu kategori yang sama.
+// Kunci (key) dipakai untuk mencocokkan; label dipakai untuk ditampilkan.
+const categoryLabels = new Map(); // key -> label tampilan
+const getCatRaw = (p) => String(p.kategori || p.category || '').trim().replace(/\s+/g, ' ');
+const getCatKey = (p) => getCatRaw(p).toLowerCase();
+const getCat    = (p) => categoryLabels.get(getCatKey(p)) || getCatRaw(p);
+
+function buildCategoryLabels() {
+    const variants = new Map(); // key -> Map(penulisan asli -> jumlah)
+    products.forEach((p) => {
+        const raw = getCatRaw(p);
+        if (!raw) return;
+        const key = raw.toLowerCase();
+        if (!variants.has(key)) variants.set(key, new Map());
+        const v = variants.get(key);
+        v.set(raw, (v.get(raw) || 0) + 1);
+    });
+
+    categoryLabels.clear();
+    variants.forEach((v, key) => {
+        // Prioritaskan penulisan berawalan huruf kapital, lalu yang paling sering dipakai
+        const best = [...v.entries()].sort((a, b) =>
+            Number(/^[A-Z]/.test(b[0])) - Number(/^[A-Z]/.test(a[0])) || b[1] - a[1]
+        )[0][0];
+        categoryLabels.set(key, best);
+    });
+}
 const getStock = (p) => Math.max(0, Number(p.stok) || 0);
 const getStatus = (p) => {
     const s = getStock(p);
@@ -115,7 +141,7 @@ window.loadStok = async function () {
 // PIPELINE FILTER  (search + kategori -> status -> pagination)
 // =========================================================
 const matchSearch   = (p) => !state.search || getName(p).toLowerCase().includes(state.search);
-const matchCategory = (p) => state.kategori === 'all' || getCat(p) === state.kategori;
+const matchCategory = (p) => state.kategori === 'all' || getCatKey(p) === state.kategori;
 const matchStatus   = (p) => state.status === 'all' || getStatus(p) === state.status;
 
 // Produk setelah search + kategori (dasar untuk kartu ringkasan)
@@ -146,14 +172,17 @@ function renderCategoryOptions() {
     const select = $('kategoriFilter');
     if (!select) return;
 
-    const cats = [...new Set(products.map(getCat).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id'));
+    buildCategoryLabels();
+
+    // [key, label] unik, diurutkan berdasarkan label
+    const cats = [...categoryLabels.entries()].sort((a, b) => a[1].localeCompare(b[1], 'id'));
 
     select.innerHTML = '';
     select.add(new Option('Semua Kategori', 'all'));
-    cats.forEach((c) => select.add(new Option(c, c)));
+    cats.forEach(([key, label]) => select.add(new Option(label, key)));
 
     // kategori terpilih sudah tidak ada -> kembali ke "all"
-    if (state.kategori !== 'all' && !cats.includes(state.kategori)) state.kategori = 'all';
+    if (state.kategori !== 'all' && !categoryLabels.has(state.kategori)) state.kategori = 'all';
     select.value = state.kategori;
 }
 
