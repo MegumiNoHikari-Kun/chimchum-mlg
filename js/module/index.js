@@ -737,8 +737,12 @@ window.showNotification = function(title, message, type = 'success') {
     modal.classList.remove('hidden');
 };
 
-window.closeNotification = function() {
+window.closeNotification = async function() {
     const modal = document.getElementById('notification-modal');
-    if (modal) modal.classList.add('hidden');
+
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
     await loadProductsFromSupabase();
 };
