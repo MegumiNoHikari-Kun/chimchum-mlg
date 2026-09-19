@@ -33,28 +33,37 @@ function renderSummary(orders) {
     });
 
     const cards = [
-        { key: 'all', title: 'Total', count: counts.all, color: 'text-slate-700 border-slate-200' },
-        { key: 'new', title: 'Baru', count: counts.new, color: 'text-amber-600 border-amber-200 bg-amber-50/50' },
-        { key: 'disiapkan', title: 'Diproses', count: counts.disiapkan, color: 'text-blue-600 border-blue-200 bg-blue-50/50' },
-        { key: 'dikirim', title: 'Dikirim', count: counts.dikirim, color: 'text-purple-600 border-purple-200 bg-purple-50/50' },
-        { key: 'selesai', title: 'Selesai', count: counts.selesai, color: 'text-emerald-600 border-emerald-200 bg-emerald-50/50' },
-        { key: 'cancel', title: 'Batal', count: counts.cancel, color: 'text-rose-600 border-rose-200 bg-rose-50/50' }
+        { key: 'all', title: 'Total', count: counts.all, defaultColor: 'text-slate-700 border-slate-200 bg-white' },
+        { key: 'new', title: 'Baru', count: counts.new, defaultColor: 'text-amber-600 border-amber-200 bg-amber-50/50' },
+        { key: 'disiapkan', title: 'Diproses', count: counts.disiapkan, defaultColor: 'text-blue-600 border-blue-200 bg-blue-50/50' },
+        { key: 'dikirim', title: 'Dikirim', count: counts.dikirim, defaultColor: 'text-purple-600 border-purple-200 bg-purple-50/50' },
+        { key: 'selesai', title: 'Selesai', count: counts.selesai, defaultColor: 'text-emerald-600 border-emerald-200 bg-emerald-50/50' },
+        { key: 'cancel', title: 'Batal', count: counts.cancel, defaultColor: 'text-rose-600 border-rose-200 bg-rose-50/50' }
     ];
 
     const container = document.getElementById('orderSummary');
     if (container) {
-        container.innerHTML = cards.map(c => `
-            <div onclick="filterStatus('${c.key}')" class="border rounded-xl p-3 cursor-pointer transition hover:shadow-sm ${c.color}">
-                <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
-                <div class="text-lg font-bold mt-1">${c.count}</div>
-            </div>
-        `).join('');
+        container.innerHTML = cards.map(c => {
+            const isActive = currentFilter === c.key;
+            // If active, override border to thick/bold orange border with orange accent text/bg
+            const activeStyle = isActive 
+                ? 'border-2 border-orange-500 shadow-sm bg-orange-50/30 text-orange-700 font-semibold' 
+                : `border border-slate-200 hover:shadow-sm ${c.defaultColor}`;
+
+            return `
+                <div onclick="filterStatus('${c.key}')" class="rounded-xl p-3 cursor-pointer transition ${activeStyle}">
+                    <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
+                    <div class="text-lg font-bold mt-1">${c.count}</div>
+                </div>
+            `;
+        }).join('');
     }
 }
 
 window.filterStatus = function(status) {
     currentFilter = status;
     currentPage = 1; // Reset to page 1 on filter change
+    renderSummary(cachedOrders); // Re-render summary to update active orange border state
     renderTable();
 };
 
@@ -90,7 +99,7 @@ function renderTable() {
         });
     }
 
-    // Apply Search Filter (Waktu, Pelanggan, WhatsApp, Tipe/Bayar, Status, Item Pesanan, ID)
+    // Apply Comprehensive Search Filter across all fields
     if (searchQuery) {
         filtered = filtered.filter(o => {
             const name = (o.customer_name || '').toLowerCase();
@@ -101,10 +110,7 @@ function renderTable() {
             const status = (o.status || 'new').toLowerCase();
             const address = (o.address || '').toLowerCase();
             
-            // Format time string representation for searching
             const tgl = o.created_at ? new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }).toLowerCase() : '';
-            
-            // Format items string representation for searching
             const items = Array.isArray(o.items) ? o.items.map(i => `${i.nama || i.name} (${i.qty}x)`).join(', ').toLowerCase() : '';
 
             return name.includes(searchQuery) || 
@@ -124,7 +130,6 @@ function renderTable() {
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
 
-    // Slice for Pagination
     const startIndex = (currentPage - 1) * rowsPerPage;
     const paginatedOrders = filtered.slice(startIndex, startIndex + rowsPerPage);
 
@@ -171,7 +176,6 @@ function renderTable() {
 function renderPaginationControls(totalItems, page, totalPages) {
     let paginationContainer = document.getElementById('orderPagination');
     if (!paginationContainer) {
-        // Automatically inject pagination controls wrapper below table if not present in HTML yet
         const tableWrapper = document.getElementById('ordersBody')?.closest('.overflow-x-auto') || document.getElementById('ordersBody')?.parentElement;
         if (tableWrapper) {
             const div = document.createElement('div');
