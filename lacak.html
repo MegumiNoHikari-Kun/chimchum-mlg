@@ -299,27 +299,26 @@
                     foundOrder.payment_proof !== 'Pending / Cash'
                 ) {
     
-                    if (
-                        String(foundOrder.payment_proof)
-                            .startsWith('data:image')
-                    ) {
-    
+                    // Cek apakah payment_proof berupa URL gambar atau base64
+                    const isImage = String(foundOrder.payment_proof).startsWith('data:image') || 
+                                    /\.(jpg|jpeg|png|webp|gif)$/i.test(foundOrder.payment_proof);
+                    
+                    if (isImage) {
                         proofDisplay = `
                             <div class="pt-2">
                                 <p class="text-xs text-slate-500 mb-1 font-semibold">
                                     Bukti Pembayaran:
                                 </p>
-    
-                                <img
-                                    src="${foundOrder.payment_proof}"
-                                    class="w-32 h-32 object-cover rounded-xl border border-slate-200"
-                                    alt="Bukti Pembayaran"
-                                >
+                                <a href="${foundOrder.payment_proof}" target="_blank" rel="noopener noreferrer">
+                                    <img
+                                        src="${foundOrder.payment_proof}"
+                                        class="w-32 h-32 object-cover rounded-xl border border-slate-200 hover:opacity-90 transition"
+                                        alt="Bukti Pembayaran"
+                                    >
+                                </a>
                             </div>
                         `;
-    
                     } else {
-    
                         proofDisplay = `
                             <div class="pt-2">
                                 <a
