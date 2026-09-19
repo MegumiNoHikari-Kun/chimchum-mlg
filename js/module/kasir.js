@@ -520,9 +520,9 @@ function buildStrukHTML(order) {
         <div class="struk-center">
             <div style="font-size:10px;margin-bottom:3px;">Tersedia juga di:</div>
             <div class="delivery-badges">
-                <span class="delivery-badge">GOFOOD</span>
-                <span class="delivery-badge">SHOPEEFOOD</span>
-                <span class="delivery-badge">GRABFOOD</span>
+                <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GOFOOD</span>
+               <span style="background-color: #ff5722; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">SHOPEEFOOD</span>
+               <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GRABFOOD</span>
             </div>
         </div>
 
@@ -904,7 +904,7 @@ function renderKasirOrders() {
                     <select onchange="updateOrderStatus('${id}', this.value)" style="margin:0;padding:6px 8px;font-size:12px;width:auto;">
                         ${statusOptionsHTML}
                     </select>
-                    <button type="button" class="btn-delete" style="margin-top:4px;" onclick="deleteKasirOrder('${id}')">Hapus</button>
+                    // <button type="button" class="btn-delete" style="margin-top:4px;" onclick="deleteKasirOrder('${id}')">Hapus</button>
                 </td>
             </tr>
         `;
