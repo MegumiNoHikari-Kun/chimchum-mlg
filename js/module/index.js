@@ -420,7 +420,15 @@ async function reduceProductStock(items) {
     for (const item of items) {
         const qty = Number(item.qty || 0);
 
-        if (!item.id || qty <= 0) continue;
+        if (!item.id || qty <= 0) {
+            continue;
+        }
+
+        console.log('[STOCK] Mengurangi stok:', {
+            productId: item.id,
+            name: item.name,
+            qty: qty
+        });
 
         const { data, error } = await supabase.rpc(
             'reduce_product_stock',
@@ -431,13 +439,17 @@ async function reduceProductStock(items) {
         );
 
         if (error) {
-            console.error(
-                `[STOCK] Gagal mengurangi stok ${item.name}:`,
-                error
-            );
+            console.error('[STOCK] RPC error:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code
+            });
+
             throw error;
         }
 
+        // false = stok tidak cukup
         if (data !== true) {
             throw new Error(
                 `Stok ${item.name} tidak mencukupi.`
@@ -445,7 +457,7 @@ async function reduceProductStock(items) {
         }
 
         console.log(
-            `[STOCK] ${item.name} berhasil dikurangi ${qty} pcs`
+            `[STOCK] ${item.name}: berhasil dikurangi ${qty} pcs`
         );
     }
 }
@@ -533,39 +545,48 @@ window.confirmAndSubmitOrder = async function() {
     try {
         await authReady;
     
-        // 1. Simpan order terlebih dahulu
-        const { data: insertedOrder, error: orderError } = await supabase
-            .from('orders')
-            .insert([pendingOrderData])
-            .select()
-            .single();
+        // Simpan order
+        const { data: insertedOrder, error: orderError } =
+            await supabase
+                .from('orders')
+                .insert([pendingOrderData])
+                .select()
+                .single();
     
         if (orderError) {
             throw orderError;
         }
     
-        console.log('[ORDER] Order berhasil dibuat:', insertedOrder);
+        console.log(
+            '[ORDER] Order berhasil dibuat:',
+            insertedOrder
+        );
     
-        // 2. Setelah order berhasil, kurangi stok
+        // Kurangi stok setelah order berhasil
         await reduceProductStock(pendingOrderData.items);
     
-        console.log('[STOCK] Stok berhasil dikurangi.');
+        console.log('[STOCK] Semua stok berhasil diperbarui.');
     
     } catch (dbErr) {
-        console.error('[ORDER] Gagal submit order / update stok:', dbErr);
+        console.error('[ORDER] Gagal submit order / update stok:', {
+            message: dbErr.message,
+            details: dbErr.details,
+            hint: dbErr.hint,
+            code: dbErr.code
+        });
     
         showNotification(
             'Pesanan Gagal',
-            dbErr.message || 'Terjadi kesalahan saat menyimpan pesanan.',
+            dbErr.message || 'Terjadi kesalahan saat memproses pesanan.',
             'warning'
         );
     
-        // Jangan lanjut ke WhatsApp
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             submitBtn.innerHTML =
-                '<i class="fa-solid fa-circle-check"></i><span>Konfirmasi & Kirim Pesanan</span>';
+                '<i class="fa-solid fa-circle-check"></i>' +
+                '<span>Konfirmasi & Kirim Pesanan</span>';
         }
     
         return;
