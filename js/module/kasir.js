@@ -754,7 +754,6 @@ function statusColorOf(value) {
 /* =========================================================
    RENDER ORDER SUMMARY CARDS (#orderSummary)
 ========================================================= */
-
 function renderOrderSummary() {
     const container = document.getElementById('orderSummary');
     if (!container) return;
@@ -762,114 +761,99 @@ function renderOrderSummary() {
     const total = cachedOrders.length;
 
     const revenue = cachedOrders
-        .filter(o => String(o.status ?? '').toLowerCase() === 'selesai')
+        .filter(o => String(o.status).toLowerCase() === 'selesai')
         .reduce((sum, o) => sum + Number(o.grand_total ?? 0), 0);
 
-    const iconMap = {
-        all: 'fa-receipt',
-        new: 'fa-bell',
-        disiapkan: 'fa-fire-burner',
-        dikirim: 'fa-motorcycle',
-        selesai: 'fa-circle-check',
-        cancel: 'fa-circle-xmark'
-    };
+    const cardStyle = `
+        background:white;
+        border-radius:16px;
+        padding:18px;
+        box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        border:1px solid #f1f5f9;
+        cursor:pointer;
+        transition:all .15s ease;
+    `;
 
-    const styleMap = {
-        all: {
-            defaultColor: 'text-slate-700 border-slate-200 bg-white',
-            iconClass: 'bg-slate-100 text-slate-600'
-        },
-        new: {
-            defaultColor: 'text-amber-600 border-amber-200 bg-amber-50/50',
-            iconClass: 'bg-blue-50 text-blue-600'
-        },
-        disiapkan: {
-            defaultColor: 'text-blue-600 border-blue-200 bg-blue-50/50',
-            iconClass: 'bg-amber-50 text-amber-600'
-        },
-        dikirim: {
-            defaultColor: 'text-purple-600 border-purple-200 bg-purple-50/50',
-            iconClass: 'bg-indigo-50 text-indigo-600'
-        },
-        selesai: {
-            defaultColor: 'text-emerald-600 border-emerald-200 bg-emerald-50/50',
-            iconClass: 'bg-emerald-50 text-emerald-600'
-        },
-        cancel: {
-            defaultColor: 'text-rose-600 border-rose-200 bg-rose-50/50',
-            iconClass: 'bg-red-50 text-red-600'
-        },
-        revenue: {
-            defaultColor: 'text-emerald-600 border-emerald-200 bg-emerald-50/50',
-            iconClass: 'bg-emerald-50 text-emerald-600'
-        }
-    };
-
-    const cards = [
-        {
-            key: 'all',
-            title: 'Total',
-            value: total
-        },
-
-        ...STATUS_LIST.map(s => {
-            const status = s.value.toLowerCase();
-
-            const count = cachedOrders.filter(
-                o => String(o.status ?? '').toLowerCase() === status
-            ).length;
-
-            return {
-                key: status,
-                title: s.label,
-                value: count
-            };
-        }),
-
-        {
-            key: 'revenue',
-            filterKey: 'selesai',
-            title: 'Revenue (Selesai)',
-            value: rupiah(revenue)
-        }
-    ];
-
-    container.innerHTML = cards.map(c => {
-        const style = styleMap[c.key] || styleMap.all;
-
-        // Revenue ikut aktif ketika filter "selesai"
-        const filterKey = c.filterKey || c.key;
-
-        const isActive =
-            currentFilterStatus === filterKey;
-
-        const activeStyle = isActive
-            ? 'border-2 border-orange-500 shadow-sm bg-orange-50/30 text-orange-700 font-semibold'
-            : `border border-slate-200 hover:shadow-sm ${style.defaultColor}`;
-
-        return `
-            <div
-                onclick="filterKasirOrders('${filterKey}')"
-                class="rounded-xl p-4 cursor-pointer transition border ${activeStyle} flex items-center justify-between"
-            >
-                <div>
-                    <div class="text-[11px] font-medium text-slate-500">
-                        ${c.title}
-                    </div>
-
-                    <div class="text-xl font-bold mt-1">
-                        ${c.value}
-                    </div>
-                </div>
-
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${style.iconClass}">
-                    <i class="fa-solid ${iconMap[c.key] || 'fa-circle-info'}"></i>
-                </div>
+    const makeCard = (label, value, color, filterValue) => `
+        <div
+            class="order-summary-card"
+            data-status-filter="${filterValue}"
+            onclick="filterKasirOrders('${filterValue}')"
+            style="${cardStyle}"
+            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 10px rgba(0,0,0,.08)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'"
+        >
+            <div style="
+                font-size:11px;
+                color:var(--gray);
+                text-transform:uppercase;
+                font-weight:600;
+            ">
+                ${label}
             </div>
-        `;
+
+            <div style="
+                font-size:22px;
+                font-weight:700;
+                margin-top:4px;
+                color:${color};
+            ">
+                ${value}
+            </div>
+        </div>
+    `;
+
+    const statusCardsHTML = STATUS_LIST.map(s => {
+        const count = cachedOrders.filter(
+            o => String(o.status).toLowerCase() === s.value.toLowerCase()
+        ).length;
+
+        return makeCard(
+            s.label,
+            count,
+            s.color,
+            s.value
+        );
     }).join('');
+
+    container.innerHTML = `
+        ${makeCard(
+            'Total Pesanan',
+            total,
+            '#334155',
+            'all'
+        )}
+
+        ${statusCardsHTML}
+
+        ${makeCard(
+            'Revenue (Selesai)',
+            rupiah(revenue),
+            'var(--primary)',
+            'selesai'
+        )}
+    `;
+
+    updateOrderSummaryActiveState();
 }
 
+function updateOrderSummaryActiveState() {
+    document
+        .querySelectorAll('.order-summary-card')
+        .forEach(card => {
+            const isActive =
+                String(card.dataset.statusFilter).toLowerCase() ===
+                String(currentFilterStatus).toLowerCase();
+
+            card.style.borderColor = isActive
+                ? '#334155'
+                : '#f1f5f9';
+
+            card.style.boxShadow = isActive
+                ? '0 0 0 2px rgba(51,65,85,.12)'
+                : '0 1px 3px rgba(0,0,0,0.05)';
+        });
+}
 
 /* =========================================================
    RENDER ORDERS TABLE (#orderTableBody)
@@ -1156,8 +1140,8 @@ window.deleteKasirOrder = async function (id) {
 window.filterKasirOrders = function (status) {
     currentFilterStatus = String(status || 'all').toLowerCase();
 
-    renderOrderSummary();
     renderKasirOrders();
+    updateOrderSummaryActiveState();
 };
 
 
