@@ -13,7 +13,7 @@ let isDeleting = false;
 
 // State Pagination
 let currentPage = 1;
-const itemsPerPage = 10;
+const itemsPerPage = 5;
 let filteredProducts = []; // Menyimpan hasil pencarian
 
 // =========================================================
