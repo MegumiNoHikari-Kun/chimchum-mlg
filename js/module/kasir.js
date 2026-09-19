@@ -479,13 +479,14 @@ function buildStrukHTML(order) {
             <div style="font-size:10px;">Dimsum &amp; Snack</div>
             <div style="font-size:10px;">Sawojajar, Malang</div>
         </div>
+         ${reprintInfo}
 
         <div class="struk-line"></div>
 
         <div>No: ${escapeHtml(order.order_id)}</div>
         <div>${escapeHtml(tanggal)}</div>
         <div>Meja/Nama: ${escapeHtml(order.customer_name)}</div>
-        ${reprintInfo}
+       
 
         <div class="struk-line"></div>
 
@@ -499,7 +500,7 @@ function buildStrukHTML(order) {
         </div>
 
         <div class="struk-row">
-            <span>Bayar</span>
+            <span>Metode Bayar</span>
             <span>${escapeHtml(order.payment_method)}</span>
         </div>
 
