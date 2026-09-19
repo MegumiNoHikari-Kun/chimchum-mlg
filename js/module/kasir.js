@@ -472,7 +472,7 @@ function buildStrukHTML(order) {
     return `
         <div class="struk-center">
             <div class="center">
-              <img src="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan_new.png">
+              <img src="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan_new.png"
                    style="width:65px; height:65px;">
             </div>
             <div class="bold" style="font-size:15px;margin-top:2px;">CHIMCHUM MALANG</div>
