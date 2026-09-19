@@ -1,28 +1,5 @@
 import { supabase, authReady } from '../supabase.js';
 
-/**
- * =========================================================
- * MANAGE ORDER - CHIMCHUM MALANG
- * =========================================================
- *
- * Tabel Supabase:
- *   orders
- *
- * Kolom yang digunakan:
- *   order_id
- *   customer_name
- *   phone
- *   address
- *   payment_method
- *   payment_proof
- *   status
- *   items
- *   grand_total
- *   total_price
- *   created_at
- *
- * =========================================================
- */
 
 let allOrders = [];
 let filteredOrders = [];
@@ -2310,180 +2287,482 @@ window.manageOrderState = function() {
 
 
 /* =========================================================
-   Delete bukti transfer lama.
+   DELETE BUKTI TRANSFER LAMA
 ========================================================= */
+
 const PAYMENT_PROOF_BUCKET = 'payment-proofs';
 const DELETE_AFTER_DAYS = 30;
 
 window.deleteOldPaymentProofs = deleteOldPaymentProofs;
 
+
 async function deleteOldPaymentProofs() {
-  const button = document.getElementById('deleteOldProofsBtn');
 
-  try {
-    await authReady;
+    const button =
+        document.getElementById('deleteOldProofsBtn');
 
-    // Ambil ulang data terbaru dari database
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select('id, order_id, status, created_at, payment_proof')
-      .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    try {
 
-    const cutoffDate = new Date(
-      Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000
-    );
+        await authReady;
 
-    // Hanya:
-    // 1. status selesai
-    // 2. umur order > 30 hari
-    // 3. punya payment_proof
-    const eligibleOrders = (orders || []).filter(order => {
-      const status = normalizeStatus(order.status);
 
-      const createdAt = new Date(order.created_at);
+        /*
+         * Ambil order terbaru langsung dari Supabase
+         */
+        const {
+            data: orders,
+            error
+        } = await supabase
+            .from('orders')
+            .select(
+                'id, order_id, status, created_at, payment_proof'
+            )
+            .order('created_at', {
+                ascending: true
+            });
 
-      return (
-        status === 'selesai' &&
-        createdAt < cutoffDate &&
-        order.payment_proof
-      );
-    });
 
-    if (eligibleOrders.length === 0) {
-      showToast(
-        'Tidak ada bukti transfer yang memenuhi syarat untuk dihapus.',
-        'info'
-      );
-      return;
-    }
+        if (error) {
+            throw error;
+        }
 
-    const confirmed = confirm(
-      `Ditemukan ${eligibleOrders.length} bukti transfer yang:\n\n` +
-      `• Status = selesai\n` +
-      `• Lebih dari 30 hari\n` +
-      `• Memiliki bukti transfer\n\n` +
-      `Bukti transfer akan dihapus dari Storage dan kolom payment_proof akan dikosongkan.\n\n` +
-      `Lanjutkan?`
-    );
 
-    if (!confirmed) return;
+        /*
+         * Batas 30 hari
+         */
+        const cutoffDate =
+            new Date(
+                Date.now() -
+                DELETE_AFTER_DAYS *
+                24 *
+                60 *
+                60 *
+                1000
+            );
 
-    // Disable button saat proses
-    if (button) {
-      button.disabled = true;
-      button.innerHTML = `
-        <i class="fa-solid fa-spinner fa-spin mr-2"></i>
-        Menghapus...
-      `;
-    }
 
-    let successCount = 0;
-    let failedCount = 0;
-    const failedOrders = [];
+        /*
+         * CARI ORDER YANG MEMENUHI SYARAT
+         *
+         * status     = selesai
+         * umur       > 30 hari
+         * payment_proof tersedia
+         */
+        const eligibleOrders =
+            (orders || []).filter(order => {
 
-    for (const order of eligibleOrders) {
-      try {
-        const storagePath = getStoragePath(
-          order.payment_proof,
-          PAYMENT_PROOF_BUCKET
+                const status =
+                    normalizeStatus(order.status);
+
+
+                const createdAt =
+                    new Date(order.created_at);
+
+
+                return (
+                    status === 'selesai' &&
+                    !Number.isNaN(createdAt.getTime()) &&
+                    createdAt < cutoffDate &&
+                    hasPaymentProof(order)
+                );
+            });
+
+
+        /*
+         * Tidak ada file yang perlu dihapus
+         */
+        if (eligibleOrders.length === 0) {
+
+            showToast(
+                'Tidak ada bukti transfer >30 hari yang memenuhi syarat.',
+                'info'
+            );
+
+            return;
+        }
+
+
+        /*
+         * KONFIRMASI
+         */
+        const confirmed =
+            confirm(
+                `Ditemukan ${eligibleOrders.length} bukti transfer yang memenuhi syarat.\n\n` +
+                `Syarat:\n` +
+                `• Status: Selesai\n` +
+                `• Umur: lebih dari 30 hari\n` +
+                `• Bukti pembayaran tersedia\n\n` +
+                `File akan dihapus permanen dari Storage.\n\n` +
+                `Lanjutkan?`
+            );
+
+
+        if (!confirmed) {
+            return;
+        }
+
+
+        /*
+         * DISABLE BUTTON
+         */
+        if (button) {
+
+            button.disabled = true;
+
+            button.innerHTML = `
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+                Menghapus...
+            `;
+        }
+
+
+        let successCount = 0;
+        let failedCount = 0;
+
+        const failedOrders = [];
+
+
+        /*
+         * PROSES SATU PER SATU
+         */
+        for (const order of eligibleOrders) {
+
+            try {
+
+                console.log(
+                    '[DELETE PROOF] Processing:',
+                    order.order_id
+                );
+
+
+                /*
+                 * AMBIL PATH STORAGE
+                 */
+                const storagePath =
+                    getStoragePath(
+                        order.payment_proof,
+                        PAYMENT_PROOF_BUCKET
+                    );
+
+
+                if (!storagePath) {
+
+                    failedCount++;
+
+                    failedOrders.push({
+                        order_id:
+                            order.order_id,
+
+                        reason:
+                            'Storage path tidak ditemukan'
+                    });
+
+                    continue;
+                }
+
+
+                console.log(
+                    '[DELETE PROOF] Storage path:',
+                    storagePath
+                );
+
+
+                /*
+                 * HAPUS FILE DARI STORAGE
+                 */
+                const {
+                    error: storageError
+                } = await supabase
+                    .storage
+                    .from(PAYMENT_PROOF_BUCKET)
+                    .remove([
+                        storagePath
+                    ]);
+
+
+                if (storageError) {
+                    throw storageError;
+                }
+
+
+                /*
+                 * SET payment_proof = NULL
+                 */
+                const {
+                    error: updateError
+                } = await supabase
+                    .from('orders')
+                    .update({
+                        payment_proof: null
+                    })
+                    .eq(
+                        'id',
+                        order.id
+                    );
+
+
+                if (updateError) {
+                    throw updateError;
+                }
+
+
+                successCount++;
+
+
+                console.log(
+                    '[DELETE PROOF] SUCCESS:',
+                    order.order_id
+                );
+
+            } catch (error) {
+
+                failedCount++;
+
+
+                failedOrders.push({
+                    order_id:
+                        order.order_id,
+
+                    reason:
+                        error?.message ||
+                        'Unknown error'
+                });
+
+
+                console.error(
+                    '[DELETE PROOF] FAILED:',
+                    order.order_id,
+                    error
+                );
+            }
+        }
+
+
+        /*
+         * REFRESH TABLE
+         */
+        await loadOrders();
+
+
+        /*
+         * HASIL
+         */
+        let message =
+            `${successCount} bukti transfer berhasil dihapus.`;
+
+
+        if (failedCount > 0) {
+
+            message +=
+                ` ${failedCount} gagal dihapus.`;
+        }
+
+
+        showToast(
+            message,
+            failedCount > 0
+                ? 'warning'
+                : 'success'
         );
 
-        // Kalau bukan file Storage yang bisa dikenali,
-        // jangan hapus database-nya.
-        if (!storagePath) {
-          failedCount++;
 
-          failedOrders.push({
-            order_id: order.order_id,
-            reason: 'Path Storage tidak dapat ditemukan'
-          });
+        console.log(
+            '================================'
+        );
 
-          continue;
+        console.log(
+            'HAPUS BUKTI TRANSFER'
+        );
+
+        console.log(
+            'Total memenuhi syarat:',
+            eligibleOrders.length
+        );
+
+        console.log(
+            'Berhasil:',
+            successCount
+        );
+
+        console.log(
+            'Gagal:',
+            failedCount
+        );
+
+        console.log(
+            '================================'
+        );
+
+
+        if (failedOrders.length > 0) {
+
+            console.table(
+                failedOrders
+            );
         }
 
-        // Hapus file dari bucket
-        const { error: storageError } = await supabase
-          .storage
-          .from(PAYMENT_PROOF_BUCKET)
-          .remove([storagePath]);
 
-        if (storageError) {
-          throw storageError;
-        }
+    } catch (error) {
 
-        // Kalau Storage berhasil dihapus,
-        // baru kosongkan payment_proof di database.
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({
-            payment_proof: null
-          })
-          .eq('id', order.id);
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        successCount++;
-
-      } catch (error) {
         console.error(
-          `Gagal menghapus bukti order ${order.order_id}:`,
-          error
+            '[DELETE PROOF] ERROR:',
+            error
         );
 
-        failedCount++;
 
-        failedOrders.push({
-          order_id: order.order_id,
-          reason: error?.message || 'Unknown error'
-        });
-      }
+        showToast(
+            error?.message ||
+            'Gagal menghapus bukti transfer.',
+            'error'
+        );
+
+    } finally {
+
+        /*
+         * ENABLE BUTTON KEMBALI
+         */
+        if (button) {
+
+            button.disabled = false;
+
+            button.innerHTML = `
+                <i class="fa-solid fa-trash-can mr-2"></i>
+                Hapus Bukti >30 Hari
+            `;
+        }
+    }
+}
+
+
+/* =========================================================
+   GET STORAGE PATH
+========================================================= */
+
+function getStoragePath(
+    value,
+    bucketName
+) {
+
+    if (!value) {
+        return null;
     }
 
-    // Refresh data table setelah selesai
-    await loadOrders();
 
-    let message =
-      `${successCount} bukti transfer berhasil dihapus.`;
+    const raw =
+        String(value).trim();
 
-    if (failedCount > 0) {
-      message += ` ${failedCount} gagal dihapus.`;
+
+    if (!raw) {
+        return null;
     }
 
-    showToast(
-      message,
-      failedCount > 0 ? 'warning' : 'success'
-    );
 
-    console.log('=== HAPUS BUKTI TRANSFER ===');
-    console.log('Total memenuhi syarat:', eligibleOrders.length);
-    console.log('Berhasil:', successCount);
-    console.log('Gagal:', failedCount);
-
-    if (failedOrders.length > 0) {
-      console.table(failedOrders);
+    /*
+     * Data URI bukan file Storage
+     */
+    if (
+        raw
+            .toLowerCase()
+            .startsWith('data:image/')
+    ) {
+        return null;
     }
 
-  } catch (error) {
-    console.error('deleteOldPaymentProofs:', error);
 
-    showToast(
-      error?.message || 'Gagal menghapus bukti transfer.',
-      'error'
-    );
+    /*
+     * Jika database menyimpan langsung path:
+     *
+     * ORD-123.jpg
+     * 2026/09/ORD-123.jpg
+     */
+    if (
+        !raw.startsWith('http://') &&
+        !raw.startsWith('https://')
+    ) {
 
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.innerHTML = `
-        <i class="fa-solid fa-trash-can mr-2"></i>
-        Hapus Bukti >30 Hari
-      `;
+        return raw.replace(
+            /^\/+/,
+            ''
+        );
     }
-  }
+
+
+    try {
+
+        const url =
+            new URL(raw);
+
+
+        const pathname =
+            decodeURIComponent(
+                url.pathname
+            );
+
+
+        const marker =
+            '/storage/v1/object/';
+
+
+        const markerIndex =
+            pathname.indexOf(marker);
+
+
+        if (markerIndex === -1) {
+            return null;
+        }
+
+
+        let afterMarker =
+            pathname.substring(
+                markerIndex +
+                marker.length
+            );
+
+
+        /*
+         * Hilangkan:
+         *
+         * public/
+         * sign/
+         * authenticated/
+         */
+        afterMarker =
+            afterMarker.replace(
+                /^(public|sign|authenticated)\//,
+                ''
+            );
+
+
+        /*
+         * Pastikan bucket benar
+         */
+        if (
+            !afterMarker.startsWith(
+                `${bucketName}/`
+            )
+        ) {
+            return null;
+        }
+
+
+        /*
+         * Ambil path setelah nama bucket
+         */
+        return afterMarker.substring(
+            bucketName.length + 1
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            '[DELETE PROOF] Invalid URL:',
+            error
+        );
+
+        return null;
+    }
 }
 
 
@@ -2557,31 +2836,7 @@ function getStoragePath(value, bucketName) {
   }
 }
 
-function normalizeStatus(status) {
-  const value = String(status || '')
-    .trim()
-    .toLowerCase();
 
-  const aliases = {
-    pending: 'new',
-    baru: 'new',
-
-    diproses: 'disiapkan',
-    processing: 'disiapkan',
-    proses: 'disiapkan',
-
-    shipped: 'dikirim',
-
-    completed: 'selesai',
-    complete: 'selesai',
-
-    cancelled: 'cancel',
-    canceled: 'cancel',
-    batal: 'cancel'
-  };
-
-  return aliases[value] || value;
-}
 
 /* =========================================================
    AUTO REFRESH OPTIONAL
