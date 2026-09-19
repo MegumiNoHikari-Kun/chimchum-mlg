@@ -318,16 +318,26 @@
             <button onclick="closeModal()" class="w-full bg-orange-500 text-white font-medium py-2 rounded-xl text-xs hover:bg-orange-600 transition">Mengerti</button>
         </div>
     </div>
-    <script type="module" src="./js/module/master_resep.js"></script>
-    <!-- <script type="module">
+    <!-- <script type="module" src="./js/module/master_resep.js"></script> -->
+    <script type="module">
         import { requireAuth } from './js/module/auth-guard.js';
+    
+        console.log('[AUTH] Mengecek auth...');
     
         const auth = await requireAuth(['admin']);
     
+        console.log('[AUTH] Hasil:', auth);
+    
         if (auth) {
+            console.log('[MODULE] Memuat master_resep.js...');
+    
             await import('./js/module/master_resep.js');
+    
+            console.log('[MODULE] master_resep.js berhasil di-load');
+        } else {
+            console.warn('[MODULE] Auth gagal, master_resep.js tidak dimuat');
         }
-    </script> -->
+    </script>
 
 </body>
 </html>
