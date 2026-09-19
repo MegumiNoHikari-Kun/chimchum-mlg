@@ -2310,6 +2310,280 @@ window.manageOrderState = function() {
 
 
 /* =========================================================
+   Delete bukti transfer lama.
+========================================================= */
+const PAYMENT_PROOF_BUCKET = 'payment-proofs';
+const DELETE_AFTER_DAYS = 30;
+
+window.deleteOldPaymentProofs = deleteOldPaymentProofs;
+
+async function deleteOldPaymentProofs() {
+  const button = document.getElementById('deleteOldProofsBtn');
+
+  try {
+    await authReady;
+
+    // Ambil ulang data terbaru dari database
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('id, order_id, status, created_at, payment_proof')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const cutoffDate = new Date(
+      Date.now() - DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000
+    );
+
+    // Hanya:
+    // 1. status selesai
+    // 2. umur order > 30 hari
+    // 3. punya payment_proof
+    const eligibleOrders = (orders || []).filter(order => {
+      const status = normalizeStatus(order.status);
+
+      const createdAt = new Date(order.created_at);
+
+      return (
+        status === 'selesai' &&
+        createdAt < cutoffDate &&
+        order.payment_proof
+      );
+    });
+
+    if (eligibleOrders.length === 0) {
+      showToast(
+        'Tidak ada bukti transfer yang memenuhi syarat untuk dihapus.',
+        'info'
+      );
+      return;
+    }
+
+    const confirmed = confirm(
+      `Ditemukan ${eligibleOrders.length} bukti transfer yang:\n\n` +
+      `• Status = selesai\n` +
+      `• Lebih dari 30 hari\n` +
+      `• Memiliki bukti transfer\n\n` +
+      `Bukti transfer akan dihapus dari Storage dan kolom payment_proof akan dikosongkan.\n\n` +
+      `Lanjutkan?`
+    );
+
+    if (!confirmed) return;
+
+    // Disable button saat proses
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = `
+        <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+        Menghapus...
+      `;
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+    const failedOrders = [];
+
+    for (const order of eligibleOrders) {
+      try {
+        const storagePath = getStoragePath(
+          order.payment_proof,
+          PAYMENT_PROOF_BUCKET
+        );
+
+        // Kalau bukan file Storage yang bisa dikenali,
+        // jangan hapus database-nya.
+        if (!storagePath) {
+          failedCount++;
+
+          failedOrders.push({
+            order_id: order.order_id,
+            reason: 'Path Storage tidak dapat ditemukan'
+          });
+
+          continue;
+        }
+
+        // Hapus file dari bucket
+        const { error: storageError } = await supabase
+          .storage
+          .from(PAYMENT_PROOF_BUCKET)
+          .remove([storagePath]);
+
+        if (storageError) {
+          throw storageError;
+        }
+
+        // Kalau Storage berhasil dihapus,
+        // baru kosongkan payment_proof di database.
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({
+            payment_proof: null
+          })
+          .eq('id', order.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        successCount++;
+
+      } catch (error) {
+        console.error(
+          `Gagal menghapus bukti order ${order.order_id}:`,
+          error
+        );
+
+        failedCount++;
+
+        failedOrders.push({
+          order_id: order.order_id,
+          reason: error?.message || 'Unknown error'
+        });
+      }
+    }
+
+    // Refresh data table setelah selesai
+    await loadOrders();
+
+    let message =
+      `${successCount} bukti transfer berhasil dihapus.`;
+
+    if (failedCount > 0) {
+      message += ` ${failedCount} gagal dihapus.`;
+    }
+
+    showToast(
+      message,
+      failedCount > 0 ? 'warning' : 'success'
+    );
+
+    console.log('=== HAPUS BUKTI TRANSFER ===');
+    console.log('Total memenuhi syarat:', eligibleOrders.length);
+    console.log('Berhasil:', successCount);
+    console.log('Gagal:', failedCount);
+
+    if (failedOrders.length > 0) {
+      console.table(failedOrders);
+    }
+
+  } catch (error) {
+    console.error('deleteOldPaymentProofs:', error);
+
+    showToast(
+      error?.message || 'Gagal menghapus bukti transfer.',
+      'error'
+    );
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = `
+        <i class="fa-solid fa-trash-can mr-2"></i>
+        Hapus Bukti >30 Hari
+      `;
+    }
+  }
+}
+
+
+function getStoragePath(value, bucketName) {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+
+  if (!raw) return null;
+
+  // Data URI bukan file Storage
+  if (raw.startsWith('data:image/')) {
+    return null;
+  }
+
+  // Kalau payment_proof sudah berupa path:
+  // contoh:
+  // ORD-123.jpg
+  // 2026/ORD-123.jpg
+  if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+    return raw.replace(/^\/+/, '');
+  }
+
+  try {
+    const url = new URL(raw);
+    const pathname = decodeURIComponent(url.pathname);
+
+    /*
+      Contoh URL Supabase:
+
+      /storage/v1/object/public/payment-proofs/ORD-123.jpg
+
+      /storage/v1/object/sign/payment-proofs/ORD-123.jpg
+
+      /storage/v1/object/authenticated/payment-proofs/ORD-123.jpg
+    */
+
+    const marker = `/storage/v1/object/`;
+
+    const markerIndex = pathname.indexOf(marker);
+
+    if (markerIndex === -1) {
+      return null;
+    }
+
+    let afterMarker = pathname.substring(
+      markerIndex + marker.length
+    );
+
+    // Hapus tipe akses:
+    // public/
+    // sign/
+    // authenticated/
+    afterMarker = afterMarker.replace(
+      /^(public|sign|authenticated)\//,
+      ''
+    );
+
+    // Pastikan URL memang menuju bucket yang kita targetkan
+    if (!afterMarker.startsWith(`${bucketName}/`)) {
+      return null;
+    }
+
+    return afterMarker.substring(
+      bucketName.length + 1
+    );
+
+  } catch (error) {
+    console.error('Gagal membaca payment_proof:', error);
+    return null;
+  }
+}
+
+function normalizeStatus(status) {
+  const value = String(status || '')
+    .trim()
+    .toLowerCase();
+
+  const aliases = {
+    pending: 'new',
+    baru: 'new',
+
+    diproses: 'disiapkan',
+    processing: 'disiapkan',
+    proses: 'disiapkan',
+
+    shipped: 'dikirim',
+
+    completed: 'selesai',
+    complete: 'selesai',
+
+    cancelled: 'cancel',
+    canceled: 'cancel',
+    batal: 'cancel'
+  };
+
+  return aliases[value] || value;
+}
+
+/* =========================================================
    AUTO REFRESH OPTIONAL
    Tidak diaktifkan otomatis supaya tidak membebani Supabase.
 ========================================================= */
