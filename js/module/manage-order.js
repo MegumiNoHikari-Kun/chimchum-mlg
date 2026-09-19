@@ -1,6 +1,5 @@
 import { supabase, authReady } from '../supabase.js';
 
-
 let allOrders = [];
 let filteredOrders = [];
 
@@ -14,17 +13,31 @@ let selectedOrder = null;
 
 
 /* =========================================================
-   DOM READY
+   INIT
 ========================================================= */
-
-document.addEventListener('DOMContentLoaded', () => {
-    initManageOrder();
-});
-
 
 async function initManageOrder() {
     bindEvents();
     await loadOrders();
+}
+
+
+/*
+ * Jika DOM sudah siap, langsung init.
+ * Jika belum, tunggu DOMContentLoaded.
+ */
+if (document.readyState === 'loading') {
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        initManageOrder,
+        { once: true }
+    );
+
+} else {
+
+    initManageOrder();
+
 }
 
 
