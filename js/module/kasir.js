@@ -846,11 +846,11 @@ function updateOrderSummaryActiveState() {
                 String(currentFilterStatus).toLowerCase();
 
             card.style.borderColor = isActive
-                ? '#334155'
+                ? '#f97316'
                 : '#f1f5f9';
-
+            
             card.style.boxShadow = isActive
-                ? '0 0 0 2px rgba(51,65,85,.12)'
+                ? '0 0 0 2px rgba(249,115,22,.20)'
                 : '0 1px 3px rgba(0,0,0,0.05)';
         });
 }
