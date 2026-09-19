@@ -457,11 +457,13 @@ function buildStrukHTML(order) {
 
     // Resolve relative to the *app's* location, not the blank popup
     // window, otherwise the image fails to load in the print preview.
-    const logoUrl = new URL('assets/logo-transparant.png', window.location.href).href;
-
+   
     return `
         <div class="struk-center">
-            <img src="${logoUrl}" class="struk-logo" alt="Logo" onerror="this.style.display='none'">
+            <div class="center">
+              <img src="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan.jpg"
+                   style="width:65px; height:65px;">
+            </div>
             <div class="bold" style="font-size:15px;margin-top:2px;">CHIMCHUM MALANG</div>
             <div style="font-size:10px;">Dimsum &amp; Snack</div>
             <div style="font-size:10px;">Sawojajar, Malang</div>
@@ -507,6 +509,7 @@ function buildStrukHTML(order) {
         <div class="struk-center">
             Terima kasih atas kunjungan Anda!
         </div>
+        <div class="center" style="font-size:10px; margin-top:8px;">Jazakumullahu Khairan</div>
     `;
 }
 
@@ -1056,7 +1059,10 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
         </style>
       </head><body>
         <div class="struk-center">
-            <img src="${logoUrl}" class="struk-logo" alt="Logo" onerror="this.style.display='none'">
+            <div class="center">
+              <img src="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan.jpg"
+                   style="width:65px; height:65px;">
+            </div>
             <div class="bold" style="font-size:15px;margin-top:2px;">CHIMCHUM MALANG</div>
             <div style="font-size:10px;">Dimsum &amp; Snack</div>
             <div style="font-size:10px;">Sawojajar, Malang</div>
@@ -1090,6 +1096,7 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
             </div>
         </div>
         <div class="center" style="font-size:10px; margin-top:8px;">Terima Kasih Atas Kunjungan Anda!</div>
+        <div class="center" style="font-size:10px; margin-top:8px;">Jazakumullahu Khairan</div>
         <script>window.onload=function(){window.print();setTimeout(()=>window.close(),300);}<\/script>
       </body></html>`);
     printWindow.document.close();
