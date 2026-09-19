@@ -1048,16 +1048,6 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
       </div>`).join('');
 
     printWindow.document.write(`
-      <html><head>
-        <title>Struk - ChimChum</title>
-        <style>
-          @page { margin:0; }
-          body { font-family:'Courier New',monospace; width:58mm; padding:2mm; color:#000; font-size:11px; }
-          .center { text-align:center; }
-          .line { border-top:1px dashed #000; margin:6px 0; }
-          .bold { font-weight:bold; }
-        </style>
-      </head><body>
         <div class="struk-center">
             <div class="center">
               <img src="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan.jpg"
@@ -1067,25 +1057,31 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
             <div style="font-size:10px;">Dimsum &amp; Snack</div>
             <div style="font-size:10px;">Sawojajar, Malang</div>
         </div>
-        <div class="line"></div>
+        
+        <div class="struk-line"></div>
+        
         <div style="font-size:11px; line-height:1.4;">
           Waktu : ${tgl}<br>
           Pelanggan : ${noMeja}
         </div>
-        <div class="line"></div>
+        <div class="struk-line"></div>
         ${itemsHtml}
-        <div class="line"></div>
+        
+        <div class="struk-line"></div>
+        
         <div style="display:flex; justify-content:space-between; font-size:12px;" class="bold">
           <span>TOTAL:</span><span>${rupiah(grandTotal)}</span>
         </div>
-        <div class="line"></div>
+        
+        <div class="struk-line"></div>
+        
         <div style="display:flex; justify-content:space-between; font-size:11px;">
           <span>Bayar (${metodeBayar}):</span><span>${rupiah(uangBayar)}</span>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px;">
           <span>Kembalian:</span><span>${rupiah(kembalian)}</span>
         </div>
-        <div class="line"></div>
+        <div class="struk-line"></div>
         
         <div class="struk-center">
             <div style="font-size:10px;margin-bottom:3px;">Tersedia juga di:</div>
