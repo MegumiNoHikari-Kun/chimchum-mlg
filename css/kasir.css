@@ -1,0 +1,952 @@
+/* =========================================================
+   ChimChum Kasir POS — assets/css/kasir.css
+   Daftar isi:
+   1. Tokens
+   2. Reset & base
+   3. Header
+   4. Tabs
+   5. Layout (container, tab content)
+   6. Komponen umum (card, form, button, table)
+   7. Kasir: toolbar, daftar menu, pagination
+   8. Kasir: sidebar struk
+   9. Tab pesanan masuk
+   10. Mode: hide header & fullscreen
+   11. Desktop (layar terkunci, tanpa scroll halaman)
+   12. Responsive (tablet & mobile)
+   ========================================================= */
+
+
+/* 1. TOKENS
+   --------------------------------------------------------- */
+:root {
+  --primary: #ff6b35;
+  --primary-dark: #ea580c;
+  --secondary: #fff5f0;
+  --dark: #1e293b;
+  --gray: #64748b;
+  --white: #fff;
+  --success: #10b981;
+  --danger: #dc2626;
+  --bg: #f8fafc;
+  --border: #f1f5f9;
+  --border-strong: #e2e8f0;
+  --input-border: #cbd5e1;
+
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+
+/* 2. RESET & BASE
+   --------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: 'Poppins', sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--dark);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+
+/* 3. HEADER
+   --------------------------------------------------------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+
+  padding: 16px 28px;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-header__logo img {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.app-header__title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--dark);
+}
+
+.app-header__title span {
+  color: var(--primary);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 14px;
+  border: 1px solid #a7f3d0;
+  border-radius: 9999px;
+
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.btn-hide-header,
+.btn-fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.btn-hide-header {
+  background: #f1f5f9;
+  color: var(--dark);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-hide-header:hover {
+  background: var(--border-strong);
+}
+
+.btn-fullscreen {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.btn-fullscreen:hover {
+  background: #ffedd5;
+}
+
+/* Tombol "tampilkan header" — hanya muncul saat header disembunyikan */
+.btn-show-header {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 9999;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+  padding: 0;
+
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--white);
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-show-header:hover {
+  background: var(--primary-dark);
+}
+
+
+/* 4. TABS
+   --------------------------------------------------------- */
+.tabs-nav {
+  display: flex;
+  gap: 10px;
+  padding: 16px 28px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  background: #f1f5f9;
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tab-btn:hover {
+  background: var(--border-strong);
+  color: var(--dark);
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+}
+
+.btn-logout {
+  margin-left: auto;
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+.btn-logout:hover {
+  background: #fca5a5;
+  color: #b91c1c;
+}
+
+
+/* 5. LAYOUT
+   --------------------------------------------------------- */
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+
+/* 6. KOMPONEN UMUM
+   --------------------------------------------------------- */
+
+/* Card */
+.card {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Form */
+input,
+textarea,
+select {
+  width: 100%;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  padding: 11px 14px;
+
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  outline: none;
+  background: var(--white);
+  font-size: 13px;
+
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray);
+}
+
+/* Button */
+button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  transition: all 0.2s;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  color: var(--dark);
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+.btn-delete:hover {
+  background: #fca5a5;
+}
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  margin-top: 10px;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+th,
+td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 13px;
+}
+
+th {
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* 7. KASIR: TOOLBAR, DAFTAR MENU, PAGINATION
+   --------------------------------------------------------- */
+.kasir-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 27vw, 380px);
+  gap: 20px;
+}
+
+.kasir-menu-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Toolbar: cari + kategori */
+.kasir-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.kasir-toolbar input,
+.kasir-toolbar select {
+  margin: 0;
+}
+
+.kasir-toolbar__search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.kasir-toolbar__category {
+  width: 200px;
+}
+
+.kasir-toolbar__category select {
+  cursor: pointer;
+}
+
+/* Grid menu */
+.kasir-menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  align-content: start;
+  gap: 12px;
+}
+
+.kasir-item-card {
+  padding: 10px;
+
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  cursor: pointer;
+
+  transition: all 0.2s;
+}
+
+.kasir-item-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+.kasir-item-card[hidden] {
+  display: none !important;
+}
+
+.kasir-item-card img {
+  display: block;
+  width: 100%;
+  height: 96px;
+  margin-bottom: 8px;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+.kasir-item-card h4 {
+  /* tinggi dikunci 2 baris supaya semua kartu sama tinggi */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+
+  min-height: 2.7em;
+  margin-bottom: 4px;
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--dark);
+}
+
+.kasir-item-card p {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Pagination menu */
+.menu-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.menu-pager__hint {
+  font-size: 11px;
+  color: var(--gray);
+}
+
+.menu-pager__hint i {
+  color: var(--primary);
+}
+
+.menu-pager__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-pager__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+  padding: 0;
+
+  background: var(--secondary);
+  color: var(--primary-dark);
+}
+
+.menu-pager__btn:not(:disabled):hover {
+  background: #ffe4d6;
+}
+
+.menu-pager__info {
+  min-width: 96px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.menu-pager__info small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--gray);
+}
+
+
+/* 8. KASIR: SIDEBAR STRUK (minimalis)
+   --------------------------------------------------------- */
+.kasir-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.receipt-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.receipt-title i {
+  color: var(--primary);
+}
+
+/* Daftar item: satu-satunya area yang boleh scroll (di dalam sidebar) */
+.receipt-items {
+  flex: 1;
+  min-height: 90px;
+  max-height: 240px;
+  overflow-y: auto;
+
+  padding: 8px 0;
+  border-top: 1px dashed var(--border-strong);
+  border-bottom: 1px dashed var(--border-strong);
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.receipt-qty-control button {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: var(--dark);
+  font-size: 11px;
+}
+
+.receipt-empty {
+  padding: 22px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.receipt-total strong {
+  color: var(--primary);
+}
+
+/* Form ringkas 2 kolom */
+.receipt-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.receipt-form .field--full {
+  grid-column: 1 / -1;
+}
+
+.receipt-form input,
+.receipt-form select {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+/* Kalkulator tunai */
+.cash-box {
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.cash-box input {
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.cash-quick {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.chip {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 6px;
+  background: var(--white);
+  border: 1px solid var(--border-strong);
+  color: var(--dark);
+  font-size: 11px;
+}
+
+.chip--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+.cash-change {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cash-change #kasirKembalian {
+  color: var(--success);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.check-row input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 12px;
+  background: var(--success);
+  color: var(--white);
+  font-size: 14px;
+}
+
+
+/* 9. TAB PESANAN MASUK
+   --------------------------------------------------------- */
+.orders-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.orders-toolbar h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.orders-toolbar h3 i {
+  color: var(--primary);
+}
+
+.orders-toolbar p {
+  font-size: 12px;
+  color: var(--gray);
+}
+
+.order-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.table-empty {
+  padding: 35px;
+  text-align: center;
+  color: #aaa;
+}
+
+
+/* 10. MODE: HIDE HEADER & FULLSCREEN
+   (mode layout aplikasi, bukan Fullscreen API browser)
+   --------------------------------------------------------- */
+body.header-hidden .app-header {
+  display: none;
+}
+
+body.header-hidden .btn-show-header {
+  display: flex;
+}
+
+/* beri ruang agar tombol show-header tidak menimpa tab pertama */
+body.header-hidden .tabs-nav {
+  padding-left: 70px;
+}
+
+body.fullscreen-mode .container {
+  max-width: none;
+}
+
+
+/* 11. DESKTOP (>= 1025px)
+   Layar dikunci setinggi viewport: menu & sidebar pas satu layar,
+   tidak perlu scroll atas-bawah.
+   --------------------------------------------------------- */
+@media (min-width: 1025px) {
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 16px 24px;
+    overflow: hidden;
+  }
+
+  .tab-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  #tab-kasir.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .kasir-layout {
+    flex: 1;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .kasir-menu-list {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden; /* halaman menu diatur pagination, bukan scroll */
+  }
+
+  .kasir-receipt {
+    height: 100%;
+  }
+
+  .receipt-items {
+    max-height: none;
+  }
+}
+
+
+/* 12. RESPONSIVE
+   --------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .kasir-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
+
+  .app-header__logo {
+    width: 100%;
+  }
+
+  .header-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .status-badge {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .btn-hide-header,
+  .btn-fullscreen {
+    width: 100%;
+  }
+
+  .tabs-nav {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  body.header-hidden .tabs-nav {
+    padding-left: 64px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .btn-logout {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .container,
+  body.fullscreen-mode .container {
+    padding: 16px;
+  }
+
+  .kasir-toolbar__category {
+    width: 100%;
+  }
+
+  .kasir-menu-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .kasir-item-card {
+    padding: 8px;
+  }
+
+  .kasir-item-card img {
+    height: 88px;
+  }
+
+  .menu-pager__hint {
+    display: none;
+  }
+
+  .menu-pager {
+    justify-content: center;
+  }
+
+  .btn-show-header {
+    top: 10px;
+    left: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kasir-item-card h4,
+  .kasir-item-card p {
+    font-size: 12px;
+  }
+}
