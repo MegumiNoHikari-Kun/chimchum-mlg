@@ -653,13 +653,6 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
 };
 
 
-document.getElementById('closeSuccessModal')?.addEventListener('click', async () => {
-    // Tutup modal
-    document.getElementById('successModal')?.classList.add('hidden');
-
-    // Refresh stok produk dari Supabase
-    await loadProductsFromSupabase();
-});
 
 window.fetchOrderStatus = async function() {
     const inputEl = document.getElementById('tracker-order-id');
@@ -747,4 +740,5 @@ window.showNotification = function(title, message, type = 'success') {
 window.closeNotification = function() {
     const modal = document.getElementById('notification-modal');
     if (modal) modal.classList.add('hidden');
+    await loadProductsFromSupabase();
 };
