@@ -331,7 +331,7 @@
 
         <!-- Modal Footer -->
         <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-end gap-3 rounded-b-2xl mt-auto">
-            <!-- btnCancelEdit repurposed as a general close/cancel button for the modal -->
+            <!-- Tombol Batal Modal Utama -->
             <button 
                 id="btnCancelModal" 
                 type="button"
@@ -339,6 +339,16 @@
             >
                 Batal
             </button>
+            
+            <!-- Tombol Cancel Edit (Dibutuhkan oleh produk.js Anda) -->
+            <button
+                id="btnCancelEdit"
+                type="button"
+                class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition"
+            >
+                <i class="fa-solid fa-xmark mr-1"></i> Batal Edit
+            </button>
+
             <button
                 id="btnSave"
                 type="button"
@@ -426,6 +436,9 @@
     });
 </script>
 
+<!-- 
+    Kode Asli Module Anda (Di-comment untuk mencegah error di preview)
+    Buka komentar ini saat diimplementasikan ke project asli. -->
 
 <script type="module">
     import { requireAuth } from './js/module/auth-guard.js';
@@ -436,6 +449,7 @@
         await import('./js/module/produk.js');
     }
 </script>
+
 
 </body>
 </html>
