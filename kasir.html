@@ -11,255 +11,175 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-:root{
-  --primary:#ff6b35;
-  --secondary:#fff5f0;
-  --dark:#1e293b;
-  --gray:#64748b;
-  --white:#fff;
-  --success:#10b981;
-}
-
-*{
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-  margin: 0; padding: 0;
-}
-
-body{
-  background: #f8fafc;
-  color: var(--dark);
-}
-
-
-
-/* HEADER */
-header {
-  background: white;
-  padding: 16px 28px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 999;
-}
-
-header .logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-  color: inherit;
-}
-
-header .logo img {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-}
-
-header h2 {
-  font-size: 17px;
-  color: var(--dark);
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-
-header h2 span {
-  color: var(--primary);
-}
-
-header .status-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: #059669;
-  background: #ecfdf5;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #a7f3d0;
-}
-
-/* TABS */
-.tabs-nav {
-  display: flex;
-  gap: 10px;
-  padding: 16px 28px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-}
-.tab-btn {
-  padding: 10px 20px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--gray);
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.tab-btn:hover {
-  background: #e2e8f0;
-  color: var(--dark);
-}
-.tab-btn.active {
-  background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 12px rgba(255,107,53,0.25);
-}
-.btn-logout {
-  margin-left: auto;
-  background: #fee2e2;
-  color: #dc2626;
-}
-.btn-logout:hover {
-  background: #fca5a5;
-  color: #b91c1c;
-}
-
-/* CONTAINER & SECTIONS */
-.container { padding: 28px; max-width: 1440px; margin: 0 auto; }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-/* CARD */
-.card {
-  background: white;
-  padding: 24px;
-  border-radius: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #f1f5f9;
-}
-
-/* FORM CONTROL */
-input, textarea, select {
-  width: 100%;
-  padding: 11px 14px;
-  margin-top: 6px;
-  margin-bottom: 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  outline: none;
-  font-size: 13px;
-  background: #fff;
-  transition: border-color 0.2s;
-}
-input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,53,0.1); }
-
-/* BUTTONS */
-button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-.btn-delete { background: #fee2e2; color: #dc2626; }
-.btn-delete:hover { background: #fca5a5; }
-
-/* TABLES */
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #f1f5f9;
-  margin-top: 10px;
-}
-th, td {
-  padding: 16px;
-  border-bottom: 1px solid #f1f5f9;
-  text-align: left;
-  font-size: 13px;
-}
-th { background: #f8fafc; font-weight: 600; color: var(--gray); text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
-tr:last-child td { border-bottom: none; }
-
-/* KASIR DINE-IN */
-.kasir-grid {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 24px;
-}
-.kasir-menu-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 16px;
-}
-.kasir-item-card {
-  background: white;
-  border-radius: 16px;
-  padding: 14px;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  cursor: pointer;
-  border: 2px solid #f1f5f9;
-  transition: all 0.2s;
-}
-.kasir-item-card:hover {
-  border-color: var(--primary);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-}
-.kasir-item-card img {
-  width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;
-}
-.kasir-item-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--dark); }
-.kasir-item-card p { font-size: 13px; color: var(--primary); font-weight: 700; }
-
-.kasir-receipt {
-  background: white; padding: 24px; border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #f1f5f9;
-  height: fit-content; position: sticky; top: 90px;
-}
-.receipt-items {
-  max-height: 260px; overflow-y: auto; margin: 16px 0;
-  border-top: 1px dashed #e2e8f0; border-bottom: 1px dashed #e2e8f0; padding: 12px 0;
-}
-.receipt-item {
-  display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 12px;
-}
-.receipt-qty-control button { padding: 4px 8px; font-size: 11px; background: #f1f5f9; color: var(--dark); border-radius: 6px; }
-
-@media(max-width: 1024px){
-  .kasir-grid { grid-template-columns: 1fr; }
-}
-@media(max-width: 768px){
-  .tabs-nav { flex-wrap: wrap; }
-  .btn-logout { margin-left: 0; width: 100%; text-align: center; justify-content: center; }
-  .container { padding: 16px; }
-}
+  /* ================================
+     FULLSCREEN MODE
+  ================================ */
+  
+  html,
+  body {
+    width: 100%;
+    min-height: 100%;
+  }
+  
+  body {
+    min-height: 100vh;
+  }
+  
+  /* Fullscreen layout */
+  body.fullscreen-mode {
+    overflow: auto;
+  }
+  
+  body.fullscreen-mode .container {
+    max-width: none;
+    width: 100%;
+    padding: 24px;
+  }
+  
+  /* Header hidden */
+  body.header-hidden header,
+  body.header-hidden .tabs-nav {
+    display: none;
+  }
+  
+  /* Saat header disembunyikan, konten mengambil seluruh layar */
+  body.header-hidden .container {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  
+  /* Tombol untuk menampilkan header kembali */
+  .btn-show-header {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 9999;
+  
+    width: 42px;
+    height: 42px;
+    padding: 0;
+  
+    display: none;
+    align-items: center;
+    justify-content: center;
+  
+    background: var(--primary);
+    color: #fff;
+    border-radius: 12px;
+  
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    font-size: 16px;
+  }
+  
+  .btn-show-header:hover {
+    transform: translateY(-1px);
+    opacity: .92;
+  }
+  
+  /* Tampilkan tombol ketika header hidden */
+  body.header-hidden .btn-show-header {
+    display: flex;
+  }
+  
+  /* Tombol hide header */
+  .btn-hide-header {
+    background: #f1f5f9;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  
+  .btn-hide-header:hover {
+    background: #e2e8f0;
+  }
+  
+  /* Fullscreen button */
+  .btn-fullscreen {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  
+  .btn-fullscreen:hover {
+    background: #ffedd5;
+  }
+  
+  /* Desktop */
+  @media (min-width: 769px) {
+    body.fullscreen-mode .kasir-grid {
+      min-height: calc(100vh - 48px);
+    }
+  }
+  
+  /* Mobile */
+  @media(max-width: 768px) {
+    body.header-hidden .container {
+      padding: 16px;
+      padding-top: 70px;
+    }
+  
+    .btn-show-header {
+      top: 10px;
+      left: 10px;
+    }
+  }
 </style>
 </head>
 <body>
+  <button
+    type="button"
+    class="btn-show-header"
+    onclick="toggleKasirHeader()"
+    title="Tampilkan Header">
+    <i class="fa-solid fa-bars"></i>
+  </button>
 
 
 <header>
   <a class="logo" href="index.html">
     <img src="./assets/logo-transparan.png"
-         alt="ChimChum Malang Logo" onerror="this.style.display='none'">
+         alt="ChimChum Malang Logo"
+         onerror="this.style.display='none'">
+
     <h2>ChimChum <span>Kasir POS</span></h2>
   </a>
-  <span class="status-badge">
-    <i class="fa-solid fa-signal"></i> Terautentikasi
-  </span>
+
+  <div style="display:flex; align-items:center; gap:10px;">
+
+    <span class="status-badge">
+      <i class="fa-solid fa-signal"></i>
+      Terautentikasi
+    </span>
+
+    <!-- Hide Header -->
+    <button
+      type="button"
+      class="btn-hide-header"
+      onclick="toggleKasirHeader()"
+      title="Sembunyikan Header">
+      <i class="fa-solid fa-chevron-up"></i>
+      Hide Header
+    </button>
+
+    <!-- Fullscreen -->
+    <button
+      type="button"
+      class="btn-fullscreen"
+      onclick="toggleKasirFullscreen()"
+      title="Fullscreen">
+      <i class="fa-solid fa-expand"></i>
+      Fullscreen
+    </button>
+
+  </div>
 </header>
 
 <div class="tabs-nav">
@@ -469,6 +389,44 @@ tr:last-child td { border-bottom: none; }
         console.error('ERROR AUTH / IMPORT KASIR:', error);
     }
 </script>
+
+  <script>
+    function toggleKasirHeader() {
+        document.body.classList.toggle('header-hidden');
+    
+        const isHidden = document.body.classList.contains('header-hidden');
+    
+        localStorage.setItem(
+            'kasirHeaderHidden',
+            isHidden ? '1' : '0'
+        );
+    }
+    
+    function toggleKasirFullscreen() {
+        document.body.classList.toggle('fullscreen-mode');
+    
+        const isFullscreen =
+            document.body.classList.contains('fullscreen-mode');
+    
+        localStorage.setItem(
+            'kasirFullscreen',
+            isFullscreen ? '1' : '0'
+        );
+    }
+    
+    /* Restore setting terakhir */
+    document.addEventListener('DOMContentLoaded', () => {
+    
+        if (localStorage.getItem('kasirFullscreen') === '1') {
+            document.body.classList.add('fullscreen-mode');
+        }
+    
+        if (localStorage.getItem('kasirHeaderHidden') === '1') {
+            document.body.classList.add('header-hidden');
+        }
+    
+    });
+  </script>
 
 </body>
 </html>
