@@ -451,12 +451,16 @@ tr:last-child td { border-bottom: none; }
     try {
         const auth = await requireAuth(['kasir']);
 
-        console.log('AUTH KASIR:', auth);
+        // console.log('AUTH KASIR:', auth);
+      console.log(
+          'AUTH KASIR:',
+          `role=${auth?.role}, email=${auth?.session?.user?.email}`
+      );
 
         if (auth) {
-            console.log('Memuat kasir.js...');
+            // console.log('Memuat kasir.js...');
             await import('./js/module/kasir.js');
-            console.log('kasir.js berhasil dimuat');
+            // console.log('kasir.js berhasil dimuat');
         } else {
             console.error('AUTH GAGAL');
         }
