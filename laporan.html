@@ -48,6 +48,14 @@
             </table>
         </div>
     </div>
-    <script type="module" src="./js/module/laporan.js"></script>
+    <script type="module">
+        import { requireAuth } from './js/module/auth-guard.js';
+    
+        const auth = await requireAuth(['admin']);
+    
+        if (auth) {
+            await import('./js/module/laporan.js');
+        }
+    </script>
 </body>
 </html>
