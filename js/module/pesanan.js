@@ -1,7 +1,10 @@
-
 import { supabase, authReady } from '../supabase.js';
+
 let cachedOrders = [];
 let currentFilter = 'all';
+let searchQuery = '';
+let currentPage = 1;
+let rowsPerPage = 10;
 
 function rupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); }
 
@@ -16,6 +19,7 @@ window.loadOrders = async function() {
         orders = JSON.parse(localStorage.getItem('local_orders') || '[]');
     }
     cachedOrders = orders;
+    currentPage = 1; // Reset to page 1 on fresh load
     renderSummary(cachedOrders);
     renderTable();
 };
@@ -37,22 +41,47 @@ function renderSummary(orders) {
         { key: 'cancel', title: 'Batal', count: counts.cancel, color: 'text-rose-600 border-rose-200 bg-rose-50/50' }
     ];
 
-    document.getElementById('orderSummary').innerHTML = cards.map(c => `
-        <div onclick="filterStatus('${c.key}')" class="border rounded-xl p-3 cursor-pointer transition hover:shadow-sm ${c.color}">
-            <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
-            <div class="text-lg font-bold mt-1">${c.count}</div>
-        </div>
-    `).join('');
+    const container = document.getElementById('orderSummary');
+    if (container) {
+        container.innerHTML = cards.map(c => `
+            <div onclick="filterStatus('${c.key}')" class="border rounded-xl p-3 cursor-pointer transition hover:shadow-sm ${c.color}">
+                <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
+                <div class="text-lg font-bold mt-1">${c.count}</div>
+            </div>
+        `).join('');
+    }
 }
 
 window.filterStatus = function(status) {
     currentFilter = status;
+    currentPage = 1; // Reset to page 1 on filter change
+    renderTable();
+};
+
+window.handleSearchInput = function(event) {
+    searchQuery = (event.target.value || '').toLowerCase().trim();
+    currentPage = 1; // Reset to page 1 on search
+    renderTable();
+};
+
+window.changeRowsPerPage = function(event) {
+    rowsPerPage = parseInt(event.target.value) || 10;
+    currentPage = 1;
+    renderTable();
+};
+
+window.changePage = function(page) {
+    currentPage = page;
     renderTable();
 };
 
 function renderTable() {
     const tbody = document.getElementById('ordersBody');
+    if (!tbody) return;
+
     let filtered = [...cachedOrders];
+
+    // Apply Status Filter
     if (currentFilter !== 'all') {
         filtered = filtered.filter(o => {
             const st = (o.status || 'new').toLowerCase();
@@ -61,23 +90,44 @@ function renderTable() {
         });
     }
 
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400">Tidak ada pesanan.</td></tr>`;
+    // Apply Search Filter (Customer Name, Order ID, Phone, or Payment Method)
+    if (searchQuery) {
+        filtered = filtered.filter(o => {
+            const name = (o.customer_name || '').toLowerCase();
+            const orderId = (o.order_id || '').toLowerCase();
+            const phone = (o.phone || '').toLowerCase();
+            const payment = (o.payment_method || '').toLowerCase();
+            return name.includes(searchQuery) || orderId.includes(searchQuery) || phone.includes(searchQuery) || payment.includes(searchQuery);
+        });
+    }
+
+    const totalFiltered = filtered.length;
+    const totalPages = Math.ceil(totalFiltered / rowsPerPage) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    // Slice for Pagination
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const paginatedOrders = filtered.slice(startIndex, startIndex + rowsPerPage);
+
+    if (paginatedOrders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400">Tidak ada pesanan ditemukan.</td></tr>`;
+        renderPaginationControls(0, 1, 1);
         return;
     }
 
-    tbody.innerHTML = filtered.map(o => {
+    tbody.innerHTML = paginatedOrders.map(o => {
         const tgl = o.created_at ? new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : '-';
         const items = Array.isArray(o.items) ? o.items.map(i => `${i.nama || i.name} (${i.qty}x)`).join(', ') : '-';
         const status = (o.status || 'new').toLowerCase();
         const key = o.id || o.order_id;
 
         return `
-            <tr class="hover:bg-slate-50/80">
-                <td class="p-3 text-slate-500">${tgl}</td>
-                <td class="p-3 font-semibold text-slate-800">${o.customer_name || '-'}<br><span class="font-normal text-[10px] text-slate-400">ID: ${o.order_id || '-'}</span></td>
-                <td class="p-3 text-slate-600">${o.phone || '-'}</td>
-                <td class="p-3 font-medium text-slate-700">${o.payment_method || 'Cash'}<br><span class="font-normal text-[11px] text-slate-400">${o.address || '-'}</span></td>
+            <tr class="hover:bg-slate-50/80 border-b border-slate-100">
+                <td class="p-3 text-slate-500 text-xs">${tgl}</td>
+                <td class="p-3 font-semibold text-slate-800 text-xs">${o.customer_name || '-'}<br><span class="font-normal text-[10px] text-slate-400">ID: ${o.order_id || '-'}</span></td>
+                <td class="p-3 text-slate-600 text-xs">${o.phone || '-'}</td>
+                <td class="p-3 font-medium text-slate-700 text-xs">${o.payment_method || 'Cash'}<br><span class="font-normal text-[11px] text-slate-400">${o.address || '-'}</span></td>
                 <td class="p-3">
                     <select onchange="updateStatus('${key}', this.value)" class="bg-slate-100 border border-slate-200 rounded-lg p-1.5 text-xs font-semibold cursor-pointer outline-none">
                         <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
@@ -87,20 +137,59 @@ function renderTable() {
                         <option value="cancel" ${status === 'cancel' ? 'selected' : ''}>Cancel</option>
                     </select>
                 </td>
-                <td class="p-3 max-w-xs text-slate-600">${items}</td>
-                <td class="p-3 font-bold text-emerald-600">${rupiah(o.grand_total || 0)}</td>
-                <td class="p-3">
-                    <button onclick="reprintOrder('${key}')" style="padding:6px 10px; font-size:12px; background:#f1f5f9; color:var(--dark);" title="Cetak Struk">🖨️</button>
-                    <button onclick="deleteOrder('${key}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                <td class="p-3 max-w-xs text-slate-600 text-xs">${items}</td>
+                <td class="p-3 font-bold text-emerald-600 text-xs">${rupiah(o.grand_total || 0)}</td>
+                <td class="p-3 flex items-center gap-1">
+                    <button onclick="reprintOrder('${key}')" class="px-2.5 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition" title="Cetak Struk">🖨️</button>
+                    <button onclick="deleteOrder('${key}')" class="bg-rose-50 text-rose-600 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg transition text-xs" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>
         `;
     }).join('');
+
+    renderPaginationControls(totalFiltered, currentPage, totalPages);
+}
+
+function renderPaginationControls(totalItems, page, totalPages) {
+    let paginationContainer = document.getElementById('orderPagination');
+    if (!paginationContainer) {
+        // Automatically inject pagination controls wrapper below table if not present in HTML yet
+        const tableWrapper = document.getElementById('ordersBody')?.closest('.overflow-x-auto') || document.getElementById('ordersBody')?.parentElement;
+        if (tableWrapper) {
+            const div = document.createElement('div');
+            div.id = 'orderPagination';
+            div.className = 'flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white border-t border-slate-100 text-xs text-slate-600';
+            tableWrapper.parentNode.insertBefore(div, tableWrapper.nextSibling);
+            paginationContainer = div;
+        } else {
+            return;
+        }
+    }
+
+    const startRecord = totalItems === 0 ? 0 : (page - 1) * rowsPerPage + 1;
+    const endRecord = Math.min(page * rowsPerPage, totalItems);
+
+    paginationContainer.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span>Menampilkan <b>${startRecord}-${endRecord}</b> dari <b>${totalItems}</b> pesanan</span>
+            <select onchange="changeRowsPerPage(event)" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none text-xs">
+                <option value="5" ${rowsPerPage === 5 ? 'selected' : ''}>5 per halaman</option>
+                <option value="10" ${rowsPerPage === 10 ? 'selected' : ''}>10 per halaman</option>
+                <option value="25" ${rowsPerPage === 25 ? 'selected' : ''}>25 per halaman</option>
+                <option value="50" ${rowsPerPage === 50 ? 'selected' : ''}>50 per halaman</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-1">
+            <button onclick="changePage(${page - 1})" ${page <= 1 ? 'disabled class="opacity-40 cursor-not-allowed"' : 'class="hover:bg-slate-100"'} class="px-3 py-1.5 border border-slate-200 rounded-lg font-medium transition">Prev</button>
+            <span class="px-3 py-1.5 font-medium text-slate-700">Halaman ${page} dari ${totalPages || 1}</span>
+            <button onclick="changePage(${page + 1})" ${page >= totalPages ? 'disabled class="opacity-40 cursor-not-allowed"' : 'class="hover:bg-slate-100"'} class="px-3 py-1.5 border border-slate-200 rounded-lg font-medium transition">Next</button>
+        </div>
+    `;
 }
 
 window.reprintOrder = (key) => {
     const order = cachedOrders.find(o => String(o.id) === String(key) || String(o.order_id) === String(key));
-    if (!order) { alert("Pesanan tidak ditemukan."); return; }
+    if (!order) { console.warn("Pesanan tidak ditemukan."); return; }
     cetakStrukThermal(order.customer_name, order.phone, order.items, order.grand_total, order.payment_method || 'Online', order.grand_total, 0);
 };
 
@@ -151,7 +240,6 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
     printWindow.document.close();
 }
 
-
 window.updateStatus = async function(key, val) {
     await authReady;
     try {
@@ -192,4 +280,3 @@ window.deleteOrder = async function(key) {
 };
 
 loadOrders();
-
