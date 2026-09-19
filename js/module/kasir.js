@@ -904,7 +904,7 @@ function renderKasirOrders() {
                     <select onchange="updateOrderStatus('${id}', this.value)" style="margin:0;padding:6px 8px;font-size:12px;width:auto;">
                         ${statusOptionsHTML}
                     </select>
-                    // <button type="button" class="btn-delete" style="margin-top:4px;" onclick="deleteKasirOrder('${id}')">Hapus</button>
+                    <button type="button" class="btn-delete" title="Hubungi Admin" style="margin-top: 4px; pointer-events: none !important; cursor: not-allowed !important; opacity: 0.6 !important;" disabled>Hapus</button>
                 </td>
             </tr>
         `;
