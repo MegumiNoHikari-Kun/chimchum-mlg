@@ -427,6 +427,17 @@ function buildStrukHTML(order) {
         hour: '2-digit',
         minute: '2-digit'
     });
+   const reprintInfo = order.isReprint
+    ? `
+        <div class="struk-line"></div>
+        <div class="struk-center bold" style="font-size:11px;">
+            REPRINT
+        </div>
+        <div class="struk-center" style="font-size:10px;">
+            Waktu Reprint: ${escapeHtml(order.reprintTime)}
+        </div>
+    `
+    : '';
 
     const itemsRows = order.items.map(i => {
         const subtotal = Number(i.harga) * Number(i.qty);
@@ -474,6 +485,7 @@ function buildStrukHTML(order) {
         <div>No: ${escapeHtml(order.order_id)}</div>
         <div>${escapeHtml(tanggal)}</div>
         <div>Meja/Nama: ${escapeHtml(order.customer_name)}</div>
+        ${reprintInfo}
 
         <div class="struk-line"></div>
 
@@ -1011,10 +1023,11 @@ function renderKasirOrders() {
     updateOrderSummaryActiveState();
 }
 
+
 /* =========================================================
    REPRINT ORDER
+   Menggunakan format struk yang sama dengan PRINT BIASA
 ========================================================= */
-
 window.reprintOrder = (key) => {
     const order = cachedOrders.find(
         o =>
@@ -1027,76 +1040,50 @@ window.reprintOrder = (key) => {
         return;
     }
 
-    cetakStrukThermal(
-        order.customer_name,
-        order.phone,
-        order.items,
-        order.grand_total,
-        order.payment_method || 'Online',
-        order.grand_total,
-        0
-    );
+    // Ambil informasi pembayaran Cash
+    let uangBayar = Number(order.grand_total) || 0;
+    let kembalian = 0;
+
+    if (order.payment_method === 'Cash' && order.address) {
+        const uangMatch = order.address.match(
+            /Uang diterima:\s*Rp\s*([\d.]+)/
+        );
+
+        const kembalianMatch = order.address.match(
+            /Kembalian:\s*Rp\s*([\d.]+)/
+        );
+
+        if (uangMatch) {
+            uangBayar =
+                Number(uangMatch[1].replace(/\./g, '')) ||
+                order.grand_total;
+        }
+
+        if (kembalianMatch) {
+            kembalian =
+                Number(kembalianMatch[1].replace(/\./g, '')) || 0;
+        }
+    }
+
+    // Tandai sebagai REPRINT
+    const reprintOrderData = {
+        ...order,
+        _uangBayar: uangBayar,
+        _kembalian: kembalian,
+        isReprint: true,
+        reprintTime: new Date().toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    };
+
+    // Tetap menggunakan fungsi print biasa
+    cetakStrukKasir(reprintOrderData);
 };
 
-function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, uangBayar, kembalian) {
-    const printWindow = window.open('', '_blank', 'width=350,height=600');
-    const tgl = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    const itemsHtml = items.map(i => `
-      <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;">
-        <span>${i.nama || i.name} x${i.qty}</span>
-        <span>${rupiah(i.qty * (i.harga || i.price))}</span>
-      </div>`).join('');
-
-    printWindow.document.write(`
-        <div class="struk-center">
-            <div class="center">
-              <img src="https://cdn.jsdelivr.net/gh/MegumiNoHikari-Kun/chimchum-malang@main/assets/logo-transparan.jpg"
-                   style="width:65px; height:65px;">
-            </div>
-            <div class="bold" style="font-size:15px;margin-top:2px;">CHIMCHUM MALANG</div>
-            <div style="font-size:10px;">Dimsum &amp; Snack</div>
-            <div style="font-size:10px;">Sawojajar, Malang</div>
-        </div>
-        
-        <div class="struk-line"></div>
-        
-        <div style="font-size:11px; line-height:1.4;">
-          Waktu : ${tgl}<br>
-          Pelanggan : ${noMeja}
-        </div>
-        <div class="struk-line"></div>
-        ${itemsHtml}
-        
-        <div class="struk-line"></div>
-        
-        <div style="display:flex; justify-content:space-between; font-size:12px;" class="bold">
-          <span>TOTAL:</span><span>${rupiah(grandTotal)}</span>
-        </div>
-        
-        <div class="struk-line"></div>
-        
-        <div style="display:flex; justify-content:space-between; font-size:11px;">
-          <span>Bayar (${metodeBayar}):</span><span>${rupiah(uangBayar)}</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:11px;">
-          <span>Kembalian:</span><span>${rupiah(kembalian)}</span>
-        </div>
-        <div class="struk-line"></div>
-        
-        <div class="struk-center">
-            <div style="font-size:10px;margin-bottom:3px;">Tersedia juga di:</div>
-            <div class="delivery-badges">
-                <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GOFOOD</span>
-               <span style="background-color: #ff5722; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">SHOPEEFOOD</span>
-               <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GRABFOOD</span>
-            </div>
-        </div>
-        <div class="center" style="font-size:10px; margin-top:8px;">Terima Kasih Atas Kunjungan Anda!</div>
-        <div class="center" style="font-size:10px; margin-top:8px;">Jazakumullahu Khairan</div>
-        <script>window.onload=function(){window.print();setTimeout(()=>window.close(),300);}<\/script>
-      </body></html>`);
-    printWindow.document.close();
-}
 
 /* =========================================================
    UPDATE ORDER STATUS (UPDATE)
