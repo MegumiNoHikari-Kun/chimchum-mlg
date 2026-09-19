@@ -2100,3 +2100,5 @@ import { supabase, authReady } from '../supabase.js';
         return Number(n || 0)
             .toLocaleString('id-ID');
     }
+
+await loadAllData();
