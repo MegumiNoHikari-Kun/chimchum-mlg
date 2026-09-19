@@ -11,734 +11,725 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-:root {
-  --primary: #ff6b35;
-  --primary-dark: #ea580c;
-  --secondary: #fff5f0;
-  --dark: #1e293b;
-  --gray: #64748b;
-  --white: #fff;
-  --success: #10b981;
-  --danger: #dc2626;
-  --border: #f1f5f9;
-  --bg: #f8fafc;
-}
-
-/* ================================
-   RESET
-================================ */
-
-* {
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-  margin: 0;
-  padding: 0;
-}
-
-html,
-body {
-  width: 100%;
-  min-height: 100%;
-}
-
-body {
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--dark);
-}
-
-
-/* ================================
-   HEADER
-================================ */
-
-header {
-  background: white;
-  padding: 16px 28px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 999;
-}
-
-header .logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-  color: inherit;
-  flex-shrink: 0;
-}
-
-header .logo img {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-}
-
-header h2 {
-  font-size: 17px;
-  color: var(--dark);
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-
-header h2 span {
-  color: var(--primary);
-}
-
-header .status-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: #059669;
-  background: #ecfdf5;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #a7f3d0;
-}
-
-
-/* ================================
-   HEADER CONTROL
-================================ */
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-
-/* ================================
-   TABS
-================================ */
-
-.tabs-nav {
-  display: flex;
-  gap: 10px;
-  padding: 16px 28px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.tab-btn {
-  padding: 10px 20px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--gray);
-  transition: all 0.2s;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.tab-btn:hover {
-  background: #e2e8f0;
-  color: var(--dark);
-}
-
-.tab-btn.active {
-  background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 12px rgba(255,107,53,0.25);
-}
-
-.btn-logout {
-  margin-left: auto;
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.btn-logout:hover {
-  background: #fca5a5;
-  color: #b91c1c;
-}
-
-
-/* ================================
-   CONTAINER
-================================ */
-
-.container {
-  width: 100%;
-  max-width: 1440px;
-  padding: 28px;
-  margin: 0 auto;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-
-/* ================================
-   CARD
-================================ */
-
-.card {
-  background: white;
-  padding: 24px;
-  border-radius: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid var(--border);
-}
-
-
-/* ================================
-   FORM
-================================ */
-
-input,
-textarea,
-select {
-  width: 100%;
-  padding: 11px 14px;
-  margin-top: 6px;
-  margin-bottom: 14px;
-
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-
-  outline: none;
-  font-size: 13px;
-  background: #fff;
-
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
-}
-
-
-/* ================================
-   BUTTON
-================================ */
-
-button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-
-  font-weight: 600;
-  font-size: 13px;
-
-  transition: all 0.2s;
-}
-
-button:hover {
-  transform: translateY(-1px);
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-}
-
-.btn-delete {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.btn-delete:hover {
-  background: #fca5a5;
-}
-
-
-/* ================================
-   HEADER BUTTON
-================================ */
-
-.btn-hide-header,
-.btn-fullscreen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-
-  white-space: nowrap;
-}
-
-.btn-hide-header {
-  background: #f1f5f9;
-  color: var(--dark);
-  border: 1px solid #e2e8f0;
-}
-
-.btn-hide-header:hover {
-  background: #e2e8f0;
-}
-
-.btn-fullscreen {
-  background: #fff7ed;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
-}
-
-.btn-fullscreen:hover {
-  background: #ffedd5;
-}
-
-
-/* ================================
-   SHOW HEADER BUTTON
-================================ */
-
-.btn-show-header {
-  position: fixed;
-  top: 14px;
-  left: 14px;
-
-  z-index: 9999;
-
-  width: 42px;
-  height: 42px;
-
-  padding: 0;
-
-  display: none;
-  align-items: center;
-  justify-content: center;
-
-  background: var(--primary);
-  color: white;
-
-  border-radius: 12px;
-
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
-
-  font-size: 16px;
-}
-
-.btn-show-header:hover {
-  background: var(--primary-dark);
-}
-
-
-/* ================================
-   TABLE
-================================ */
-
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-
-  background: white;
-
-  border-radius: 16px;
-  overflow: hidden;
-
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-
-  border: 1px solid var(--border);
-
-  margin-top: 10px;
-}
-
-th,
-td {
-  padding: 16px;
-
-  border-bottom: 1px solid var(--border);
-
-  text-align: left;
-
-  font-size: 13px;
-}
-
-th {
-  background: #f8fafc;
-
-  font-weight: 600;
-  color: var(--gray);
-
-  text-transform: uppercase;
-
-  font-size: 11px;
-  letter-spacing: 0.05em;
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-
-/* ================================
-   KASIR GRID
-================================ */
-
-.kasir-grid {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 24px;
-}
-
-.kasir-menu-list {
-  display: grid;
-
-  grid-template-columns:
-    repeat(auto-fill, minmax(170px, 1fr));
-
-  gap: 16px;
-}
-
-
-/* ================================
-   MENU CARD
-================================ */
-
-.kasir-item-card {
-  background: white;
-
-  border-radius: 16px;
-
-  padding: 14px;
-
-  text-align: center;
-
-  box-shadow:
-    0 1px 3px rgba(0,0,0,0.05);
-
-  cursor: pointer;
-
-  border: 2px solid var(--border);
-
-  transition: all 0.2s;
-}
-
-.kasir-item-card:hover {
-  border-color: var(--primary);
-
-  transform: translateY(-3px);
-
-  box-shadow:
-    0 10px 20px rgba(0,0,0,0.05);
-}
-
-.kasir-item-card img {
-  width: 100%;
-  height: 120px;
-
-  object-fit: cover;
-
-  border-radius: 10px;
-
-  margin-bottom: 10px;
-}
-
-.kasir-item-card h4 {
-  font-size: 13px;
-  font-weight: 600;
-
-  margin-bottom: 4px;
-
-  color: var(--dark);
-}
-
-.kasir-item-card p {
-  font-size: 13px;
-
-  color: var(--primary);
-
-  font-weight: 700;
-}
-
-
-/* ================================
-   RECEIPT
-================================ */
-
-.kasir-receipt {
-  background: white;
-
-  padding: 24px;
-
-  border-radius: 16px;
-
-  box-shadow:
-    0 1px 3px rgba(0,0,0,0.05);
-
-  border: 1px solid var(--border);
-
-  height: fit-content;
-
-  position: sticky;
-
-  top: 90px;
-}
-
-.receipt-items {
-  max-height: 260px;
-
-  overflow-y: auto;
-
-  margin: 16px 0;
-
-  border-top: 1px dashed #e2e8f0;
-  border-bottom: 1px dashed #e2e8f0;
-
-  padding: 12px 0;
-}
-
-.receipt-item {
-  display: flex;
-
-  justify-content: space-between;
-
-  align-items: center;
-
-  font-size: 13px;
-
-  margin-bottom: 12px;
-}
-
-.receipt-qty-control button {
-  padding: 4px 8px;
-
-  font-size: 11px;
-
-  background: #f1f5f9;
-
-  color: var(--dark);
-
-  border-radius: 6px;
-}
-
-
-/* ================================
-   FULLSCREEN MODE
-================================ */
-
-/*
-   Mode fullscreen layout aplikasi.
-   Bukan browser fullscreen API.
-*/
-
-body.fullscreen-mode {
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-body.fullscreen-mode .container {
-  width: 100%;
-  max-width: none;
-
-  min-height: calc(100vh - 1px);
-
-  padding: 24px;
-}
-
-body.fullscreen-mode .kasir-grid {
-  min-height: calc(100vh - 180px);
-}
-
-
-/* ================================
-   HIDE HEADER MODE
-================================ */
-
-body.header-hidden header,
-body.header-hidden .tabs-nav {
-  display: none;
-}
-
-body.header-hidden .container {
-  width: 100%;
-  max-width: none;
-
-  min-height: 100vh;
-
-  padding: 24px;
-}
-
-body.header-hidden .kasir-grid {
-  min-height: calc(100vh - 48px);
-}
-
-
-/*
-   Ketika header disembunyikan,
-   tombol Show Header muncul.
-*/
-
-body.header-hidden .btn-show-header {
-  display: flex;
-}
-
-
-/* ================================
-   FULLSCREEN + HIDE HEADER
-================================ */
-
-body.fullscreen-mode.header-hidden .container {
-  min-height: 100vh;
-
-  padding: 24px;
-}
-
-body.fullscreen-mode.header-hidden .kasir-grid {
-  min-height: calc(100vh - 48px);
-}
-
-
-/* ================================
-   MOBILE
-================================ */
-
-@media(max-width: 1024px) {
-
-  .kasir-grid {
-    grid-template-columns: 1fr;
+  :root {
+    --primary: #ff6b35;
+    --primary-dark: #ea580c;
+    --secondary: #fff5f0;
+    --dark: #1e293b;
+    --gray: #64748b;
+    --white: #fff;
+    --success: #10b981;
+    --danger: #dc2626;
+    --border: #f1f5f9;
+    --bg: #f8fafc;
   }
-
-  .kasir-receipt {
-    position: relative;
-    top: auto;
+  
+  /* ================================
+     RESET
+  ================================ */
+  
+  * {
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
   }
-
-}
-
-
-@media(max-width: 768px) {
-
+  
+  html,
+  body {
+    width: 100%;
+    min-height: 100%;
+  }
+  
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--dark);
+  }
+  
+  
+  /* ================================
+     HEADER
+  ================================ */
+  
   header {
-    padding: 14px 16px;
-
-    flex-wrap: wrap;
+    background: white;
+    padding: 16px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 999;
   }
-
+  
   header .logo {
-    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    flex-shrink: 0;
   }
-
-  header > div {
-    width: 100%;
+  
+  header .logo img {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
   }
-
+  
+  header h2 {
+    font-size: 17px;
+    color: var(--dark);
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  
+  header h2 span {
+    color: var(--primary);
+  }
+  
+  header .status-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #059669;
+    background: #ecfdf5;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #a7f3d0;
+  }
+  
+  
+  /* ================================
+     HEADER CONTROL
+  ================================ */
+  
   .header-controls {
-    width: 100%;
-
-    display: grid;
-
-    grid-template-columns:
-      1fr 1fr;
-
+    display: flex;
+    align-items: center;
     gap: 8px;
   }
-
-  .status-badge {
-    grid-column: 1 / -1;
-
-    justify-content: center;
+  
+  
+  /* ================================
+     TABS
+  ================================ */
+  
+  .tabs-nav {
+    display: flex;
+    gap: 10px;
+    padding: 16px 28px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
   }
-
+  
+  .tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--gray);
+    transition: all 0.2s;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .tab-btn:hover {
+    background: #e2e8f0;
+    color: var(--dark);
+  }
+  
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255,107,53,0.25);
+  }
+  
+  .btn-logout {
+    margin-left: auto;
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  
+  .btn-logout:hover {
+    background: #fca5a5;
+    color: #b91c1c;
+  }
+  
+  
+  /* ================================
+     CONTAINER
+  ================================ */
+  
+  .container {
+    width: 100%;
+    max-width: 1440px;
+    padding: 28px;
+    margin: 0 auto;
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  
+  /* ================================
+     CARD
+  ================================ */
+  
+  .card {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+  }
+  
+  
+  /* ================================
+     FORM
+  ================================ */
+  
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 11px 14px;
+    margin-top: 6px;
+    margin-bottom: 14px;
+  
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+  
+    outline: none;
+    font-size: 13px;
+    background: #fff;
+  
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+  
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+  }
+  
+  
+  /* ================================
+     BUTTON
+  ================================ */
+  
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  
+    font-weight: 600;
+    font-size: 13px;
+  
+    transition: all 0.2s;
+  }
+  
+  button:hover {
+    transform: translateY(-1px);
+  }
+  
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+  
+  .btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  
+  .btn-delete:hover {
+    background: #fca5a5;
+  }
+  
+  
+  /* ================================
+     HEADER BUTTON
+  ================================ */
+  
   .btn-hide-header,
   .btn-fullscreen {
-    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  
+    white-space: nowrap;
   }
-
-
-  .tabs-nav {
-    padding: 12px 16px;
-
-    flex-wrap: wrap;
+  
+  .btn-hide-header {
+    background: #f1f5f9;
+    color: var(--dark);
+    border: 1px solid #e2e8f0;
   }
-
-  .tab-btn {
-    flex: 1;
-    min-width: 150px;
+  
+  .btn-hide-header:hover {
+    background: #e2e8f0;
   }
-
-  .btn-logout {
-    margin-left: 0;
-
-    width: 100%;
+  
+  .btn-fullscreen {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
   }
-
-
-  .container {
-    padding: 16px;
+  
+  .btn-fullscreen:hover {
+    background: #ffedd5;
   }
-
-
-  body.header-hidden .container,
-  body.fullscreen-mode .container {
-    padding: 16px;
-
-    padding-top: 70px;
-  }
-
-
-  .kasir-menu-list {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-
-    gap: 10px;
-  }
-
-
-  .kasir-item-card {
-    padding: 10px;
-  }
-
-
-  .kasir-item-card img {
-    height: 100px;
-  }
-
-
+  
+  
+  /* ================================
+     SHOW HEADER BUTTON
+  ================================ */
+  
   .btn-show-header {
-    top: 10px;
-    left: 10px;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+  
+    z-index: 9999;
+  
+    width: 42px;
+    height: 42px;
+  
+    padding: 0;
+  
+    display: none;
+    align-items: center;
+    justify-content: center;
+  
+    background: var(--primary);
+    color: white;
+  
+    border-radius: 12px;
+  
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  
+    font-size: 16px;
   }
-
-}
-
-
-@media(max-width: 480px) {
-
+  
+  .btn-show-header:hover {
+    background: var(--primary-dark);
+  }
+  
+  
+  /* ================================
+     TABLE
+  ================================ */
+  
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  
+    background: white;
+  
+    border-radius: 16px;
+    overflow: hidden;
+  
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  
+    border: 1px solid var(--border);
+  
+    margin-top: 10px;
+  }
+  
+  th,
+  td {
+    padding: 16px;
+  
+    border-bottom: 1px solid var(--border);
+  
+    text-align: left;
+  
+    font-size: 13px;
+  }
+  
+  th {
+    background: #f8fafc;
+  
+    font-weight: 600;
+    color: var(--gray);
+  
+    text-transform: uppercase;
+  
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  
+  tr:last-child td {
+    border-bottom: none;
+  }
+  
+  
+  /* ================================
+     KASIR GRID
+  ================================ */
+  
+  .kasir-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+  }
+  
   .kasir-menu-list {
-    grid-template-columns: 1fr 1fr;
+    display: grid;
+  
+    grid-template-columns:
+      repeat(auto-fill, minmax(170px, 1fr));
+  
+    gap: 16px;
   }
-
+  
+  
+  /* ================================
+     MENU CARD
+  ================================ */
+  
+  .kasir-item-card {
+    background: white;
+  
+    border-radius: 16px;
+  
+    padding: 14px;
+  
+    text-align: center;
+  
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.05);
+  
+    cursor: pointer;
+  
+    border: 2px solid var(--border);
+  
+    transition: all 0.2s;
+  }
+  
+  .kasir-item-card:hover {
+    border-color: var(--primary);
+  
+    transform: translateY(-3px);
+  
+    box-shadow:
+      0 10px 20px rgba(0,0,0,0.05);
+  }
+  
+  .kasir-item-card img {
+    width: 100%;
+    height: 120px;
+  
+    object-fit: cover;
+  
+    border-radius: 10px;
+  
+    margin-bottom: 10px;
+  }
+  
   .kasir-item-card h4 {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
+  
+    margin-bottom: 4px;
+  
+    color: var(--dark);
   }
-
+  
   .kasir-item-card p {
-    font-size: 12px;
+    font-size: 13px;
+  
+    color: var(--primary);
+  
+    font-weight: 700;
   }
-
-}
+  
+  
+  /* ================================
+     RECEIPT
+  ================================ */
+  
+  .kasir-receipt {
+    background: white;
+  
+    padding: 24px;
+  
+    border-radius: 16px;
+  
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.05);
+  
+    border: 1px solid var(--border);
+  
+    height: fit-content;
+  
+    position: sticky;
+  
+    top: 90px;
+  }
+  
+  .receipt-items {
+    max-height: 260px;
+  
+    overflow-y: auto;
+  
+    margin: 16px 0;
+  
+    border-top: 1px dashed #e2e8f0;
+    border-bottom: 1px dashed #e2e8f0;
+  
+    padding: 12px 0;
+  }
+  
+  .receipt-item {
+    display: flex;
+  
+    justify-content: space-between;
+  
+    align-items: center;
+  
+    font-size: 13px;
+  
+    margin-bottom: 12px;
+  }
+  
+  .receipt-qty-control button {
+    padding: 4px 8px;
+  
+    font-size: 11px;
+  
+    background: #f1f5f9;
+  
+    color: var(--dark);
+  
+    border-radius: 6px;
+  }
+  
+  
+  /* ================================
+     FULLSCREEN MODE
+  ================================ */
+  
+  /*
+     Mode fullscreen layout aplikasi.
+     Bukan browser fullscreen API.
+  */
+  
+  body.fullscreen-mode {
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  body.fullscreen-mode .container {
+    width: 100%;
+    max-width: none;
+  
+    min-height: calc(100vh - 1px);
+  
+    padding: 24px;
+  }
+  
+  body.fullscreen-mode .kasir-grid {
+    min-height: calc(100vh - 180px);
+  }
+  
+  
+  /* ================================
+     HIDE HEADER
+  ================================ */
+  
+  body.header-hidden header {
+    display: none;
+  }
+  
+  /* NAV tetap tampil */
+  body.header-hidden .tabs-nav {
+    display: flex;
+  }
+  
+  
+  /*
+     Ketika header disembunyikan,
+     tombol Show Header muncul.
+  */
+  
+  body.header-hidden .btn-show-header {
+    display: flex;
+  }
+  
+  
+  /* ================================
+     FULLSCREEN + HIDE HEADER
+  ================================ */
+  
+  body.fullscreen-mode.header-hidden .container {
+    min-height: 100vh;
+  
+    padding: 24px;
+  }
+  
+  body.fullscreen-mode.header-hidden .kasir-grid {
+    min-height: calc(100vh - 48px);
+  }
+  
+  
+  /* ================================
+     MOBILE
+  ================================ */
+  
+  @media(max-width: 1024px) {
+  
+    .kasir-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .kasir-receipt {
+      position: relative;
+      top: auto;
+    }
+  
+  }
+  
+  
+  @media(max-width: 768px) {
+  
+    header {
+      padding: 14px 16px;
+  
+      flex-wrap: wrap;
+    }
+  
+    header .logo {
+      width: 100%;
+    }
+  
+    header > div {
+      width: 100%;
+    }
+  
+    .header-controls {
+      width: 100%;
+  
+      display: grid;
+  
+      grid-template-columns:
+        1fr 1fr;
+  
+      gap: 8px;
+    }
+  
+    .status-badge {
+      grid-column: 1 / -1;
+  
+      justify-content: center;
+    }
+  
+    .btn-hide-header,
+    .btn-fullscreen {
+      width: 100%;
+    }
+  
+  
+    .tabs-nav {
+      padding: 12px 16px;
+  
+      flex-wrap: wrap;
+    }
+  
+    .tab-btn {
+      flex: 1;
+      min-width: 150px;
+    }
+  
+    .btn-logout {
+      margin-left: 0;
+  
+      width: 100%;
+    }
+  
+  
+    .container {
+      padding: 16px;
+    }
+  
+  
+    body.header-hidden .container,
+    body.fullscreen-mode .container {
+      padding: 16px;
+  
+      padding-top: 70px;
+    }
+  
+  
+    .kasir-menu-list {
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+  
+      gap: 10px;
+    }
+  
+  
+    .kasir-item-card {
+      padding: 10px;
+    }
+  
+  
+    .kasir-item-card img {
+      height: 100px;
+    }
+  
+  
+    .btn-show-header {
+      top: 10px;
+      left: 10px;
+    }
+  
+  }
+  
+  
+  @media(max-width: 480px) {
+  
+    .kasir-menu-list {
+      grid-template-columns: 1fr 1fr;
+    }
+  
+    .kasir-item-card h4 {
+      font-size: 12px;
+    }
+  
+    .kasir-item-card p {
+      font-size: 12px;
+    }
+  
+  }
 </style>
 </head>
 <body>
