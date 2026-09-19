@@ -744,10 +744,10 @@ window.loadOrders = async () => {
 
 const STATUS_LIST = [
     { value: 'new', label: 'New', color: '#d97706' },
-    { value: 'proses', label: 'Proses', color: '#2563eb' },
-    { value: 'delivery', label: 'Delivery', color: '#7c3aed' },
+    { value: 'disiapkan', label: 'Diproses', color: '#2563eb' },
+    { value: 'dikirim', label: 'Dikirim', color: '#7c3aed' },
     { value: 'selesai', label: 'Selesai', color: '#059669' },
-    { value: 'batal', label: 'Batal', color: '#dc2626' }
+    { value: 'cancel', label: 'Batal', color: '#dc2626' }
 ];
 
 function statusLabel(value) {
