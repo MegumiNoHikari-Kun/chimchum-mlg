@@ -32,13 +32,69 @@ function renderSummary(orders) {
         else if (counts[st] !== undefined) counts[st]++;
     });
 
+    // const cards = [
+    //     { key: 'all', title: 'Total', count: counts.all, defaultColor: 'text-slate-700 border-slate-200 bg-white' },
+    //     { key: 'new', title: 'Baru', count: counts.new, defaultColor: 'text-amber-600 border-amber-200 bg-amber-50/50' },
+    //     { key: 'disiapkan', title: 'Diproses', count: counts.disiapkan, defaultColor: 'text-blue-600 border-blue-200 bg-blue-50/50' },
+    //     { key: 'dikirim', title: 'Dikirim', count: counts.dikirim, defaultColor: 'text-purple-600 border-purple-200 bg-purple-50/50' },
+    //     { key: 'selesai', title: 'Selesai', count: counts.selesai, defaultColor: 'text-emerald-600 border-emerald-200 bg-emerald-50/50' },
+    //     { key: 'cancel', title: 'Batal', count: counts.cancel, defaultColor: 'text-rose-600 border-rose-200 bg-rose-50/50' }
+    // ];
     const cards = [
-        { key: 'all', title: 'Total', count: counts.all, defaultColor: 'text-slate-700 border-slate-200 bg-white' },
-        { key: 'new', title: 'Baru', count: counts.new, defaultColor: 'text-amber-600 border-amber-200 bg-amber-50/50' },
-        { key: 'disiapkan', title: 'Diproses', count: counts.disiapkan, defaultColor: 'text-blue-600 border-blue-200 bg-blue-50/50' },
-        { key: 'dikirim', title: 'Dikirim', count: counts.dikirim, defaultColor: 'text-purple-600 border-purple-200 bg-purple-50/50' },
-        { key: 'selesai', title: 'Selesai', count: counts.selesai, defaultColor: 'text-emerald-600 border-emerald-200 bg-emerald-50/50' },
-        { key: 'cancel', title: 'Batal', count: counts.cancel, defaultColor: 'text-rose-600 border-rose-200 bg-rose-50/50' }
+        {
+            key: 'all',
+            title: 'Total',
+            label: 'Total Order',
+            count: counts.all,
+            defaultColor: 'text-slate-700 border-slate-200 bg-white',
+            icon: 'fa-receipt',
+            iconClass: 'bg-slate-100 text-slate-600'
+        },
+        {
+            key: 'new',
+            title: 'Baru',
+            label: 'New',
+            count: counts.new,
+            defaultColor: 'text-amber-600 border-amber-200 bg-amber-50/50',
+            icon: 'fa-bell',
+            iconClass: 'bg-blue-50 text-blue-600'
+        },
+        {
+            key: 'disiapkan',
+            title: 'Diproses',
+            label: 'Diproses',
+            count: counts.disiapkan,
+            defaultColor: 'text-blue-600 border-blue-200 bg-blue-50/50',
+            icon: 'fa-fire-burner',
+            iconClass: 'bg-amber-50 text-amber-600'
+        },
+        {
+            key: 'dikirim',
+            title: 'Dikirim',
+            label: 'Dikirim',
+            count: counts.dikirim,
+            defaultColor: 'text-purple-600 border-purple-200 bg-purple-50/50',
+            icon: 'fa-motorcycle',
+            iconClass: 'bg-indigo-50 text-indigo-600'
+        },
+        {
+            key: 'selesai',
+            title: 'Selesai',
+            label: 'Selesai',
+            count: counts.selesai,
+            defaultColor: 'text-emerald-600 border-emerald-200 bg-emerald-50/50',
+            icon: 'fa-circle-check',
+            iconClass: 'bg-emerald-50 text-emerald-600'
+        },
+        {
+            key: 'cancel',
+            title: 'Batal',
+            label: 'Batal',
+            count: counts.cancel,
+            defaultColor: 'text-rose-600 border-rose-200 bg-rose-50/50',
+            icon: 'fa-circle-xmark',
+            iconClass: 'bg-red-50 text-red-600'
+        }
     ];
 
     const container = document.getElementById('orderSummary');
