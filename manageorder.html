@@ -223,6 +223,14 @@
         </div>
     </div>
 
-    <script type="module" src="./js/module/manage-order.js"></script>
+    <script type="module">
+        import { requireAuth } from './js/module/auth-guard.js';
+    
+        const auth = await requireAuth(['admin']);
+    
+        if (auth) {
+            await import('./js/module/manage-order.js');
+        }
+    </script>
 </body>
 </html>
