@@ -264,14 +264,12 @@ async function loadAllData() {
 
         console.log('Final PO data:', purchaseOrders);
 
-        // Sesuaikan dengan variable global yang digunakan aplikasi
-        window.suppliers = suppliers;
-        window.ingredients = ingredients;
-        window.purchaseOrders = purchaseOrders;
-        window.purchaseOrderItems = purchaseOrderItems;
-
+        // Isi variabel yang benar-benar dipakai oleh renderPOTable & fungsi lain
+        suppliersData = suppliers || [];
+        ingredientsData = ingredients || [];
+        purchaseOrdersData = purchaseOrders || [];
+        
         console.log('5. Rendering PO table...');
-
         renderPOTable();
 
         console.log('=== LOAD PO SUCCESS ===');
@@ -292,6 +290,30 @@ async function loadAllData() {
     }
 }
 
+
+async function initPage() {
+    debug('Application starting...');
+    try {
+        await authReady;
+        if (!supabase) throw new Error('Supabase client tidak tersedia.');
+        supabaseClient = supabase;
+        isDemoMode = false;
+        await loadAllData();
+        debug('Initial data loaded');
+    } catch (err) {
+        debugError('Supabase initialization failed', err);
+        isDemoMode = true;
+        loadMockData();
+        showModal("Mode Demo",
+            "Supabase tidak terhubung.\n\n" + getSupabaseErrorMessage(err), "⚠️");
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPage);
+} else {
+    initPage();
+}
 
 // =========================================================
 // MOCK DATA
