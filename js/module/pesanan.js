@@ -107,13 +107,16 @@ function renderSummary(orders) {
                 : `border border-slate-200 hover:shadow-sm ${c.defaultColor}`;
 
             return `
-                <div onclick="filterStatus('${c.key}')" class="rounded-xl p-3 cursor-pointer transition ${activeStyle}">
-                    <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
-                    <div class="text-lg font-bold mt-1">${c.count}</div>
-                    <div class="w-9 h-9 rounded-xl flex items-center justify-center ${c.iconClass}">
+                <div onclick="filterStatus('${c.key}')" class="rounded-xl p-4 cursor-pointer transition border ${activeStyle} flex items-center justify-between">
+                    <div>
+                        <div class="text-[11px] font-medium text-slate-500">${c.title}</div>
+                        <div class="text-xl font-bold mt-1">${c.count}</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.iconClass}">
                         <i class="fa-solid ${c.icon}"></i>
                     </div>
                 </div>
+                
                 
             `;
         }).join('');
