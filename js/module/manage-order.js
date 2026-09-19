@@ -1679,9 +1679,13 @@ function renderProofModal(order) {
                     File bukti pembayaran
                 </p>
 
-                <p class="text-xs text-slate-400 break-all mb-5">
-                    ${escapeHTML(proof)}
-                </p>
+                <div class="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white max-h-48 flex items-center justify-center">
+                  <img src="${escapeHTML(proof)}" alt="Bukti Pembayaran" class="w-full h-full object-cover">
+              </div>
+      
+              <div class="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-4 text-2xl">
+                  <i class="fa-solid fa-file-lines"></i>
+              </div>
 
                 <a
                     href="${safeURL(proof)}"
