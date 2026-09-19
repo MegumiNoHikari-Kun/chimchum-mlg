@@ -15,6 +15,10 @@ let supabaseClient = null;
 let searchDebounceTimer = null;
 let confirmResolve = null;
 
+// Pagination state
+let currentPage = 1;
+let pageSize = 10;
+
 // =========================================================
 // DEBUG HELPER
 // =========================================================
@@ -132,60 +136,9 @@ document.getElementById('confirm-ok-btn')
     });
 
 // =========================================================
-// INIT
-// =========================================================
-
-window.onload = async function() {
-
-    debug('Application starting...');
-
-    try {
-
-        debug('Waiting authReady...');
-
-        await authReady;
-
-        debug('authReady completed');
-
-        if (!supabase) {
-            throw new Error(
-                'Supabase client tidak tersedia.'
-            );
-        }
-
-        supabaseClient = supabase;
-
-        debug('Supabase client:', supabaseClient);
-
-        isDemoMode = false;
-
-        await loadAllData();
-
-        debug('Initial data loaded');
-
-    } catch (err) {
-
-        debugError(
-            'Supabase initialization failed',
-            err
-        );
-
-        isDemoMode = true;
-
-        loadMockData();
-
-        showModal(
-            "Mode Demo",
-            "Supabase tidak terhubung.\n\n" +
-            getSupabaseErrorMessage(err),
-            "⚠️"
-        );
-    }
-};
-
-// =========================================================
 // LOAD ALL DATA
 // =========================================================
+
 async function loadAllData() {
     if (!supabaseClient) {
         throw new Error('Supabase client belum siap.');
@@ -268,7 +221,7 @@ async function loadAllData() {
         suppliersData = suppliers || [];
         ingredientsData = ingredients || [];
         purchaseOrdersData = purchaseOrders || [];
-        
+
         console.log('5. Rendering PO table...');
         renderPOTable();
 
@@ -288,31 +241,6 @@ async function loadAllData() {
 
         throw error;
     }
-}
-
-
-async function initPage() {
-    debug('Application starting...');
-    try {
-        await authReady;
-        if (!supabase) throw new Error('Supabase client tidak tersedia.');
-        supabaseClient = supabase;
-        isDemoMode = false;
-        await loadAllData();
-        debug('Initial data loaded');
-    } catch (err) {
-        debugError('Supabase initialization failed', err);
-        isDemoMode = true;
-        loadMockData();
-        showModal("Mode Demo",
-            "Supabase tidak terhubung.\n\n" + getSupabaseErrorMessage(err), "⚠️");
-    }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPage);
-} else {
-    initPage();
 }
 
 // =========================================================
@@ -388,17 +316,95 @@ function loadMockData() {
 }
 
 // =========================================================
-// SEARCH
+// SEARCH & FILTER
 // =========================================================
 
 window.onSearchInput = function() {
 
     clearTimeout(searchDebounceTimer);
 
-    searchDebounceTimer = setTimeout(
-        renderPOTable,
-        250
-    );
+    searchDebounceTimer = setTimeout(() => {
+        currentPage = 1;          // hasil search selalu mulai dari halaman 1
+        renderPOTable();
+    }, 250);
+};
+
+// Dipanggil saat filter status berubah
+window.onFilterChange = function() {
+    currentPage = 1;
+    renderPOTable();
+};
+
+// =========================================================
+// PAGINATION
+// =========================================================
+
+function renderPagination(totalItems) {
+
+    const nav = document.getElementById('po-pagination');
+    const info = document.getElementById('po-page-info');
+
+    if (!nav || !info) return;
+
+    if (totalItems === 0) {
+        nav.innerHTML = '';
+        info.innerText = '';
+        return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, totalItems);
+
+    info.innerText = `Menampilkan ${start}–${end} dari ${totalItems}`;
+
+    // Nomor halaman dengan ellipsis: 1 … 4 [5] 6 … 20
+    const pages = [];
+
+    for (let p = 1; p <= totalPages; p++) {
+        if (
+            p === 1 ||
+            p === totalPages ||
+            Math.abs(p - currentPage) <= 1
+        ) {
+            pages.push(p);
+        } else if (pages[pages.length - 1] !== '...') {
+            pages.push('...');
+        }
+    }
+
+    const btn = (label, page, { disabled = false, active = false } = {}) => `
+        <button
+            ${disabled ? 'disabled' : ''}
+            onclick="goToPage(${page})"
+            class="min-w-[32px] px-2.5 py-1.5 rounded-lg text-[11px]
+            font-semibold border transition
+            disabled:opacity-40 disabled:cursor-not-allowed
+            ${active
+                ? 'bg-orange-500 border-orange-500 text-white'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}">
+            ${label}
+        </button>`;
+
+    nav.innerHTML =
+        btn('‹', currentPage - 1, { disabled: currentPage === 1 }) +
+        pages.map(p =>
+            p === '...'
+                ? '<span class="px-1 text-slate-400 text-xs">…</span>'
+                : btn(p, p, { active: p === currentPage })
+        ).join('') +
+        btn('›', currentPage + 1, { disabled: currentPage === totalPages });
+}
+
+window.goToPage = function(page) {
+    currentPage = Number(page) || 1;
+    renderPOTable();
+};
+
+window.changePageSize = function(value) {
+    pageSize = Number(value) || 10;
+    currentPage = 1;
+    renderPOTable();
 };
 
 // =========================================================
@@ -458,6 +464,20 @@ window.renderPOTable = function() {
         .innerText =
         `${filtered.length} dari ${purchaseOrdersData.length} PO`;
 
+    // ---------- PAGINATION ----------
+    const totalPages =
+        Math.max(1, Math.ceil(filtered.length / pageSize));
+
+    // Clamp: menangani kasus hapus item terakhir di sebuah halaman
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const pageItems = filtered.slice(startIdx, startIdx + pageSize);
+
+    renderPagination(filtered.length);
+    // --------------------------------
+
     if (filtered.length === 0) {
 
         tbody.innerHTML = `
@@ -479,7 +499,7 @@ window.renderPOTable = function() {
     }
 
     tbody.innerHTML =
-        filtered.map(po => {
+        pageItems.map(po => {
 
             const sup =
                 suppliersData.find(s =>
@@ -1357,6 +1377,9 @@ window.handlePOSubmit =
                     'New PO ID:',
                     poId
                 );
+
+                // PO baru muncul paling atas -> kembali ke halaman 1
+                currentPage = 1;
             }
 
             // =================================================
@@ -2035,6 +2058,7 @@ window.deletePO =
                         String(poId)
                 );
 
+            // renderPOTable otomatis meng-clamp currentPage
             renderPOTable();
 
             // =================================================
@@ -2125,4 +2149,50 @@ function formatNumber(n) {
 
     return Number(n || 0)
         .toLocaleString('id-ID');
+}
+
+// =========================================================
+// INIT  (taruh paling bawah, setelah semua fungsi terdefinisi)
+// =========================================================
+
+async function initPage() {
+
+    debug('Application starting...');
+
+    try {
+
+        await authReady;
+
+        if (!supabase) {
+            throw new Error('Supabase client tidak tersedia.');
+        }
+
+        supabaseClient = supabase;
+        isDemoMode = false;
+
+        await loadAllData();
+
+        debug('Initial data loaded');
+
+    } catch (err) {
+
+        debugError('Supabase initialization failed', err);
+
+        isDemoMode = true;
+
+        loadMockData();
+
+        showModal(
+            "Mode Demo",
+            "Supabase tidak terhubung.\n\n" +
+            getSupabaseErrorMessage(err),
+            "⚠️"
+        );
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPage);
+} else {
+    initPage();
 }
