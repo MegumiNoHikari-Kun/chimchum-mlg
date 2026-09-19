@@ -186,151 +186,113 @@ window.onload = async function() {
 // =========================================================
 // LOAD ALL DATA
 // =========================================================
-
 async function loadAllData() {
-  if (!supabaseClient) {
-    throw new Error('Supabase client belum siap.');
-  }
-
-  console.log('========================================');
-  console.log('DEBUG: loadAllData() START');
-  console.log('supabaseClient:', supabaseClient);
-  console.log('========================================');
-
-  showLoading('Memuat data Purchase Order dari Supabase...');
-
-  const start = performance.now();
-
-  try {
-    console.log('[1/4] Query suppliers...');
-    const suppliersStart = performance.now();
-
-    const suppliersResult = await supabaseClient
-      .from('suppliers')
-      .select('*');
-
-    console.log(
-      `[1/4] suppliers selesai dalam ${(performance.now() - suppliersStart).toFixed(0)} ms`,
-      suppliersResult
-    );
-
-    if (suppliersResult.error) {
-      throw new Error(
-        `suppliers: ${suppliersResult.error.message}`
-      );
+    if (!supabaseClient) {
+        throw new Error('Supabase client belum siap.');
     }
 
-    console.log('[2/4] Query ingredients...');
-    const ingredientsStart = performance.now();
+    console.log('=== LOAD PO START ===');
 
-    const ingredientsResult = await supabaseClient
-      .from('ingredients')
-      .select('*');
+    try {
+        console.log('1. Loading suppliers...');
 
-    console.log(
-      `[2/4] ingredients selesai dalam ${(performance.now() - ingredientsStart).toFixed(0)} ms`,
-      ingredientsResult
-    );
+        const { data: suppliers, error: suppliersError } =
+            await supabaseClient
+                .from('suppliers')
+                .select('*');
 
-    if (ingredientsResult.error) {
-      throw new Error(
-        `ingredients: ${ingredientsResult.error.message}`
-      );
+        if (suppliersError) {
+            console.error('SUPPLIERS ERROR:', suppliersError);
+            throw suppliersError;
+        }
+
+        console.log('Suppliers:', suppliers);
+
+        console.log('2. Loading ingredients...');
+
+        const { data: ingredients, error: ingredientsError } =
+            await supabaseClient
+                .from('ingredients')
+                .select('*');
+
+        if (ingredientsError) {
+            console.error('INGREDIENTS ERROR:', ingredientsError);
+            throw ingredientsError;
+        }
+
+        console.log('Ingredients:', ingredients);
+
+        console.log('3. Loading purchase_orders...');
+
+        const { data: purchaseOrders, error: purchaseOrdersError } =
+            await supabaseClient
+                .from('purchase_orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+        if (purchaseOrdersError) {
+            console.error('PURCHASE ORDERS ERROR:', purchaseOrdersError);
+            throw purchaseOrdersError;
+        }
+
+        console.log('Purchase Orders:', purchaseOrders);
+
+        console.log('4. Loading purchase_order_items...');
+
+        const { data: purchaseOrderItems, error: itemsError } =
+            await supabaseClient
+                .from('purchase_order_items')
+                .select('*');
+
+        if (itemsError) {
+            console.error('PURCHASE ORDER ITEMS ERROR:', itemsError);
+            throw itemsError;
+        }
+
+        console.log('Purchase Order Items:', purchaseOrderItems);
+
+        /*
+         * IMPORTANT:
+         * Database memakai order_id,
+         * bukan purchase_order_id.
+         */
+        purchaseOrders.forEach(po => {
+            po.items = purchaseOrderItems.filter(
+                item => item.order_id === po.id
+            );
+        });
+
+        console.log('Final PO data:', purchaseOrders);
+
+        // Sesuaikan dengan variable global yang digunakan aplikasi
+        window.suppliers = suppliers;
+        window.ingredients = ingredients;
+        window.purchaseOrders = purchaseOrders;
+        window.purchaseOrderItems = purchaseOrderItems;
+
+        console.log('5. Rendering PO table...');
+
+        renderPOTable();
+
+        console.log('=== LOAD PO SUCCESS ===');
+
+    } catch (error) {
+
+        console.error('=== LOAD PO FAILED ===');
+        console.error(error);
+
+        showModal(
+            'Gagal Memuat Data',
+            error.message ||
+            'Terjadi kesalahan saat mengambil data Purchase Order.',
+            '❌'
+        );
+
+        throw error;
     }
-
-    console.log('[3/4] Query purchase_orders...');
-    const poStart = performance.now();
-
-    const purchaseOrdersResult = await supabaseClient
-      .from('purchase_orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    console.log(
-      `[3/4] purchase_orders selesai dalam ${(performance.now() - poStart).toFixed(0)} ms`,
-      purchaseOrdersResult
-    );
-
-    if (purchaseOrdersResult.error) {
-      throw new Error(
-        `purchase_orders: ${purchaseOrdersResult.error.message}`
-      );
-    }
-
-    console.log('[4/4] Query purchase_order_items...');
-    const itemsStart = performance.now();
-
-    const purchaseOrderItemsResult = await supabaseClient
-      .from('purchase_order_items')
-      .select('*');
-
-    console.log(
-      `[4/4] purchase_order_items selesai dalam ${(performance.now() - itemsStart).toFixed(0)} ms`,
-      purchaseOrderItemsResult
-    );
-
-    if (purchaseOrderItemsResult.error) {
-      throw new Error(
-        `purchase_order_items: ${purchaseOrderItemsResult.error.message}`
-      );
-    }
-
-    const suppliers = suppliersResult.data || [];
-    const ingredients = ingredientsResult.data || [];
-    const purchaseOrders = purchaseOrdersResult.data || [];
-    const purchaseOrderItems = purchaseOrderItemsResult.data || [];
-
-    console.log('----------------------------------------');
-    console.log('HASIL QUERY:');
-    console.log('suppliers:', suppliers.length);
-    console.log('ingredients:', ingredients.length);
-    console.log('purchase_orders:', purchaseOrders.length);
-    console.log('purchase_order_items:', purchaseOrderItems.length);
-    console.log('----------------------------------------');
-
-    // Simpan ke variable global yang digunakan halaman
-    window.suppliers = suppliers;
-    window.ingredients = ingredients;
-    window.purchaseOrders = purchaseOrders;
-    window.purchaseOrderItems = purchaseOrderItems;
-
-    // Gabungkan items ke masing-masing PO
-    purchaseOrders.forEach(po => {
-      po.items = purchaseOrderItems.filter(
-        item => item.purchase_order_id === po.id
-      );
-    });
-
-    console.log('Data PO setelah mapping:', purchaseOrders);
-
-    // Kalau kode lama menggunakan variable global:
-    window.purchaseOrders = purchaseOrders;
-
-    renderPOTable();
-
-    console.log(
-      `DEBUG: loadAllData() SELESAI dalam ${(performance.now() - start).toFixed(0)} ms`
-    );
-
-    hideLoading();
-
-  } catch (error) {
-    console.error('========================================');
-    console.error('DEBUG: loadAllData() ERROR');
-    console.error(error);
-    console.error('========================================');
-
-    hideLoading();
-
-    showModal(
-      'Gagal Memuat Data',
-      error.message || 'Terjadi kesalahan saat mengambil data dari Supabase.',
-      '❌'
-    );
-
-    throw error;
-  }
 }
+
+
 // =========================================================
 // MOCK DATA
 // =========================================================
