@@ -408,6 +408,81 @@ window.changePageSize = function(value) {
 };
 
 // =========================================================
+// SEARCH TEXT (semua kolom tabel)
+// =========================================================
+
+function getPOSearchText(po) {
+
+    const sup =
+        suppliersData.find(s =>
+            String(s.id) === String(po.supplier_id)
+        );
+
+    const supName =
+        sup ? (sup.name || sup.nama || '') : 'Supplier Umum';
+
+    // ---- Tanggal Order (GMT+7): beberapa format agar mudah dicari ----
+    const d = new Date(po.order_date);
+    const tz = 'Asia/Jakarta';
+    let dateText = '';
+
+    if (!isNaN(d)) {
+        dateText = [
+            // sama persis dengan yang tampil di tabel: "20 Sep 2026, 14.30"
+            d.toLocaleString('id-ID', {
+                timeZone: tz, dateStyle: 'medium', timeStyle: 'short'
+            }),
+            // "20 September 2026"
+            d.toLocaleDateString('id-ID', {
+                timeZone: tz, dateStyle: 'long'
+            }),
+            // "20/09/2026"
+            d.toLocaleDateString('id-ID', {
+                timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric'
+            }),
+            // "2026-09-20"
+            d.toLocaleDateString('en-CA', { timeZone: tz })
+        ].join(' ');
+
+        // jam bisa dicari dengan "14:30" maupun "14.30"
+        dateText += ' ' + dateText.replace(/(\d{2})\.(\d{2})/g, '$1:$2');
+    }
+
+    // ---- Status: label yang tampil + nilai di database ----
+    const statusText =
+        po.status === 'completed'
+            ? 'selesai completed'
+            : 'pending';
+
+    // ---- Total Harga: angka mentah & format ribuan ----
+    const total = Number(po.total_amount || 0);
+    const totalText =
+        `${total} ${total.toLocaleString('id-ID')} rp`;
+
+    // ---- Rincian Bahan & Catatan ----
+    const itemsText =
+        (po.items || []).map(i => {
+            const sub = Number(i.subtotal || 0);
+            return [
+                i.ingredient_name || i.name || '',
+                i.quantity,
+                i.unit || '',
+                sub,
+                sub.toLocaleString('id-ID')
+            ].join(' ');
+        }).join(' ');
+
+    return [
+        dateText,
+        supName,
+        statusText,
+        totalText,
+        itemsText,
+        po.notes || ''
+    ].join(' ').toLowerCase();
+}
+
+// =========================================================
 // TABLE
 // =========================================================
 
@@ -428,30 +503,15 @@ window.renderPOTable = function() {
         document.getElementById('poStatusFilter')
             ?.value || 'all';
 
+    // Multi-kata: semua kata harus cocok (AND), di kolom mana pun
+    const tokens = searchVal.split(/\s+/).filter(Boolean);
+
     const filtered =
         purchaseOrdersData.filter(po => {
 
-            const sup =
-                suppliersData.find(s =>
-                    String(s.id) ===
-                    String(po.supplier_id)
-                );
-
-            const supName =
-                (
-                    sup
-                        ? (sup.name || sup.nama)
-                        : ''
-                )
-                .toLowerCase();
-
-            const notes =
-                (po.notes || '').toLowerCase();
-
             const matchSearch =
-                !searchVal ||
-                supName.includes(searchVal) ||
-                notes.includes(searchVal);
+                tokens.length === 0 ||
+                tokens.every(t => getPOSearchText(po).includes(t));
 
             const matchStatus =
                 statusFilter === 'all' ||
