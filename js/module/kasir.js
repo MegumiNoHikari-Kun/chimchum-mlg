@@ -762,39 +762,87 @@ function statusColorOf(value) {
 /* =========================================================
    RENDER ORDER SUMMARY CARDS (#orderSummary)
 ========================================================= */
-
 function renderOrderSummary() {
     const container = document.getElementById('orderSummary');
     if (!container) return;
 
     const total = cachedOrders.length;
+
     const revenue = cachedOrders
         .filter(o => String(o.status).toLowerCase() === 'selesai')
         .reduce((sum, o) => sum + Number(o.grand_total ?? 0), 0);
 
-    const cardStyle = 'background:white;border-radius:16px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.05);border:1px solid #f1f5f9;';
+    const cardStyle = `
+        background:white;
+        border-radius:16px;
+        padding:18px;
+        box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        border:1px solid #f1f5f9;
+        cursor:pointer;
+        transition:all .15s ease;
+    `;
+
+    const makeCard = (label, value, color, filterValue) => `
+        <div
+            class="order-summary-card"
+            data-status-filter="${filterValue}"
+            onclick="filterKasirOrders('${filterValue}')"
+            style="${cardStyle}"
+            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 10px rgba(0,0,0,.08)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'"
+        >
+            <div style="
+                font-size:11px;
+                color:var(--gray);
+                text-transform:uppercase;
+                font-weight:600;
+            ">
+                ${label}
+            </div>
+
+            <div style="
+                font-size:22px;
+                font-weight:700;
+                margin-top:4px;
+                color:${color};
+            ">
+                ${value}
+            </div>
+        </div>
+    `;
 
     const statusCardsHTML = STATUS_LIST.map(s => {
-        const count = cachedOrders.filter(o => String(o.status).toLowerCase() === s.value).length;
-        return `
-            <div style="${cardStyle}">
-                <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">${s.label}</div>
-                <div style="font-size:22px;font-weight:700;margin-top:4px;color:${s.color};">${count}</div>
-            </div>
-        `;
+        const count = cachedOrders.filter(
+            o => String(o.status).toLowerCase() === s.value.toLowerCase()
+        ).length;
+
+        return makeCard(
+            s.label,
+            count,
+            s.color,
+            s.value
+        );
     }).join('');
 
     container.innerHTML = `
-        <div style="${cardStyle}">
-            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Total Pesanan</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;">${total}</div>
-        </div>
+        ${makeCard(
+            'Total Pesanan',
+            total,
+            '#334155',
+            'all'
+        )}
+
         ${statusCardsHTML}
-        <div style="${cardStyle}">
-            <div style="font-size:11px;color:var(--gray);text-transform:uppercase;font-weight:600;">Revenue (Selesai)</div>
-            <div style="font-size:22px;font-weight:700;margin-top:4px;color:var(--primary);">${rupiah(revenue)}</div>
-        </div>
+
+        ${makeCard(
+            'Revenue (Selesai)',
+            rupiah(revenue),
+            'var(--primary)',
+            'selesai'
+        )}
     `;
+
+    updateOrderSummaryActiveState();
 }
 
 
@@ -852,9 +900,8 @@ function renderOrderFilterBar() {
 ========================================================= */
 
 function renderKasirOrders() {
-    renderOrderFilterBar();
-
     const tbody = document.getElementById('orderTableBody');
+
     if (!tbody) {
         console.warn('⚠️ #orderTableBody tidak ditemukan.');
         return;
@@ -864,18 +911,24 @@ function renderKasirOrders() {
 
     if (currentFilterStatus !== 'all') {
         orders = orders.filter(order =>
-            String(order.status ?? '').trim().toLowerCase() === currentFilterStatus.toLowerCase()
+            String(order.status ?? '').trim().toLowerCase() ===
+            currentFilterStatus.toLowerCase()
         );
     }
 
     if (orders.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; color:#aaa; padding:35px;">
+                <td colspan="8" style="
+                    text-align:center;
+                    color:#aaa;
+                    padding:35px;
+                ">
                     Belum ada pesanan.
                 </td>
             </tr>
         `;
+        updateOrderSummaryActiveState();
         return;
     }
 
@@ -883,36 +936,204 @@ function renderKasirOrders() {
         const id = order.id ?? '-';
         const status = String(order.status ?? 'new');
         const total = Number(order.grand_total ?? 0);
-        const items = Array.isArray(order.items) ? order.items : [];
-        const itemsText = items.map(i => `${escapeHtml(i.nama ?? i.name ?? '')} x${i.qty ?? 1}`).join(', ') || '-';
+
+        const items = Array.isArray(order.items)
+            ? order.items
+            : [];
+
+        const itemsText = items
+            .map(i =>
+                `${escapeHtml(i.nama ?? i.name ?? '')} x${i.qty ?? 1}`
+            )
+            .join(', ') || '-';
 
         const statusColor = statusColorOf(status);
+
         const statusOptionsHTML = STATUS_LIST.map(s =>
-            `<option value="${s.value}" ${status.toLowerCase() === s.value ? 'selected' : ''}>${s.label}</option>`
+            `<option value="${s.value}" ${
+                status.toLowerCase() === s.value.toLowerCase()
+                    ? 'selected'
+                    : ''
+            }>${s.label}</option>`
         ).join('');
 
         return `
             <tr>
-                <td>${escapeHtml(formatWaktu(order.created_at))}</td>
-                <td>${escapeHtml(order.customer_name ?? order.nama ?? '-')}</td>
-                <td>${escapeHtml(order.phone ?? order.wa ?? '-')}</td>
-                <td>${escapeHtml(order.address ?? '-')} / ${escapeHtml(order.payment_method ?? '-')}</td>
-                <td><span style="color:${statusColor};font-weight:600;">${escapeHtml(statusLabel(status))}</span></td>
-                <td style="max-width:220px;">${itemsText}</td>
-                <td>${rupiah(total)}</td>
                 <td>
-                    <select onchange="updateOrderStatus('${id}', this.value)" style="margin:0;padding:6px 8px;font-size:12px;width:auto;">
+                    ${escapeHtml(formatWaktu(order.created_at))}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        order.customer_name ??
+                        order.nama ??
+                        '-'
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        order.phone ??
+                        order.wa ??
+                        '-'
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(order.address ?? '-')}
+                    /
+                    ${escapeHtml(order.payment_method ?? '-')}
+                </td>
+
+                <td>
+                    <span style="
+                        color:${statusColor};
+                        font-weight:600;
+                    ">
+                        ${escapeHtml(statusLabel(status))}
+                    </span>
+                </td>
+
+                <td style="max-width:220px;">
+                    ${itemsText}
+                </td>
+
+                <td>
+                    ${rupiah(total)}
+                </td>
+
+                <td>
+                    <select
+                        onchange="updateOrderStatus('${id}', this.value)"
+                        style="
+                            margin:0;
+                            padding:6px 8px;
+                            font-size:12px;
+                            width:auto;
+                        "
+                    >
                         ${statusOptionsHTML}
                     </select>
-                    <span title="Hubungi Admin" style="display: inline-block; cursor: not-allowed;">
-                      <button type="button" class="btn-delete" style="margin-top: 4px; pointer-events: none !important; cursor: not-allowed !important; opacity: 0.6 !important;" disabled>Hapus</button>
-                  </span>
+                     <button
+                          type="button"
+                          onclick="reprintOrder('${id}')"
+                          style="
+                              padding:6px 10px;
+                              font-size:12px;
+                              background:#f1f5f9;
+                              color:var(--dark);
+                              border:1px solid #e2e8f0;
+                              border-radius:6px;
+                              cursor:pointer;
+                              margin-left:4px;
+                          "
+                          title="Cetak Struk"
+                      >
+                          🖨️
+                      </button>
+
+                    <span
+                        title="Hubungi Admin"
+                        style="
+                            display:inline-block;
+                            cursor:not-allowed;
+                        "
+                    >
+                        <button
+                            type="button"
+                            class="btn-delete"
+                            style="
+                                margin-top:4px;
+                                pointer-events:none !important;
+                                cursor:not-allowed !important;
+                                opacity:.6 !important;
+                            "
+                            disabled
+                        >
+                            Hapus
+                        </button>
+                    </span>
                 </td>
             </tr>
         `;
     }).join('');
+
+    updateOrderSummaryActiveState();
 }
 
+/* =========================================================
+   REPRINT ORDER
+========================================================= */
+
+window.reprintOrder = (key) => {
+    const order = cachedOrders.find(
+        o =>
+            String(o.id) === String(key) ||
+            String(o.order_id) === String(key)
+    );
+
+    if (!order) {
+        alert("Pesanan tidak ditemukan.");
+        return;
+    }
+
+    cetakStrukThermal(
+        order.customer_name,
+        order.phone,
+        order.items,
+        order.grand_total,
+        order.payment_method || 'Online',
+        order.grand_total,
+        0
+    );
+};
+
+function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, uangBayar, kembalian) {
+    const printWindow = window.open('', '_blank', 'width=350,height=600');
+    const tgl = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const itemsHtml = items.map(i => `
+      <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;">
+        <span>${i.nama || i.name} x${i.qty}</span>
+        <span>${rupiah(i.qty * (i.harga || i.price))}</span>
+      </div>`).join('');
+
+    printWindow.document.write(`
+      <html><head>
+        <title>Struk - ChimChum</title>
+        <style>
+          @page { margin:0; }
+          body { font-family:'Courier New',monospace; width:48mm; padding:2mm; color:#000; font-size:11px; }
+          .center { text-align:center; }
+          .line { border-top:1px dashed #000; margin:6px 0; }
+          .bold { font-weight:bold; }
+        </style>
+      </head><body>
+        <div class="center bold" style="font-size:14px;">CHIMCHUM MALANG</div>
+        <div class="center" style="font-size:10px;">Dimsum Mentai & Crispy Chicken</div>
+        <div class="line"></div>
+        <div style="font-size:11px; line-height:1.4;">
+          Waktu : ${tgl}<br>
+          Pelanggan : ${noMeja}
+        </div>
+        <div class="line"></div>
+        ${itemsHtml}
+        <div class="line"></div>
+        <div style="display:flex; justify-content:space-between; font-size:12px;" class="bold">
+          <span>TOTAL:</span><span>${rupiah(grandTotal)}</span>
+        </div>
+        <div class="line"></div>
+        <div style="display:flex; justify-content:space-between; font-size:11px;">
+          <span>Bayar (${metodeBayar}):</span><span>${rupiah(uangBayar)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px;">
+          <span>Kembalian:</span><span>${rupiah(kembalian)}</span>
+        </div>
+        <div class="line"></div>
+        <div class="center" style="font-size:10px; margin-top:8px;">Terima Kasih!</div>
+        <script>window.onload=function(){window.print();setTimeout(()=>window.close(),300);}<\/script>
+      </body></html>`);
+    printWindow.document.close();
+}
 
 /* =========================================================
    UPDATE ORDER STATUS (UPDATE)
