@@ -416,31 +416,7 @@ window.setUangPas = function () {
 /* =========================================================
    RECEIPT PRINTING (FIXED)
 
-   Previous version had several bugs:
-   - buildStrukHTML() duplicated the shop header (rendered the
-     name/address twice, plus the logo twice).
-   - The delivery-platform section used the shop's own logo
-     image for GoFood/ShopeeFood/GrabFood instead of any real
-     mark, so it was meaningless. Replaced with simple text
-     badges (no third-party logo files are bundled with the
-     project, so real brand marks can't be embedded here — add
-     actual icon files under ./assets/ later if you want real
-     logos instead of text badges).
-   - The logo <img> pointed at a live GitHub Pages URL, so
-     printing failed/blank if the printing device had no
-     internet access. Now resolved to a LOCAL asset
-     (./assets/logo-transparant.png) via an absolute URL, and
-     silently hides itself with onerror if missing.
-   - buildStrukHTML() referenced .delivery-title /
-     .delivery-logos classes that were never defined in the
-     print window's <style>, so that section rendered
-     unstyled. New classes (.delivery-badges/.delivery-badge)
-     are now defined in cetakStrukKasir()'s injected <style>.
-   - Dead code removed: ensureStrukStyle() and the 'afterprint'
-     listener referenced a #strukPrintArea element that is
-     never created anywhere (printing happens via a popup
-     window, not in-page), so both were inert and have been
-     deleted.
+   
 ========================================================= */
 
 function buildStrukHTML(order) {
@@ -1079,8 +1055,12 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
           .bold { font-weight:bold; }
         </style>
       </head><body>
-        <div class="center bold" style="font-size:14px;">CHIMCHUM MALANG</div>
-        <div class="center" style="font-size:10px;">Dimsum Mentai & Crispy Chicken</div>
+        <div class="struk-center">
+            <img src="${logoUrl}" class="struk-logo" alt="Logo" onerror="this.style.display='none'">
+            <div class="bold" style="font-size:15px;margin-top:2px;">CHIMCHUM MALANG</div>
+            <div style="font-size:10px;">Dimsum &amp; Snack</div>
+            <div style="font-size:10px;">Sawojajar, Malang</div>
+        </div>
         <div class="line"></div>
         <div style="font-size:11px; line-height:1.4;">
           Waktu : ${tgl}<br>
@@ -1100,7 +1080,16 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
           <span>Kembalian:</span><span>${rupiah(kembalian)}</span>
         </div>
         <div class="line"></div>
-        <div class="center" style="font-size:10px; margin-top:8px;">Terima Kasih!</div>
+        
+        <div class="struk-center">
+            <div style="font-size:10px;margin-bottom:3px;">Tersedia juga di:</div>
+            <div class="delivery-badges">
+                <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GOFOOD</span>
+               <span style="background-color: #ff5722; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">SHOPEEFOOD</span>
+               <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GRABFOOD</span>
+            </div>
+        </div>
+        <div class="center" style="font-size:10px; margin-top:8px;">Terima Kasih Atas Kunjungan Anda!</div>
         <script>window.onload=function(){window.print();setTimeout(()=>window.close(),300);}<\/script>
       </body></html>`);
     printWindow.document.close();
