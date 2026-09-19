@@ -90,14 +90,32 @@ function renderTable() {
         });
     }
 
-    // Apply Search Filter (Customer Name, Order ID, Phone, or Payment Method)
+    // Apply Search Filter (Waktu, Pelanggan, WhatsApp, Tipe/Bayar, Status, Item Pesanan, ID)
     if (searchQuery) {
         filtered = filtered.filter(o => {
             const name = (o.customer_name || '').toLowerCase();
             const orderId = (o.order_id || '').toLowerCase();
+            const idKey = String(o.id || '').toLowerCase();
             const phone = (o.phone || '').toLowerCase();
             const payment = (o.payment_method || '').toLowerCase();
-            return name.includes(searchQuery) || orderId.includes(searchQuery) || phone.includes(searchQuery) || payment.includes(searchQuery);
+            const status = (o.status || 'new').toLowerCase();
+            const address = (o.address || '').toLowerCase();
+            
+            // Format time string representation for searching
+            const tgl = o.created_at ? new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }).toLowerCase() : '';
+            
+            // Format items string representation for searching
+            const items = Array.isArray(o.items) ? o.items.map(i => `${i.nama || i.name} (${i.qty}x)`).join(', ').toLowerCase() : '';
+
+            return name.includes(searchQuery) || 
+                   orderId.includes(searchQuery) || 
+                   idKey.includes(searchQuery) || 
+                   phone.includes(searchQuery) || 
+                   payment.includes(searchQuery) || 
+                   status.includes(searchQuery) || 
+                   address.includes(searchQuery) ||
+                   tgl.includes(searchQuery) || 
+                   items.includes(searchQuery);
         });
     }
 
