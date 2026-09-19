@@ -78,7 +78,7 @@ window.switchTab = function (tabId, btnEl) {
 
     if (tabId === 'tab-pesanan') {
         window.loadOrders();
-       console.log("load pesanan @30 detik");
+       // console.log("load pesanan @30 detik");
         startOrderAutoRefresh(); // refresh every 30s while this tab is open
     } else {
         stopOrderAutoRefresh(); // don't keep polling in the background
@@ -104,10 +104,10 @@ window.logoutKasir = async function () {
 ========================================================= */
 
 async function initKasirDashboard() {
-    console.log('🚀 Start dashboard kasir...');
+    // console.log('🚀 Start dashboard kasir...');
     await window.loadProducts();
     await window.loadOrders();
-    console.log('✅ Dashboard kasir siap.');
+    // console.log('✅ Dashboard kasir siap.');
 }
 
 
@@ -116,7 +116,7 @@ async function initKasirDashboard() {
 ========================================================= */
 
 window.loadProducts = async () => {
-    console.log('🟠 loadProducts() MULAI');
+    // console.log('🟠 loadProducts() MULAI');
 
     try {
         await authReady;
@@ -129,7 +129,7 @@ window.loadProducts = async () => {
             .from('products')
             .select('*');
 
-        console.log('📦 DATA PRODUCTS:', data, '🔴 ERROR:', error);
+        // console.log('📦 DATA PRODUCTS:', data, '🔴 ERROR:', error);
 
         if (error) throw error;
 
@@ -669,7 +669,7 @@ window.submitKasirOrder = async function () {
 
         if (error) throw error;
 
-        console.log('✅ Order tersimpan:', data);
+        // console.log('✅ Order tersimpan:', data);
 
         if (printStruk) {
             cetakStrukKasir({
@@ -702,7 +702,7 @@ window.submitKasirOrder = async function () {
 ========================================================= */
 
 window.loadOrders = async () => {
-    console.log('🟠 loadOrders() MULAI');
+    // console.log('🟠 loadOrders() MULAI');
 
     try {
         await authReady;
@@ -713,7 +713,7 @@ window.loadOrders = async () => {
             .select('*')
             .order('created_at', { ascending: false });
 
-        console.log('📦 DATA ORDERS:', data, '🔴 ERROR:', error);
+        // console.log('📦 DATA ORDERS:', data, '🔴 ERROR:', error);
 
         if (error) throw error;
 
@@ -1158,7 +1158,7 @@ function setupKasirEvents() {
     if (filterKategoriKasir) filterKategoriKasir.addEventListener('change', jalankanFilterKasir);
     if (metodeBayar) window.toggleCashSection(); // set initial visibility on load
 
-    console.log('✅ Event listener kasir terpasang.');
+    // console.log('✅ Event listener kasir terpasang.');
 }
 
 
@@ -1168,10 +1168,10 @@ function setupKasirEvents() {
 
 async function startKasir() {
     try {
-        console.log('🚀 START KASIR MODULE');
+        // console.log('🚀 START KASIR MODULE');
         setupKasirEvents();
         await initKasirDashboard();
-        console.log('✅ KASIR MODULE SELESAI');
+        // console.log('✅ KASIR MODULE SELESAI');
     } catch (error) {
         console.error('❌ Gagal initialize kasir:', error);
     }
