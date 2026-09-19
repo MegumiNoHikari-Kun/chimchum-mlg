@@ -1052,7 +1052,7 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
         <title>Struk - ChimChum</title>
         <style>
           @page { margin:0; }
-          body { font-family:'Courier New',monospace; width:48mm; padding:2mm; color:#000; font-size:11px; }
+          body { font-family:'Courier New',monospace; width:58mm; padding:2mm; color:#000; font-size:11px; }
           .center { text-align:center; }
           .line { border-top:1px dashed #000; margin:6px 0; }
           .bold { font-weight:bold; }
