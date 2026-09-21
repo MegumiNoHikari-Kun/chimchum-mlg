@@ -161,7 +161,7 @@ function setConnectionStatus(connected, localMode = false) {
 
     if (connected) {
         element.className = 'text-[10px] text-emerald-600';
-        element.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Terhubung ke Supabase';
+        element.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Terhubung ke Database';
     } else {
         element.className = 'text-[10px] text-red-600';
         element.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i> Supabase tidak terhubung';
