@@ -80,11 +80,12 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                    <label class="lbl" for="hppOutput">Hasil produksi (pcs / 1 resep batch)</label>
-                    <input type="number" id="hppOutput" class="field" min="0" step="any" placeholder="Cth: 20">
+                    <label class="lbl" for="hppQty">Isi per menu (jumlah pcs)</label>
+                    <input type="number" id="hppQty" class="field" min="0" step="any" placeholder="Cth: 6" value="1">
+                    <p class="text-[10px] text-slate-400 mt-1">Resep dihitung per 1 pcs. Isi berapa pcs dalam 1 menu yang dijual (mis. dimsum isi 6).</p>
                 </div>
                 <div>
-                    <label class="lbl" for="hppExtra">Biaya tambahan per batch (Rp)</label>
+                    <label class="lbl" for="hppExtra">Biaya tambahan per menu (Rp)</label>
                     <input type="number" id="hppExtra" class="field" min="0" step="any" placeholder="Kemasan, gas, tenaga, dll">
                 </div>
                 <div>
@@ -96,7 +97,7 @@
             <p id="hppExtraHint" class="text-[11px] text-amber-600"></p>
 
             <div>
-                <label class="lbl" for="hppBatch">Simulasi jumlah batch produksi (opsional)</label>
+                <label class="lbl" for="hppBatch">Simulasi produksi berapa menu sekaligus (opsional)</label>
                 <input type="number" id="hppBatch" class="field" value="1" min="0.1" step="0.1">
                 <p id="hppBatchInfo" class="text-[11px] text-slate-500 mt-1"></p>
             </div>
@@ -105,20 +106,20 @@
         <!-- ================= RINCIAN BIAYA BAHAN ================= -->
         <div class="card overflow-hidden">
             <div class="p-4 flex items-center justify-between border-b border-slate-100">
-                <h3 class="font-bold text-sm">Rincian biaya bahan (per 1 batch resep)</h3>
+                <h3 class="font-bold text-sm">Rincian biaya bahan</h3>
                 <span id="hppLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu...</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="tbl">
                     <thead>
-                        <tr><th>Bahan baku</th><th>Kebutuhan</th><th class="text-right">Subtotal</th></tr>
+                        <tr><th>Bahan baku</th><th>Per 1 pcs</th><th id="hppColTotal">Kebutuhan total</th><th class="text-right">Subtotal</th></tr>
                     </thead>
                     <tbody id="hppBody">
-                        <tr><td colspan="3" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
+                        <tr><td colspan="4" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
                     </tbody>
                     <tfoot>
                         <tr class="border-t border-slate-200 bg-slate-50">
-                            <td class="font-bold" colspan="2">Total biaya bahan</td>
+                            <td class="font-bold" colspan="3">Total biaya bahan (1 menu)</td>
                             <td class="text-right font-bold text-orange-600" id="hppTotalBahan">Rp 0</td>
                         </tr>
                     </tfoot>
@@ -130,18 +131,22 @@
         <div id="hppResult" class="hidden card p-4 sm:p-5 space-y-4">
             <h3 class="font-bold text-sm">Hasil perhitungan HPP</h3>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div class="stat-box">
-                    <p class="stat-label">Total Biaya Produksi</p>
+                    <p class="stat-label">Total Biaya Bahan</p>
                     <p class="stat-value" id="hppTotalBiaya">Rp 0</p>
                 </div>
                 <div class="stat-box">
-                    <p class="stat-label">Total Unit Dihasilkan</p>
+                    <p class="stat-label">Isi per Menu</p>
                     <p class="stat-value" id="hppTotalUnit">0 pcs</p>
                 </div>
                 <div class="stat-box border-orange-200 bg-orange-50">
-                    <p class="stat-label text-orange-500">HPP per Unit</p>
+                    <p class="stat-label text-orange-500">HPP per Menu</p>
                     <p class="stat-value text-orange-600" id="hppPerUnit">Rp 0</p>
+                </div>
+                <div class="stat-box border-orange-200 bg-orange-50">
+                    <p class="stat-label text-orange-500">HPP per Pcs</p>
+                    <p class="stat-value text-orange-600" id="hppPerPcs">Rp 0</p>
                 </div>
                 <div class="stat-box border-emerald-200 bg-emerald-50">
                     <p class="stat-label text-emerald-600">Harga Jual Disarankan</p>
