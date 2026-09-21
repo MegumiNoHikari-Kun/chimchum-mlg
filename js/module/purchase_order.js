@@ -313,18 +313,14 @@ function rowHtml(po) {
                           class="icon-btn text-emerald-600 hover:bg-emerald-50"><i class="fa-brands fa-whatsapp text-sm"></i></a>`
                     : `<span title="Supplier belum punya nomor WhatsApp" class="icon-btn cursor-not-allowed opacity-30"><i class="fa-brands fa-whatsapp text-sm"></i></span>`}
                 <button data-act="edit" title="Edit" aria-label="Edit" class="icon-btn hover:text-orange-600"><i class="fa-solid fa-pen"></i></button>
-                    ${prev
-                        ? `<button data-act="status" data-to="${prev}" title="${BACK_TITLE[status]}" aria-label="${BACK_TITLE[status]}"
-                              class="icon-btn hover:text-amber-600"><i class="fa-solid fa-rotate-left"></i></button>`
-                        : '<span class="icon-btn invisible" aria-hidden="true"></span>'}
-                    ${next
-                        ? `<button data-act="status" data-to="${next}" title="${ADVANCE[status].title}" aria-label="${ADVANCE[status].title}"
-                              class="icon-btn ${ADVANCE[status].cls}"><i class="fa-solid ${ADVANCE[status].icon}"></i></button>`
-                        : '<span class="icon-btn invisible" aria-hidden="true"></span>'}
-                <button data-act="delete" title="Hapus" aria-label="Hapus" class="icon-btn hover:bg-rose-50 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>                
-                <button data-act="toggle" aria-label="Ubah status" class="icon-btn ${done ? 'hover:text-amber-600' : 'text-emerald-600 hover:bg-emerald-50'}"
-                    title="${done ? 'Kembalikan ke Pending (stok dikurangi)' : 'Tandai Selesai (stok bertambah)'}">
-                    <i class="fa-solid ${done ? 'fa-rotate-left' : 'fa-circle-check'}"></i></button>
+                ${prev
+                    ? `<button data-act="status" data-to="${prev}" title="${BACK_TITLE[status]}" aria-label="${BACK_TITLE[status]}"
+                          class="icon-btn hover:text-amber-600"><i class="fa-solid fa-rotate-left"></i></button>`
+                    : '<span class="icon-btn invisible" aria-hidden="true"></span>'}
+                ${next
+                    ? `<button data-act="status" data-to="${next}" title="${ADVANCE[status].title}" aria-label="${ADVANCE[status].title}"
+                          class="icon-btn ${ADVANCE[status].cls}"><i class="fa-solid ${ADVANCE[status].icon}"></i></button>`
+                    : '<span class="icon-btn invisible" aria-hidden="true"></span>'}
                 <button data-act="delete" title="Hapus" aria-label="Hapus" class="icon-btn hover:bg-rose-50 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>
             </div>
         </td>
