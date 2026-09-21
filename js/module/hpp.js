@@ -92,106 +92,110 @@ function renderProductOptions() {
 function calcContext() {
     const prod = S.products.find(p => same(p.id, $('hppProduct').value));
     const recipe = prod?.resep_id ? recById(prod.resep_id) : null;
+    const qty = parseFloat($('hppQty').value) || 0; // isi per menu (pcs)
 
     // Gabungkan bahan yang sama agar tidak dobel dihitung
+    // Catatan: amount di resep = kebutuhan untuk 1 PCS, bukan 1 menu/batch
     const merged = new Map();
     (recipe?.items ?? []).forEach(it =>
         merged.set(String(it.ingredientId), (merged.get(String(it.ingredientId)) || 0) + (Number(it.amount) || 0))
     );
 
-    const lines = [...merged].map(([id, amount]) => {
+    const lines = [...merged].map(([id, amountPerPcs]) => {
         const ing = ingById(id);
         const price = Number(ing?.price) || 0;
-        const subtotal = round2(amount * price);
+        const amountTotal = round2(amountPerPcs * qty); // dikalikan isi per menu
+        const subtotal = round2(amountTotal * price);
         return {
             ing,
             name: ing?.name ?? 'Bahan terhapus',
             unit: ing?.unit ?? '',
-            amount: round2(amount),
+            amountPerPcs: round2(amountPerPcs),
+            amountTotal,
             price,
             subtotal
         };
     });
 
-    return { prod, recipe, lines };
+    return { prod, recipe, qty, lines };
 }
 
 function renderCalc() {
-    const { prod, recipe, lines } = calcContext();
+    const { prod, recipe, qty, lines } = calcContext();
     const body = $('hppBody');
     const label = $('hppLabel');
+    const colHead = $('hppColTotal');
 
     $('hppResult').classList.add('hidden');
 
     if (!prod) {
         label.textContent = 'Menunggu pilihan menu...';
-        body.innerHTML = emptyRow(3, 'Pilih menu terlebih dahulu untuk melihat rincian bahan.');
+        body.innerHTML = emptyRow(4, 'Pilih menu terlebih dahulu untuk melihat rincian bahan.');
         return;
     }
     if (!recipe) {
         label.textContent = 'Resep belum diatur';
-        body.innerHTML = emptyRow(3, 'Menu ini belum punya resep. Atur dulu di tab Menu &amp; Resep pada Master Resep.');
+        body.innerHTML = emptyRow(4, 'Menu ini belum punya resep. Atur dulu di tab Menu &amp; Resep pada Master Resep.');
         return;
     }
     if (!lines.length) {
         label.textContent = 'Resep kosong';
-        body.innerHTML = emptyRow(3, 'Resep ini belum memiliki bahan.');
+        body.innerHTML = emptyRow(4, 'Resep ini belum memiliki bahan.');
         return;
     }
 
-    label.textContent = `Resep: ${esc(recipe.name ?? recipe.description ?? '-')}`;
+    label.textContent = `Resep: ${esc(recipe.name ?? recipe.description ?? '-')} (per 1 pcs)`;
+    colHead.textContent = `Kebutuhan (x ${num(qty || 0)} pcs)`;
 
     const totalBahan = lines.reduce((s, l) => s + l.subtotal, 0);
 
     body.innerHTML = lines.map(l => `<tr>
         <td class="font-medium text-slate-800">${esc(l.name)}${!l.ing ? ' <span class="badge b-warn">Terhapus</span>' : ''}</td>
-        <td>${num(l.amount)} <span class="text-slate-400">${esc(l.unit)}</span></td>
+        <td class="text-slate-500">${num(l.amountPerPcs)} <span class="text-slate-400">${esc(l.unit)}</span></td>
+        <td>${num(l.amountTotal)} <span class="text-slate-400">${esc(l.unit)}</span></td>
         <td class="text-right font-semibold text-slate-700">${rp(l.subtotal)}</td>
     </tr>`).join('');
 
     $('hppTotalBahan').textContent = rp(totalBahan);
 
-    computeResult(prod, totalBahan);
+    computeResult(prod, totalBahan, qty);
 }
 
-function computeResult(prod, totalBahan) {
-    const batch = parseFloat($('hppBatch').value) || 1;
-    const output = parseFloat($('hppOutput').value) || 0;
-    const extra = parseFloat($('hppExtra').value) || 0;
+function computeResult(prod, totalBahan, qty) {
+    const batch = parseFloat($('hppBatch').value) || 1; // simulasi produksi berapa menu sekaligus (opsional)
+    const extra = parseFloat($('hppExtra').value) || 0; // biaya tambahan per 1 menu (kemasan, dll)
     const margin = parseFloat($('hppMargin').value) || 0;
 
     const resultBox = $('hppResult');
 
-    if (!(output > 0)) {
+    if (!(qty > 0)) {
         resultBox.classList.add('hidden');
-        $('hppExtraHint').textContent = 'Isi jumlah hasil produksi (pcs per batch) untuk menghitung HPP.';
+        $('hppExtraHint').textContent = 'Isi "Isi per menu" (jumlah pcs dalam 1 menu) untuk menghitung HPP.';
         return;
     }
     $('hppExtraHint').textContent = '';
 
-    const totalBiaya = totalBahan + extra;
-    const totalUnit = output; // per 1 batch resep
-    const hppPerUnit = totalUnit > 0 ? totalBiaya / totalUnit : 0;
-    const hargaSaran = hppPerUnit * (1 + margin / 100);
+    // totalBahan = biaya bahan untuk 1 menu (sudah dikalikan qty pcs)
+    const hppPerMenu = totalBahan + extra;
+    const hppPerPcs = qty > 0 ? hppPerMenu / qty : 0;
+    const hargaSaran = hppPerMenu * (1 + margin / 100);
     const hargaJualSaatIni = pPrice(prod);
 
-    const totalBiayaBatchDipilih = totalBiaya * batch;
-    const totalUnitBatchDipilih = totalUnit * batch;
-
     resultBox.classList.remove('hidden');
-    $('hppTotalBiaya').textContent = rp(totalBiaya);
-    $('hppTotalUnit').textContent = `${num(totalUnit)} pcs`;
-    $('hppPerUnit').textContent = rp(hppPerUnit);
+    $('hppTotalBiaya').textContent = rp(hppPerMenu);
+    $('hppTotalUnit').textContent = `${num(qty)} pcs / menu`;
+    $('hppPerUnit').textContent = rp(hppPerMenu);
+    $('hppPerPcs').textContent = rp(hppPerPcs);
     $('hppHargaSaran').textContent = rp(hargaSaran);
 
     $('hppBatchInfo').textContent =
         batch > 1
-            ? `Untuk ${num(batch)} batch: total biaya ${rp(totalBiayaBatchDipilih)}, menghasilkan ${num(totalUnitBatchDipilih)} pcs.`
+            ? `Simulasi produksi ${num(batch)} menu sekaligus: total belanja bahan ${rp(hppPerMenu * batch)}, menghasilkan ${num(qty * batch)} pcs.`
             : '';
 
     const currentBox = $('hppCurrentPrice');
     if (hargaJualSaatIni > 0) {
-        const profit = hargaJualSaatIni - hppPerUnit;
+        const profit = hargaJualSaatIni - hppPerMenu;
         const marginAktual = hargaJualSaatIni > 0 ? (profit / hargaJualSaatIni) * 100 : 0;
         currentBox.classList.remove('hidden');
         $('hppHargaSekarang').textContent = rp(hargaJualSaatIni);
@@ -218,8 +222,8 @@ document.addEventListener('click', e => {
 });
 
 $('hppProduct').addEventListener('change', renderCalc);
+$('hppQty').addEventListener('input', renderCalc);
 $('hppBatch').addEventListener('input', renderCalc);
-$('hppOutput').addEventListener('input', renderCalc);
 $('hppExtra').addEventListener('input', renderCalc);
 $('hppMargin').addEventListener('input', renderCalc);
 
