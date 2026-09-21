@@ -368,8 +368,10 @@ function calcContext() {
 function renderCalcOptions() {
     const sel = $('calcProduct'), current = sel.value;
     sel.innerHTML = '<option value="">-- Pilih menu --</option>' + S.products.map(p =>
-        `<option value="${esc(p.id)}">${esc(pName(p))} (stok ${pStock(p)})${isMapped(p) ? '' : ' - belum ada resep'}</option>`).join('');
+        `<option value="${esc(p.id)}" data-s="${esc(pName(p))}">${esc(pName(p))} (stok ${pStock(p)})${isMapped(p) ? '' : ' - belum ada resep'}</option>`).join('');
     sel.value = current;
+    spEnhance(sel, { placeholder: 'Cari menu...', empty: 'Menu tidak ditemukan' });
+    spSync(sel);   // wajib: innerHTML di atas mengganti opsi, label tombol harus diperbarui
     renderCalc();
 }
 
@@ -504,37 +506,53 @@ function spInit() {
     window.addEventListener('scroll', e => { if (SP.sel && !SP.panel.contains(e.target)) spPosition(); }, true);
 }
 
-function spEnhance(sel) {
+function spEnhance(sel, opts = {}) {
     if (!sel._sp) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `${sel.className} flex items-center justify-between gap-2 text-left`;
         btn.setAttribute('aria-haspopup', 'listbox');
         btn.setAttribute('aria-expanded', 'false');
-        btn.setAttribute('aria-label', sel.getAttribute('aria-label') || 'Pilih supplier');
+        btn.setAttribute('aria-label', sel.getAttribute('aria-label') || 'Pilih');
         btn.innerHTML = `<span class="truncate"></span>
             <svg class="w-3.5 h-3.5 shrink-0 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z"/></svg>`;
         btn.addEventListener('click', () => (SP.sel === sel ? spClose() : spOpen(sel)));
         sel.before(btn);
         sel.style.display = 'none';
         sel.tabIndex = -1;
-        sel._sp = { btn, label: btn.firstElementChild };
+        sel._sp = {
+            btn, label: btn.firstElementChild,
+            ph: opts.placeholder || 'Cari...',
+            empty: opts.empty || 'Tidak ditemukan'
+        };
+
+        // klik <label for="..."> ikut membuka picker
+        if (sel.id) {
+            const lbl = document.querySelector(`label[for="${sel.id}"]`);
+            lbl?.addEventListener('click', e => { e.preventDefault(); spOpen(sel); });
+        }
     }
     spSync(sel);
 }
 
-// panggil ini setiap kali select diubah lewat kode (sel.value = ...)
+// panggil setiap kali select diubah lewat kode (sel.value = ..., sel.disabled = ...)
 function spSync(sel) {
     if (!sel._sp) return;
+    const { btn, label } = sel._sp;
     const o = sel.options[sel.selectedIndex];
-    sel._sp.label.textContent = o ? o.textContent : '';
-    sel._sp.label.classList.toggle('text-slate-400', !sel.value);
+    label.textContent = o ? o.textContent : '';
+    label.classList.toggle('text-slate-400', !sel.value);
+    btn.disabled = sel.disabled;
+    btn.classList.toggle('opacity-50', sel.disabled);
 }
 
 function spOpen(sel) {
+    if (sel.disabled) return;
     spInit();
     if (SP.sel) spClose();
     SP.sel = sel;
+    SP.input.placeholder = sel._sp.ph;
+    SP.input.setAttribute('aria-label', sel._sp.ph);
     SP.panel.classList.remove('hidden');
     SP.input.value = '';
     spRender('');
@@ -543,38 +561,23 @@ function spOpen(sel) {
     SP.input.focus();
 }
 
-function spClose(refocus) {
-    if (!SP.sel) return;
-    const btn = SP.sel._sp.btn;
-    SP.panel.classList.add('hidden');
-    btn.setAttribute('aria-expanded', 'false');
-    SP.sel = null;
-    if (refocus) btn.focus();
-}
-
-function spPick(v) {
-    const sel = SP.sel;
-    if (!sel) return;
-    sel.value = v;
-    spSync(sel);
-    spClose(true);
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
 function spRender(q = '') {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const cur = SP.sel.value;
     SP.items = [...SP.sel.options]
-        .map(o => ({ value: o.value, label: o.textContent }))
-        // opsi kosong ("Belum ditentukan") hanya tampil saat tidak sedang mencari
-        .filter(o => o.value === '' ? !words.length : words.every(w => o.label.toLowerCase().includes(w)));
+        .map(o => ({
+            value: o.value,
+            label: o.textContent,
+            key: (o.dataset.s || o.textContent).toLowerCase()   // data-s = teks khusus untuk dicari
+        }))
+        .filter(o => o.value === '' ? !words.length : words.every(w => o.key.includes(w)));
     SP.idx = words.length ? 0 : Math.max(0, SP.items.findIndex(o => o.value === cur));
 
     SP.list.innerHTML = SP.items.length
         ? SP.items.map((o, i) => `
             <div role="option" class="sp-item px-2.5 py-2 rounded-lg text-xs cursor-pointer ${o.value === '' ? 'text-slate-400 italic' : 'text-slate-700'} ${o.value === cur ? 'font-semibold' : ''}"
                  data-v="${esc(o.value)}" data-i="${i}" aria-selected="${o.value === cur}">${esc(o.label)}</div>`).join('')
-        : '<div class="px-2.5 py-3 text-xs text-slate-400 text-center">Supplier tidak ditemukan</div>';
+        : `<div class="px-2.5 py-3 text-xs text-slate-400 text-center">${esc(SP.sel._sp.empty)}</div>`;
     spHighlight();
 }
 
