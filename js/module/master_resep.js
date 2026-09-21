@@ -459,6 +459,151 @@ async function produce(btn) {
     });
 }
 
+/* ===== Searchable supplier picker (enhancement di atas <select>) ===== */
+const SP = { panel: null, input: null, list: null, sel: null, items: [], idx: -1 };
+
+function spInit() {
+    if (SP.panel) return;
+    const p = document.createElement('div');
+    p.className = 'hidden fixed bg-white border border-slate-200 rounded-xl shadow-xl p-2';
+    p.style.zIndex = 9999;
+    p.innerHTML = `
+        <input type="text" class="field w-full mb-2" placeholder="Cari supplier..." autocomplete="off" aria-label="Cari supplier">
+        <div class="max-h-52 overflow-y-auto" role="listbox"></div>`;
+    document.body.appendChild(p);
+    SP.panel = p; SP.input = p.firstElementChild; SP.list = p.lastElementChild;
+
+    SP.input.addEventListener('input', () => spRender(SP.input.value));
+    SP.input.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!SP.items.length) return;
+            SP.idx = (SP.idx + (e.key === 'ArrowDown' ? 1 : -1) + SP.items.length) % SP.items.length;
+            spHighlight();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (SP.items[SP.idx]) spPick(SP.items[SP.idx].value);
+        } else if (e.key === 'Escape') {
+            e.preventDefault(); e.stopPropagation(); spClose(true);
+        }
+    });
+    SP.list.addEventListener('click', e => {
+        const el = e.target.closest('[data-v]');
+        if (el) spPick(el.dataset.v);
+    });
+    SP.list.addEventListener('mousemove', e => {
+        const el = e.target.closest('.sp-item');
+        if (el && +el.dataset.i !== SP.idx) { SP.idx = +el.dataset.i; spHighlight(); }
+    });
+
+    // tutup saat klik di luar; reposisi saat scroll/resize (keyboard HP bisa memicu resize)
+    document.addEventListener('mousedown', e => {
+        if (SP.sel && !SP.panel.contains(e.target) && !SP.sel._sp.btn.contains(e.target)) spClose();
+    });
+    window.addEventListener('resize', spPosition);
+    window.addEventListener('scroll', e => { if (SP.sel && !SP.panel.contains(e.target)) spPosition(); }, true);
+}
+
+function spEnhance(sel) {
+    if (!sel._sp) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `${sel.className} flex items-center justify-between gap-2 text-left`;
+        btn.setAttribute('aria-haspopup', 'listbox');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-label', sel.getAttribute('aria-label') || 'Pilih supplier');
+        btn.innerHTML = `<span class="truncate"></span>
+            <svg class="w-3.5 h-3.5 shrink-0 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z"/></svg>`;
+        btn.addEventListener('click', () => (SP.sel === sel ? spClose() : spOpen(sel)));
+        sel.before(btn);
+        sel.style.display = 'none';
+        sel.tabIndex = -1;
+        sel._sp = { btn, label: btn.firstElementChild };
+    }
+    spSync(sel);
+}
+
+// panggil ini setiap kali select diubah lewat kode (sel.value = ...)
+function spSync(sel) {
+    if (!sel._sp) return;
+    const o = sel.options[sel.selectedIndex];
+    sel._sp.label.textContent = o ? o.textContent : '';
+    sel._sp.label.classList.toggle('text-slate-400', !sel.value);
+}
+
+function spOpen(sel) {
+    spInit();
+    if (SP.sel) spClose();
+    SP.sel = sel;
+    SP.panel.classList.remove('hidden');
+    SP.input.value = '';
+    spRender('');
+    spPosition();
+    sel._sp.btn.setAttribute('aria-expanded', 'true');
+    SP.input.focus();
+}
+
+function spClose(refocus) {
+    if (!SP.sel) return;
+    const btn = SP.sel._sp.btn;
+    SP.panel.classList.add('hidden');
+    btn.setAttribute('aria-expanded', 'false');
+    SP.sel = null;
+    if (refocus) btn.focus();
+}
+
+function spPick(v) {
+    const sel = SP.sel;
+    if (!sel) return;
+    sel.value = v;
+    spSync(sel);
+    spClose(true);
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function spRender(q = '') {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const cur = SP.sel.value;
+    SP.items = [...SP.sel.options]
+        .map(o => ({ value: o.value, label: o.textContent }))
+        // opsi kosong ("Belum ditentukan") hanya tampil saat tidak sedang mencari
+        .filter(o => o.value === '' ? !words.length : words.every(w => o.label.toLowerCase().includes(w)));
+    SP.idx = words.length ? 0 : Math.max(0, SP.items.findIndex(o => o.value === cur));
+
+    SP.list.innerHTML = SP.items.length
+        ? SP.items.map((o, i) => `
+            <div role="option" class="sp-item px-2.5 py-2 rounded-lg text-xs cursor-pointer ${o.value === '' ? 'text-slate-400 italic' : 'text-slate-700'} ${o.value === cur ? 'font-semibold' : ''}"
+                 data-v="${esc(o.value)}" data-i="${i}" aria-selected="${o.value === cur}">${esc(o.label)}</div>`).join('')
+        : '<div class="px-2.5 py-3 text-xs text-slate-400 text-center">Supplier tidak ditemukan</div>';
+    spHighlight();
+}
+
+function spHighlight() {
+    SP.list.querySelectorAll('.sp-item').forEach((el, i) => {
+        const on = i === SP.idx;
+        el.classList.toggle('bg-orange-50', on);
+        if (on) el.scrollIntoView({ block: 'nearest' });
+    });
+}
+
+function spPosition() {
+    if (!SP.sel) return;
+    const r = SP.sel._sp.btn.getBoundingClientRect();
+    const w = Math.max(r.width, 240);
+    const p = SP.panel.style;
+    p.width = w + 'px';
+    p.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    const spaceBelow = innerHeight - r.bottom;
+    if (spaceBelow < 280 && r.top > spaceBelow) {   // buka ke atas kalau di bawah tidak muat
+        p.top = 'auto';
+        p.bottom = (innerHeight - r.top + 4) + 'px';
+    } else {
+        p.bottom = 'auto';
+        p.top = (r.bottom + 4) + 'px';
+    }
+}
+
+
 // ---------- Order ke supplier ----------
 function openOrder() {
     orderDraft = calcContext().lines.filter(l => l.ing && l.short > 0);
@@ -476,6 +621,20 @@ function openOrder() {
             </div>
             <select data-sup="${i}" class="field sup" aria-label="Supplier untuk ${esc(l.name)}"><option value="">Belum ditentukan</option>${supOpts}</select>
         </div>`).join('');
+
+    // aktifkan pencarian
+    spEnhance($('orderBulk'));
+    document.querySelectorAll('#orderRows select[data-sup]').forEach(spEnhance);
+
+    // bulk: terapkan ke semua baris, lalu kembalikan ke placeholder
+    $('orderBulk').onchange = e => {
+        const v = e.target.value;
+        if (!v) return;
+        document.querySelectorAll('#orderRows select[data-sup]').forEach(s => { s.value = v; spSync(s); });
+        e.target.value = '';
+        spSync(e.target);
+    };
+
     updateOrderTotal();
     openModal('orderModal');
 }
