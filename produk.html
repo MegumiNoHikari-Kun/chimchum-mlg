@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Produk - ChimChum</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc; /* Slightly off-white background for depth */
+        }
+
+        input, textarea, button {
+            font-family: inherit;
+        }
+
+        .loading-spinner {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal transitions */
+        .modal-enter {
+            opacity: 0;
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transition: opacity 300ms ease-out;
+        }
+        .modal-exit {
+            opacity: 1;
+        }
+        .modal-exit-active {
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .modal-content-scale-enter {
+            transform: scale(0.95) translateY(10px);
+        }
+        .modal-content-scale-enter-active {
+            transform: scale(1) translateY(0);
+            transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+
+<body class="p-4 sm:p-6 overflow-y-auto text-slate-800">
+
+<div class="max-w-6xl mx-auto">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div>
+            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-box text-orange-500"></i>
+                Kelola Produk
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">
+                Kelola katalog menu makanan & minuman ChimChum.
+            </p>
+        </div>
+
+        <div>
+            <!-- Tombol untuk membuka modal -->
+            <button 
+                id="btnOpenAddModal"
+                class="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2"
+            >
+                <i class="fa-solid fa-plus-circle"></i>
+                Tambah Produk
+            </button>
+        </div>
+    </div>
+
+    <!-- =====================================================
+         STATUS BOX (Hidden by default)
+    ====================================================== -->
+    <div id="statusBox" class="hidden mb-5 rounded-xl px-4 py-3 text-xs"></div>
+
+    <!-- =====================================================
+         TABLE HEADER & CONTROLS
+    ====================================================== -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+            
+            <div>
+                <h4 class="font-bold text-sm text-slate-800">Daftar Produk</h4>
+                <p id="productCount" class="text-[10px] text-slate-400 mt-0.5">Memuat...</p>
+            </div>
+        
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <div class="relative w-full sm:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input
+                        type="text"
+                        id="p-search"
+                        placeholder="Cari nama produk atau kategori..."
+                        autocomplete="off"
+                        class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                    >
+                    <button
+                        type="button"
+                        id="btnClearProductSearch"
+                        class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1"
+                        title="Bersihkan pencarian"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+        
+                <div id="connectionStatus" class="text-[10px] text-slate-400 whitespace-nowrap hidden sm:block">
+                    <i class="fa-solid fa-circle-notch loading-spinner mr-1"></i>
+                    Menghubungkan...
+                </div>
+
+                <button id="btnRefresh" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs transition" title="Refresh Data">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- =====================================================
+             TABLE
+        ====================================================== -->
+        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
+                        <th class="p-3.5 min-w-[70px]">Foto</th>
+                        <th class="p-3.5 min-w-[180px]">Nama</th>
+                        <th class="p-3.5 min-w-[110px]">Kategori</th>
+                        <th class="p-3.5 min-w-[120px]">Harga Jual</th>
+                        <th class="p-3.5 min-w-[120px]">HPP</th>
+                        <th class="p-3.5 min-w-[80px]">Stok</th>
+                        <th class="p-3.5 min-w-[100px] text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="prodTable" class="divide-y divide-slate-100">
+                    
+                </tbody>
+            </table>
+        </div>
+
+        <!-- =====================================================
+             PAGINATION
+        ====================================================== -->
+        <div id="paginationContainer" class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-slate-100">
+            <div id="paginationInfo" class="text-[11px] text-slate-500">
+                Menampilkan <span class="font-medium text-slate-700">1</span> sampai <span class="font-medium text-slate-700">10</span> dari <span class="font-medium text-slate-700">45</span> produk
+            </div>
+            
+            <div class="flex items-center gap-1">
+                <button id="btnPrevPage" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition" disabled>
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                </button>
+                
+                <div id="pageNumbers" class="flex gap-1 hidden sm:flex">
+                    <!-- Angka halaman (Jika di-generate dari JS, bisa disuntikkan kesini) -->
+                    <button class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-medium shadow-sm">1</button>
+                    <button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">2</button>
+                    <button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">3</button>
+                    <span class="w-8 h-8 flex items-center justify-center text-slate-400 text-xs">...</span>
+                    <button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">5</button>
+                </div>
+                <div id="pageInfoMobile" class="sm:hidden text-xs text-slate-600 font-medium px-2">Page 1 of 5</div>
+
+                <button id="btnNextPage" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium transition">
+                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =====================================================
+     MODAL TAMBAH/EDIT PRODUK
+====================================================== -->
+<div 
+    id="productModalOverlay" 
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4"
+>
+    <!-- Modal Content -->
+    <div 
+        id="productModalContent" 
+        class="bg-white rounded-2xl w-full max-w-3xl max-h-[95vh] overflow-y-auto shadow-2xl transform scale-95 transition-transform duration-300 relative flex flex-col"
+    >
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-white z-10 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div>
+                <h3 id="formTitle" class="font-bold text-base text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle text-orange-500"></i>
+                    Tambah Produk
+                </h3>
+            </div>
+            <button 
+                id="btnCloseModal" 
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body (FORM) -->
+        <div class="p-6">
+            <input type="hidden" id="p-id">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <!-- NAMA -->
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        Nama Produk <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="p-nama" type="text" maxlength="150" placeholder="Contoh: Dimsum Ayam"
+                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                    >
+                </div>
+
+                <!-- KATEGORI -->
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Kategori</label>
+                    <input
+                        id="p-kategori" type="text" maxlength="80" placeholder="Contoh: Makanan Ringan"
+                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                    >
+                </div>
+
+                <!-- STOK -->
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Stok Porsi</label>
+                    <input
+                        type="number" id="p-stok" min="0" step="1" placeholder="30"
+                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                    >
+                </div>
+
+                <!-- HARGA -->
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        Harga Jual (Rp) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">Rp</span>
+                        <input
+                            type="number" id="p-harga" min="1" step="1" placeholder="25000"
+                            class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                        >
+                    </div>
+                </div>
+
+                <!-- HPP -->
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">HPP Modal (Rp)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">Rp</span>
+                        <input
+                            type="number" id="p-hpp" min="0" step="1" placeholder="10000"
+                            class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                        >
+                    </div>
+                </div>
+
+                <!-- FOTO -->
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Foto Produk</label>
+                
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <!-- Tombol upload -->
+                        <label
+                            for="p-foto-file" id="uploadLabel"
+                            class="cursor-pointer shrink-0 inline-flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 border border-dashed border-orange-300 text-orange-600 font-semibold px-4 py-3 rounded-xl text-xs transition"
+                        >
+                            <i id="uploadIcon" class="fa-solid fa-cloud-arrow-up"></i>
+                            <span id="uploadLabelText">Upload Foto</span>
+                        </label>
+                        <input type="file" id="p-foto-file" accept="image/png,image/jpeg,image/webp" class="hidden">
+                
+                        <!-- URL hasil upload (bisa juga diisi manual) -->
+                        <input
+                            id="p-foto" type="url" maxlength="1000" placeholder="URL otomatis terisi setelah upload, atau tempel URL..."
+                            class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                        >
+                
+                        <button
+                            id="btnCopyUrl" type="button" title="Salin URL"
+                            class="shrink-0 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3.5 rounded-xl text-xs transition"
+                        >
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                
+                    <p id="uploadMessage" class="hidden text-[11px] mt-1.5"></p>
+                    <p class="text-[10px] text-slate-400 mt-1">JPG, PNG, atau WEBP. Maksimal 2 MB.</p>
+                </div>
+            </div>
+
+            <!-- PREVIEW FOTO (Hidden by default in new form) -->
+            <div id="photoPreview" class="hidden mb-4 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div class="flex items-center gap-3">
+                    <img id="previewImage" src="" alt="Preview produk" class="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-700">Preview Foto</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Gambar yang akan ditampilkan.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DESKRIPSI -->
+            <div class="mb-4 md:mb-0">
+                <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Deskripsi</label>
+                <textarea
+                    id="p-deskripsi" maxlength="500" placeholder="Jelaskan detail produk ini..." rows="3"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition resize-none"
+                ></textarea>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-end gap-3 rounded-b-2xl mt-auto">
+            <!-- Tombol Batal Modal Utama -->
+            <button 
+                id="btnCancelModal" 
+                type="button"
+                class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold px-5 py-2.5 rounded-xl text-xs transition"
+            >
+                Batal
+            </button>
+            
+            <!-- Tombol Cancel Edit (Dibutuhkan oleh produk.js Anda) -->
+            <button
+                id="btnCancelEdit"
+                type="button"
+                class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition"
+            >
+                <i class="fa-solid fa-xmark mr-1"></i> Batal Edit
+            </button>
+
+            <button
+                id="btnSave"
+                type="button"
+                class="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2"
+            >
+                <i class="fa-solid fa-save"></i>
+                <span id="btnSaveText">Simpan Produk</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<script type="module">
+    import { requireAuth } from './js/module/auth-guard.js';
+
+    const auth = await requireAuth(['admin']);
+
+    if (auth) {
+        await import('./js/module/produk.js');
+    }
+</script>
+<!-- =====================================================
+     SCRIPTS
+====================================================== -->
+<script>
+    /* 
+       MOCK INTERFACE JAVASCRIPT
+       Script ini berfungsi agar UI modal dan interaksi dasar dapat berjalan
+       di preview ini. Anda tetap bisa menggunakan file module Anda di environment asli.
+    */
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // Elemen Modal
+        const modalOverlay = document.getElementById('productModalOverlay');
+        const modalContent = document.getElementById('productModalContent');
+        const btnOpenAddModal = document.getElementById('btnOpenAddModal');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+        const btnCancelModal = document.getElementById('btnCancelModal');
+        
+        // Elemen Form Text
+        const formTitle = document.getElementById('formTitle');
+        const btnSaveText = document.getElementById('btnSaveText');
+        const photoPreview = document.getElementById('photoPreview');
+
+        // Fungsi Buka Modal
+        const openModal = (mode = 'add') => {
+            modalOverlay.classList.remove('hidden');
+            // Sedikit delay untuk memicu animasi CSS
+            setTimeout(() => {
+                modalOverlay.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95', 'translate-y-10');
+            }, 10);
+
+            if (mode === 'edit') {
+                formTitle.innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-500"></i> Edit Produk';
+                btnSaveText.innerText = 'Simpan Perubahan';
+                photoPreview.classList.remove('hidden'); // Contoh jika sedang edit, tunjukkan gambar
+            } else {
+                formTitle.innerHTML = '<i class="fa-solid fa-plus-circle text-orange-500"></i> Tambah Produk';
+                btnSaveText.innerText = 'Simpan Produk';
+                photoPreview.classList.add('hidden');
+                // Disini idealnya form dikosongkan jika mode 'add'
+            }
+        };
+
+        // Fungsi Tutup Modal
+        const closeModal = () => {
+            modalOverlay.classList.add('opacity-0');
+            modalContent.classList.add('scale-95', 'translate-y-10');
+            
+            // Tunggu animasi selesai sebelum menambahkan class hidden
+            setTimeout(() => {
+                modalOverlay.classList.add('hidden');
+            }, 300);
+        };
+
+        // Event Listeners
+        btnOpenAddModal.addEventListener('click', () => openModal('add'));
+        btnCloseModal.addEventListener('click', closeModal);
+        btnCancelModal.addEventListener('click', closeModal);
+        
+        // Menutup modal jika klik di luar kotak modal (overlay)
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        /* 
+           EVENT DELEGATION UNTUK TOMBOL EDIT DINAMIS
+           Karena produk.js memuat baris tabel secara dinamis, 
+           kita pasang event listener di tag <tbody> utama.
+        */
+        const prodTable = document.getElementById('prodTable');
+        if (prodTable) {
+            prodTable.addEventListener('click', (e) => {
+                // Mengecek apakah elemen yang diklik adalah tombol dengan data-action="edit" atau icon di dalamnya
+                const editBtn = e.target.closest('[data-action="edit"]');
+                
+                if (editBtn) {
+                    // Memicu modal untuk terbuka
+                    openModal('edit');
+                    
+                    // NOTE: Anda tidak perlu menarik data disini jika produk.js Anda sudah
+                    // menangani fungsi penarikan data ke dalam form berdasarkan data-id
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>
