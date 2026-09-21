@@ -561,6 +561,25 @@ function spOpen(sel) {
     SP.input.focus();
 }
 
+
+function spClose(refocus) {
+    if (!SP.sel) return;
+    const btn = SP.sel._sp.btn;
+    SP.panel.classList.add('hidden');
+    btn.setAttribute('aria-expanded', 'false');
+    SP.sel = null;
+    if (refocus) btn.focus();
+}
+
+function spPick(v) {
+    const sel = SP.sel;
+    if (!sel) return;
+    sel.value = v;
+    spSync(sel);
+    spClose(true);
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function spRender(q = '') {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const cur = SP.sel.value;
