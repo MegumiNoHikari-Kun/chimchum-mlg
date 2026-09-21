@@ -9,10 +9,24 @@ const STOCK_RPC = 'adjust_ingredient_stock';  // fungsi SQL atomik (lihat purcha
 const TZ = 'Asia/Jakarta';
 
 const STATUS = {
-    pending:   { label: 'Pending', badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
-    completed: { label: 'Selesai', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' }
+    pending:    { label: 'Pending', badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
+    processing: { label: 'Proses',  badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
+    completed:  { label: 'Selesai', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' }
 };
-const TABS = [['all', 'Semua'], ['pending', 'Pending'], ['completed', 'Selesai']];
+const FLOW = ['pending', 'processing', 'completed'];   // urutan alur
+const nextOf = s => FLOW[FLOW.indexOf(s) + 1];
+const prevOf = s => FLOW[FLOW.indexOf(s) - 1];
+
+const ADVANCE = {   // tombol "maju" per status saat ini
+    pending:    { icon: 'fa-play',         cls: 'text-sky-600 hover:bg-sky-50',         title: 'Mulai proses (Pending → Proses)' },
+    processing: { icon: 'fa-circle-check', cls: 'text-emerald-600 hover:bg-emerald-50', title: 'Tandai Selesai (stok bertambah)' }
+};
+const BACK_TITLE = {  // tombol "mundur" per status saat ini
+    processing: 'Kembalikan ke Pending',
+    completed:  'Kembalikan ke Proses (stok dikurangi)'
+};
+
+const TABS = [['all', 'Semua'], ...FLOW.map(k => [k, STATUS[k].label])];
 
 const state = {
     pos: [], suppliers: [], ingredients: [],
@@ -215,7 +229,7 @@ function buildSearchText(po) {
     return [
         dates,
         supplierName(supplierOf(po.supplier_id)),
-        po.status === 'completed' ? 'selesai completed' : 'pending',
+        `${STATUS[po.status]?.label || 'Pending'} ${po.status}`,
         total, num(total), 'rp',
         items,
         po.notes || ''
@@ -267,8 +281,9 @@ function waUrl(po, sup) {
 
 function rowHtml(po) {
     const sup = supplierOf(po.supplier_id);
-    const st = STATUS[po.status] || STATUS.pending;
-    const done = po.status === 'completed';
+    const status = STATUS[po.status] ? po.status : 'pending';
+    const st = STATUS[status];
+    const next = nextOf(status), prev = prevOf(status);
     const wa = waUrl(po, sup);
 
     const shown = po.items.slice(0, 3);
@@ -298,6 +313,15 @@ function rowHtml(po) {
                           class="icon-btn text-emerald-600 hover:bg-emerald-50"><i class="fa-brands fa-whatsapp text-sm"></i></a>`
                     : `<span title="Supplier belum punya nomor WhatsApp" class="icon-btn cursor-not-allowed opacity-30"><i class="fa-brands fa-whatsapp text-sm"></i></span>`}
                 <button data-act="edit" title="Edit" aria-label="Edit" class="icon-btn hover:text-orange-600"><i class="fa-solid fa-pen"></i></button>
+                    ${prev
+                        ? `<button data-act="status" data-to="${prev}" title="${BACK_TITLE[status]}" aria-label="${BACK_TITLE[status]}"
+                              class="icon-btn hover:text-amber-600"><i class="fa-solid fa-rotate-left"></i></button>`
+                        : '<span class="icon-btn invisible" aria-hidden="true"></span>'}
+                    ${next
+                        ? `<button data-act="status" data-to="${next}" title="${ADVANCE[status].title}" aria-label="${ADVANCE[status].title}"
+                              class="icon-btn ${ADVANCE[status].cls}"><i class="fa-solid ${ADVANCE[status].icon}"></i></button>`
+                        : '<span class="icon-btn invisible" aria-hidden="true"></span>'}
+                <button data-act="delete" title="Hapus" aria-label="Hapus" class="icon-btn hover:bg-rose-50 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>                
                 <button data-act="toggle" aria-label="Ubah status" class="icon-btn ${done ? 'hover:text-amber-600' : 'text-emerald-600 hover:bg-emerald-50'}"
                     title="${done ? 'Kembalikan ke Pending (stok dikurangi)' : 'Tandai Selesai (stok bertambah)'}">
                     <i class="fa-solid ${done ? 'fa-rotate-left' : 'fa-circle-check'}"></i></button>
@@ -629,7 +653,7 @@ function updateStockHint() {
         now && was ? 'Selisih jumlah bahan akan disesuaikan ke stok.' :
         now        ? 'Saat disimpan, stok bahan bertambah sesuai jumlah pesanan.' :
         was        ? 'Stok yang sebelumnya ditambahkan akan dikurangi kembali.' :
-                     'Stok tidak berubah selama PO masih Pending.';
+                     'Stok tidak berubah selama PO belum Selesai.';
 }
 
 // =========================================================
@@ -733,11 +757,10 @@ async function submitPO(e) {
 const setBusy = (id, on) => $(`po-row-${id}`)?.classList.toggle('row-busy', on);
 const fetchPO = async id => (await db.from('purchase_orders').select('id,status').eq('id', id).maybeSingle()).data;
 
-async function toggleStatus(id) {
+async function changeStatus(id, next) {
     const po = findPO(id);
-    if (!po) return;
+    if (!po || !STATUS[next] || next === po.status) return;
 
-    const next = po.status === 'completed' ? 'pending' : 'completed';
     const delta = stockDelta(stockEffect(po), stockEffect({ ...po, status: next }));
 
     setBusy(id, true);
@@ -748,7 +771,7 @@ async function toggleStatus(id) {
 
             // Pastikan benar-benar berubah (RLS bisa menolak tanpa error) agar stok tidak salah
             if ((await fetchPO(id))?.status !== next) {
-                throw new Error('Status tidak berubah. Periksa policy (RLS) tabel purchase_orders.');
+                throw new Error('Status tidak berubah. Periksa policy (RLS) atau constraint kolom status di tabel purchase_orders.');
             }
         });
 
@@ -843,7 +866,7 @@ $('po-body').addEventListener('click', e => {
     const actions = {
         retry: load,
         edit: () => openForm(findPO(id)),
-        toggle: () => toggleStatus(id),
+        status: () => changeStatus(id, btn.dataset.to),
         delete: () => deletePO(id)
     };
     actions[btn.dataset.act]?.();
@@ -911,4 +934,5 @@ $('po-items').addEventListener('click', e => {
 ['msg-dialog', 'confirm-dialog'].forEach(id =>
     $(id).addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); }));
 
+$('po-status').innerHTML = FLOW.map(k => `<option value="${k}">${STATUS[k].label}</option>`).join('');
 load();
