@@ -364,11 +364,10 @@ function render() {
 // FORM: SUPPLIER & ITEM
 // =========================================================
 
-function fillSuppliers(selected = '') {
-    $('po-supplier').innerHTML =
-        '<option value="">Pilih supplier</option>' +
-        state.suppliers.map(s => `
-            <option value="${esc(s.id)}" ${same(s.id, selected) ? 'selected' : ''}>${esc(supplierName(s))}</option>`).join('');
+function setSupplier(id = '') {
+    const valid = supplierOf(id) ? id : '';
+    $('po-supplier').value = valid;
+    $('po-supplier-search').value = COMBOS.supplier.label(valid);
     updatePhoneWarning();
 }
 
@@ -377,20 +376,184 @@ function updatePhoneWarning() {
     $('phone-warning').classList.toggle('hidden', !id || !!supplierOf(id)?.phone);
 }
 
-function ingredientOptions(selected) {
-    return '<option value="">Pilih bahan baku</option>' +
-        state.ingredients.map(i => {
-            const price = i.price ? ` — ${rp(i.price)}/${i.unit || ''}` : '';
-            const stock = i[STOCK_COL] != null ? `, stok ${num(i[STOCK_COL])}` : '';
-            return `<option value="${esc(i.id)}" ${same(i.id, selected) ? 'selected' : ''}>${esc(i.name)} (${esc(i.unit || '')})${price}${stock}</option>`;
-        }).join('');
+// ---------- Combobox yang bisa dicari (supplier & bahan baku) ----------
+// Pola HTML: <input type="text" data-combo="jenis"> + <input type="hidden"> (id terpilih) dalam satu pembungkus.
+// Satu menu melayang `#combo-menu` dipakai bersama supaya tidak terpotong area scroll.
+
+const menu = { el: $('combo-menu'), input: null, filter: '' };
+
+const hiddenOf = input => input.parentElement.querySelector('input[type="hidden"]');
+const comboOf = input => COMBOS[input.dataset.combo];
+
+const ingLabel = id => {
+    const i = ingredientOf(id);
+    return i ? `${i.name}${i.unit ? ` (${i.unit})` : ''}` : '';
+};
+
+// Tiap jenis combobox: label teks, daftar opsi, dan apa yang terjadi setelah dipilih.
+const COMBOS = {
+    supplier: {
+        empty: 'Supplier tidak ditemukan',
+        label: id => { const s = supplierOf(id); return s ? supplierName(s) : ''; },
+        options: () => state.suppliers.map(s => ({
+            id: s.id,
+            title: supplierName(s),
+            sub: s.phone ? `WA ${s.phone}` : 'Belum ada nomor WA'
+        })),
+        changed: updatePhoneWarning,
+        next: () => $('po-date')
+    },
+
+    ingredient: {
+        empty: 'Bahan tidak ditemukan',
+        label: ingLabel,
+        options: input => {
+            // Bahan yang sudah dipilih di baris lain tidak bisa dipilih lagi
+            const taken = new Set([...document.querySelectorAll('#po-items .item-ing')].map(h => h.value));
+            taken.delete(hiddenOf(input).value);
+            taken.delete('');
+
+            return state.ingredients.map(i => ({
+                id: i.id,
+                title: i.name,
+                sub: `${i.unit || ''}${i.price ? ` — ${rp(i.price)}/${i.unit || ''}` : ''}`,
+                right: i[STOCK_COL] != null ? `stok ${num(i[STOCK_COL])}` : '',
+                disabled: taken.has(String(i.id)),
+                disabledNote: 'sudah dipilih'
+            }));
+        },
+        changed: recalc,
+        next: input => input.closest('.item-row').querySelector('.item-qty')
+    }
+};
+
+function positionMenu() {
+    const r = menu.input.getBoundingClientRect();
+    const width = Math.max(r.width, 300);
+    const below = window.innerHeight - r.bottom;
+    const openUp = below < 220 && r.top > below;
+
+    Object.assign(menu.el.style, {
+        width: `${width}px`,
+        left: `${Math.max(8, Math.min(r.left, window.innerWidth - width - 8))}px`,
+        top: openUp ? '' : `${r.bottom + 4}px`,
+        bottom: openUp ? `${window.innerHeight - r.top + 4}px` : '',
+        maxHeight: `${Math.min(260, (openUp ? r.top : below) - 12)}px`
+    });
+}
+
+function setActive(li) {
+    menu.el.querySelectorAll('[data-active]').forEach(o => {
+        o.removeAttribute('data-active');
+        o.classList.remove('bg-orange-50');
+    });
+    if (!li) return;
+    li.setAttribute('data-active', '');
+    li.classList.add('bg-orange-50');
+    li.scrollIntoView({ block: 'nearest' });
+}
+
+const enabledOptions = () => [...menu.el.querySelectorAll('[role="option"]:not([aria-disabled="true"])')];
+
+function renderMenu() {
+    const cfg = comboOf(menu.input);
+    const current = hiddenOf(menu.input).value;
+    const tokens = menu.filter.toLowerCase().split(/\s+/).filter(Boolean);
+
+    const list = cfg.options(menu.input)
+        .filter(o => tokens.every(t => `${o.title} ${o.sub || ''}`.toLowerCase().includes(t)))
+        .slice(0, 100);
+
+    menu.el.innerHTML = list.length
+        ? list.map(o => `
+            <li role="option" data-id="${esc(o.id)}" ${o.disabled ? 'aria-disabled="true"' : ''}
+                class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${o.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}">
+                <span class="min-w-0">
+                    <span class="block truncate font-medium text-slate-800">${esc(o.title)}</span>
+                    ${o.sub ? `<span class="block text-[11px] text-slate-400">${esc(o.sub)}</span>` : ''}
+                </span>
+                <span class="shrink-0 text-[11px] text-slate-500">${esc(o.disabled ? o.disabledNote : o.right || '')}</span>
+            </li>`).join('')
+        : `<li class="px-3 py-4 text-center text-slate-400">${cfg.empty}</li>`;
+
+    const opts = enabledOptions();
+    setActive(opts.find(o => same(o.dataset.id, current)) || opts[0]);
+}
+
+function openMenu(input, filter = '', selectText = true) {
+    menu.input = input;
+    menu.filter = filter;
+    if (selectText) input.select();
+    menu.el.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+    positionMenu();
+    renderMenu();
+}
+
+function closeMenu() {
+    if (!menu.input) return;
+    menu.input.setAttribute('aria-expanded', 'false');
+    menu.el.classList.add('hidden');
+    menu.input = null;
+}
+
+function chooseOption(id) {
+    const input = menu.input;
+    const cfg = comboOf(input);
+
+    hiddenOf(input).value = id;
+    input.value = cfg.label(id);
+    closeMenu();
+    cfg.changed();
+
+    const next = cfg.next(input);
+    next?.focus();
+    if (next?.type === 'number') next.select();
+}
+
+function onComboKey(e) {
+    const input = e.target;
+    const isOpen = menu.input === input;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!isOpen) return openMenu(input);
+
+        const opts = enabledOptions();
+        if (!opts.length) return;
+        const at = opts.findIndex(o => o.hasAttribute('data-active'));
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        setActive(opts[(at + step + opts.length) % opts.length]);
+    } else if (e.key === 'Enter' && isOpen) {
+        e.preventDefault(); // jangan submit form
+        const active = menu.el.querySelector('[data-active]');
+        if (active) chooseOption(active.dataset.id);
+    } else if (e.key === 'Escape' && isOpen) {
+        e.preventDefault(); // tutup menu saja, bukan seluruh dialog
+        e.stopPropagation();
+        closeMenu();
+    }
+}
+
+function onComboBlur(input) {
+    const hidden = hiddenOf(input);
+    if (!input.value.trim()) hidden.value = '';                 // dikosongkan = batal pilih
+    input.value = comboOf(input).label(hidden.value);           // teks yang tidak dipilih dikembalikan
+    if (menu.input === input) closeMenu();
+    comboOf(input).changed();
 }
 
 function addRow(ingId = '', qty = 1) {
+    const valid = ingredientOf(ingId) ? ingId : '';
     const row = document.createElement('div');
     row.className = 'item-row flex flex-wrap items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 p-2';
     row.innerHTML = `
-        <select class="item-ing field min-w-40 flex-1 !py-1.5" aria-label="Bahan baku">${ingredientOptions(ingId)}</select>
+        <div class="min-w-40 flex-1">
+            <input type="text" data-combo="ingredient" class="item-search field !py-1.5" value="${esc(ingLabel(valid))}"
+                   placeholder="Cari bahan baku…" autocomplete="off" role="combobox" aria-expanded="false"
+                   aria-controls="combo-menu" aria-label="Bahan baku">
+            <input type="hidden" class="item-ing" value="${esc(valid)}">
+        </div>
         <div class="relative w-28">
             <input type="number" step="any" min="0" value="${qty}" class="item-qty field !py-1.5 !pr-10" aria-label="Jumlah">
             <span class="item-unit pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"></span>
@@ -418,8 +581,8 @@ function recalc() {
     });
 
     rows.forEach(row => {
-        const sel = row.querySelector('.item-ing');
-        sel.classList.toggle('dup-warning', dup.has(sel.value));
+        const id = row.querySelector('.item-ing').value;
+        row.querySelector('.item-search').classList.toggle('dup-warning', dup.has(id));
     });
 
     $('dup-warning').classList.toggle('hidden', dup.size === 0);
@@ -481,7 +644,7 @@ function openForm(po = null) {
     $('po-status').value = po?.status || 'pending';
     $('po-notes').value = po?.notes || '';
 
-    fillSuppliers(po?.supplier_id);
+    setSupplier(po?.supplier_id);
 
     $('po-items').innerHTML = '';
     (po?.items?.length ? po.items : [{}]).forEach(i => addRow(i.ingredient_id, i.quantity));
@@ -502,6 +665,7 @@ async function submitPO(e) {
     const editId = $('po-edit-id').value;
     const { items, total, dup } = readItems();
 
+    if (!$('po-supplier').value) return notify('Supplier belum dipilih', 'Pilih supplier dari daftar yang muncul saat Anda mengetik.');
     if (!items.length) return notify('Bahan belum diisi', 'Tambahkan minimal satu bahan dengan jumlah lebih dari 0.');
     if (dup) return notify('Bahan ganda', 'Ada bahan yang dipilih lebih dari sekali. Gabungkan jumlahnya di satu baris.');
 
@@ -687,7 +851,6 @@ $('po-body').addEventListener('click', e => {
 
 $('btn-create').addEventListener('click', () => openForm());
 $('po-form').addEventListener('submit', submitPO);
-$('po-supplier').addEventListener('change', updatePhoneWarning);
 $('po-status').addEventListener('change', updateStockHint);
 $('po-close').addEventListener('click', () => $('po-dialog').close());
 $('po-cancel').addEventListener('click', () => $('po-dialog').close());
@@ -695,11 +858,47 @@ $('po-cancel').addEventListener('click', () => $('po-dialog').close());
 $('po-add-row').addEventListener('click', () => {
     addRow();
     recalc();
-    $('po-items').lastElementChild.querySelector('select').focus();
+    $('po-items').lastElementChild.querySelector('.item-search').focus(); // langsung membuka daftar bahan
 });
 
-$('po-items').addEventListener('input', recalc);
-$('po-items').addEventListener('change', recalc);
+// Combobox (supplier & bahan) didelegasikan di level form; input lain di baris bahan cukup menghitung ulang total
+const isCombo = e => e.target.matches('[data-combo]');
+
+$('po-form').addEventListener('focusin', e => { if (isCombo(e)) openMenu(e.target); });
+$('po-form').addEventListener('focusout', e => { if (isCombo(e)) onComboBlur(e.target); });
+$('po-form').addEventListener('keydown', e => { if (isCombo(e)) onComboKey(e); });
+$('po-form').addEventListener('input', e => {
+    if (!isCombo(e)) return e.target.closest('#po-items') && recalc();
+
+    if (menu.input !== e.target) return openMenu(e.target, e.target.value, false);
+    menu.filter = e.target.value;
+    positionMenu();
+    renderMenu();
+});
+
+$('po-items').addEventListener('click', e => {
+    const btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    btn.closest('.item-row').remove();
+    if (!$('po-items').children.length) addRow();
+    recalc();
+});
+
+// Menu combobox: mousedown ditahan agar input tidak kehilangan fokus sebelum klik terbaca
+menu.el.addEventListener('mousedown', e => e.preventDefault());
+menu.el.addEventListener('mouseover', e => {
+    const li = e.target.closest('[role="option"]');
+    if (li && li.getAttribute('aria-disabled') !== 'true') setActive(li);
+});
+menu.el.addEventListener('click', e => {
+    const li = e.target.closest('[role="option"]');
+    if (li && li.getAttribute('aria-disabled') !== 'true') chooseOption(li.dataset.id);
+});
+
+// Menu melayang tidak ikut bergeser saat area di bawahnya di-scroll, jadi ditutup; saat resize (mis. keyboard HP) diposisikan ulang
+$('po-dialog').addEventListener('scroll', e => { if (!menu.el.contains(e.target)) closeMenu(); }, true);
+$('po-dialog').addEventListener('close', closeMenu);
+window.addEventListener('resize', () => menu.input && positionMenu());
 $('po-items').addEventListener('click', e => {
     const btn = e.target.closest('[data-remove]');
     if (!btn) return;
