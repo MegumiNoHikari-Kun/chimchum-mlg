@@ -15,7 +15,9 @@ let isDeleting = false;
 let isUploading = false;
 
 const STORAGE_BUCKET = 'menu';
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
+const MAX_INPUT_SIZE = 15 * 1024 * 1024;  // batas file asli yang boleh dipilih
+const MAX_UPLOAD_SIZE = 2 * 1024 * 1024;  // batas setelah dikompres
+const MAX_IMAGE_DIMENSION = 1280;         // sisi terpanjang (px)
 const IMAGE_EXT = {
     'image/jpeg': 'jpg',
     'image/png': 'png',
@@ -581,31 +583,92 @@ function hideUploadMessage() {
     $('uploadMessage')?.classList.add('hidden');
 }
 
-function setUploadState(uploading) {
+function setUploadState(uploading, label = 'Mengunggah...') {
     isUploading = uploading;
 
-    const label = $('uploadLabel');
+    const labelEl = $('uploadLabel');
     const text = $('uploadLabelText');
     const icon = $('uploadIcon');
     const saveBtn = $('btnSave');
 
-    if (text) text.textContent = uploading ? 'Mengunggah...' : 'Upload Foto';
+    if (text) text.textContent = uploading ? label : 'Upload Foto';
     if (icon) icon.className = uploading
         ? 'fa-solid fa-circle-notch loading-spinner'
         : 'fa-solid fa-cloud-arrow-up';
 
-    label?.classList.toggle('opacity-60', uploading);
-    label?.classList.toggle('pointer-events-none', uploading);
+    labelEl?.classList.toggle('opacity-60', uploading);
+    labelEl?.classList.toggle('pointer-events-none', uploading);
     if (saveBtn) saveBtn.disabled = uploading;
+}
+
+class UploadValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'UploadValidationError';
+    }
+}
+
+function formatBytes(bytes) {
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 function validateImageFile(file) {
     if (!IMAGE_EXT[file.type]) {
-        throw new Error('Format file harus JPG, PNG, atau WEBP.');
+        throw new UploadValidationError('Format file harus JPG, PNG, atau WEBP.');
     }
-    if (file.size > MAX_IMAGE_SIZE) {
-        throw new Error('Ukuran file maksimal 2 MB.');
+    if (file.size > MAX_INPUT_SIZE) {
+        throw new UploadValidationError(
+            `File terlalu besar (${formatBytes(file.size)}). Maksimal ${formatBytes(MAX_INPUT_SIZE)}.`
+        );
     }
+}
+
+function canvasToBlob(canvas, type, quality) {
+    return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+
+async function compressImage(file) {
+    let bitmap;
+    try {
+        bitmap = await createImageBitmap(file);
+    } catch {
+        throw new UploadValidationError('File gambar tidak bisa dibaca. Coba file lain.');
+    }
+
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+
+    // Sudah kecil dan dimensinya aman: langsung pakai file asli
+    if (scale === 1 && file.size <= 500 * 1024) {
+        bitmap.close?.();
+        return file;
+    }
+
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; // latar putih (PNG transparan tidak jadi hitam)
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+
+    // Turunkan kualitas bertahap sampai ukuran <= 2 MB
+    for (const quality of [0.82, 0.7, 0.55, 0.4]) {
+        let blob = await canvasToBlob(canvas, 'image/webp', quality);
+        if (!blob || blob.type !== 'image/webp') {
+            blob = await canvasToBlob(canvas, 'image/jpeg', quality); // fallback browser lama
+        }
+        if (blob && blob.size <= MAX_UPLOAD_SIZE) {
+            return new File([blob], 'menu.' + IMAGE_EXT[blob.type], { type: blob.type });
+        }
+    }
+
+    throw new UploadValidationError('Gambar masih terlalu besar setelah dikompres. Coba foto dengan resolusi lebih kecil.');
 }
 
 function buildFilePath(file) {
@@ -656,28 +719,38 @@ function formatStorageError(error) {
 
 async function handleFileSelected(event) {
     const input = event.target;
-    const file = input.files?.[0];
-    if (!file || isUploading) return;
+    const originalFile = input.files?.[0];
+    if (!originalFile || isUploading) return;
 
     hideUploadMessage();
 
     try {
-        validateImageFile(file);
-        setUploadState(true);
+        validateImageFile(originalFile);
 
+        setUploadState(true, 'Memproses...');
+        const file = await compressImage(originalFile);
+
+        setUploadState(true, 'Mengunggah...');
         const { url } = await uploadProductImage(file);
 
-        $('p-foto').value = url;   // URL hasil upload masuk ke field foto
+        $('p-foto').value = url;
         updatePhotoPreview();
-        showUploadMessage('Foto berhasil diupload. URL sudah terisi.', 'success');
+
+        const sizeInfo = file === originalFile
+            ? formatBytes(file.size)
+            : `${formatBytes(originalFile.size)} → ${formatBytes(file.size)}`;
+        showUploadMessage(`Foto berhasil diupload (${sizeInfo}). URL sudah terisi.`, 'success');
     } catch (error) {
-        console.error('UPLOAD ERROR:', error);
-        showUploadMessage(error?.message && !error.statusCode && !error.error
-            ? error.message
-            : formatStorageError(error), 'error');
+        if (error instanceof UploadValidationError) {
+            console.warn('Upload ditolak:', error.message); // bukan error sistem
+            showUploadMessage(error.message, 'error');
+        } else {
+            console.error('UPLOAD ERROR:', error);
+            showUploadMessage(formatStorageError(error), 'error');
+        }
     } finally {
         setUploadState(false);
-        input.value = ''; // supaya file yang sama bisa dipilih lagi
+        input.value = '';
     }
 }
 
