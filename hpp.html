@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator HPP - ChimChum</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f8fafc; }
+
+        .field { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .75rem; padding: .625rem .875rem; font-size: .75rem; outline: 0; transition: border-color .15s, box-shadow .15s, background .15s; }
+        .field:focus { background: #fff; border-color: #f97316; box-shadow: 0 0 0 3px #ffedd5; }
+        .lbl { display: block; font-size: .6875rem; font-weight: 600; color: #475569; margin-bottom: .375rem; }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; font-weight: 600; font-size: .75rem; padding: .625rem 1rem; border-radius: .75rem; transition: background .15s, opacity .15s; white-space: nowrap; }
+        .btn-ghost { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
+        .btn-ghost:hover:not(:disabled) { background: #f8fafc; }
+        .btn-sm { padding: .4rem .6rem; border-radius: .5rem; }
+
+        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; }
+
+        .tbl { width: 100%; font-size: .75rem; text-align: left; border-collapse: collapse; }
+        .tbl th { padding: .75rem 1rem; background: #f8fafc; color: #64748b; font-weight: 600; white-space: nowrap; }
+        .tbl td { padding: .75rem 1rem; border-top: 1px solid #f1f5f9; vertical-align: top; }
+        .tbl tbody tr:hover { background: #fffaf5; }
+        .tbl td.empty { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; }
+
+        .badge { display: inline-flex; align-items: center; padding: .125rem .5rem; border-radius: 9999px; font-size: .625rem; font-weight: 600; white-space: nowrap; }
+        .b-ok { background: #ecfdf5; color: #047857; }
+        .b-warn { background: #fffbeb; color: #b45309; }
+        .b-bad { background: #fff1f2; color: #be123c; }
+
+        .spin { animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .stat-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .875rem; padding: .875rem 1rem; }
+        .stat-label { font-size: .6875rem; font-weight: 600; color: #94a3b8; }
+        .stat-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+
+        .btn:focus-visible, .field:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+    </style>
+</head>
+
+<body class="text-slate-800">
+
+    <!-- ================= HEADER ================= -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-sack-dollar text-orange-500"></i> Kalkulator HPP
+                </h1>
+                <p class="text-[11px] text-slate-500">Hitung Harga Pokok Produksi per menu berdasarkan resep dan bahan baku.</p>
+            </div>
+            <a href="./master_resep.html" class="btn btn-ghost btn-sm"><i class="fa-solid fa-book"></i> Master Resep</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+
+        <!-- Gagal memuat data -->
+        <div id="loadError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-xs flex items-center justify-between gap-3">
+            <span><i class="fa-solid fa-circle-exclamation mr-2"></i><span id="loadErrorMsg"></span></span>
+            <button class="btn btn-ghost btn-sm" data-action="reload"><i class="fa-solid fa-rotate"></i> Coba lagi</button>
+        </div>
+
+        <!-- ================= PILIH MENU & PRODUKSI ================= -->
+        <div class="card p-4 sm:p-5 space-y-4">
+            <div>
+                <label class="lbl" for="hppProduct">Pilih menu</label>
+                <select id="hppProduct" class="field">
+                    <option value="">-- Memuat menu... --</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="lbl" for="hppOutput">Hasil produksi (pcs / 1 resep batch)</label>
+                    <input type="number" id="hppOutput" class="field" min="0" step="any" placeholder="Cth: 20">
+                </div>
+                <div>
+                    <label class="lbl" for="hppExtra">Biaya tambahan per batch (Rp)</label>
+                    <input type="number" id="hppExtra" class="field" min="0" step="any" placeholder="Kemasan, gas, tenaga, dll">
+                </div>
+                <div>
+                    <label class="lbl" for="hppMargin">Margin keuntungan diinginkan (%)</label>
+                    <input type="number" id="hppMargin" class="field" min="0" step="any" placeholder="Cth: 30">
+                </div>
+            </div>
+
+            <p id="hppExtraHint" class="text-[11px] text-amber-600"></p>
+
+            <div>
+                <label class="lbl" for="hppBatch">Simulasi jumlah batch produksi (opsional)</label>
+                <input type="number" id="hppBatch" class="field" value="1" min="0.1" step="0.1">
+                <p id="hppBatchInfo" class="text-[11px] text-slate-500 mt-1"></p>
+            </div>
+        </div>
+
+        <!-- ================= RINCIAN BIAYA BAHAN ================= -->
+        <div class="card overflow-hidden">
+            <div class="p-4 flex items-center justify-between border-b border-slate-100">
+                <h3 class="font-bold text-sm">Rincian biaya bahan (per 1 batch resep)</h3>
+                <span id="hppLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu...</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="tbl">
+                    <thead>
+                        <tr><th>Bahan baku</th><th>Kebutuhan</th><th class="text-right">Subtotal</th></tr>
+                    </thead>
+                    <tbody id="hppBody">
+                        <tr><td colspan="3" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-t border-slate-200 bg-slate-50">
+                            <td class="font-bold" colspan="2">Total biaya bahan</td>
+                            <td class="text-right font-bold text-orange-600" id="hppTotalBahan">Rp 0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= HASIL PERHITUNGAN ================= -->
+        <div id="hppResult" class="hidden card p-4 sm:p-5 space-y-4">
+            <h3 class="font-bold text-sm">Hasil perhitungan HPP</h3>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="stat-box">
+                    <p class="stat-label">Total Biaya Produksi</p>
+                    <p class="stat-value" id="hppTotalBiaya">Rp 0</p>
+                </div>
+                <div class="stat-box">
+                    <p class="stat-label">Total Unit Dihasilkan</p>
+                    <p class="stat-value" id="hppTotalUnit">0 pcs</p>
+                </div>
+                <div class="stat-box border-orange-200 bg-orange-50">
+                    <p class="stat-label text-orange-500">HPP per Unit</p>
+                    <p class="stat-value text-orange-600" id="hppPerUnit">Rp 0</p>
+                </div>
+                <div class="stat-box border-emerald-200 bg-emerald-50">
+                    <p class="stat-label text-emerald-600">Harga Jual Disarankan</p>
+                    <p class="stat-value text-emerald-700" id="hppHargaSaran">Rp 0</p>
+                </div>
+            </div>
+
+            <div id="hppCurrentPrice" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-xs font-bold text-slate-700">Perbandingan dengan harga jual saat ini</h4>
+                    <span id="hppMarginBadge" class="badge b-ok">Untung</span>
+                </div>
+                <div class="grid grid-cols-3 gap-3 text-xs">
+                    <div>
+                        <p class="text-slate-400">Harga jual sekarang</p>
+                        <p class="font-bold" id="hppHargaSekarang">Rp 0</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">Keuntungan per pcs</p>
+                        <p id="hppProfit" class="font-bold">Rp 0</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">Margin aktual</p>
+                        <p class="font-bold" id="hppMarginAktual">0%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toasts" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-80 z-[100] flex flex-col gap-2" aria-live="polite"></div>
+
+    <script type="module">
+        import { requireAuth } from './js/module/auth-guard.js';
+
+        const auth = await requireAuth(['admin']);
+        if (auth) await import('./js/module/hpp.js');
+    </script>
+</body>
+</html>
