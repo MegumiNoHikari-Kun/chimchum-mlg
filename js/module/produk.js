@@ -68,6 +68,10 @@ function getProductCategory(product) {
     return String(product?.kategori ?? product?.category ?? '').trim();
 }
 
+function getProductIsi(product) {
+    return String(product?.isi ?? '').trim();
+}
+
 function getProductPrice(product) {
     return Number(product?.harga ?? product?.price ?? 0);
 }
@@ -307,7 +311,7 @@ async function loadProducts() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-10 text-slate-400">
+                <td colspan="8" class="text-center py-10 text-slate-400">
                     <i class="fa-solid fa-circle-notch loading-spinner text-orange-500 mr-2"></i>
                     Memuat produk...
                 </td>
@@ -419,6 +423,7 @@ function renderTable(dataList) {
                 <td class="p-3">
                     <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg text-[10px] font-medium">${escapeHtml(category)}</span>
                 </td>
+                <td class="p-3 text-slate-600">${escapeHtml(getProductIsi(product) || '-')}</td>
                 <td class="p-3 font-bold text-orange-600">${rupiah(price)}</td>
                 <td class="p-3 text-slate-600">${rupiah(hpp)}</td>
                 <td class="p-3 font-bold ${stockClass}">${stock}</td>
@@ -459,9 +464,10 @@ function filterTable() {
     filteredProducts = products.filter(product => {
         const name = getProductName(product).toLowerCase();
         const category = getProductCategory(product).toLowerCase();
+        const isi = getProductIsi(product).toLowerCase();
         const description = getProductDescription(product).toLowerCase();
 
-        return (name.includes(keyword) || category.includes(keyword) || description.includes(keyword));
+        return (name.includes(keyword) || category.includes(keyword) || isi.includes(keyword) || description.includes(keyword));
     });
 
     currentPage = 1; // Reset halaman ke 1 saat pencarian
@@ -480,6 +486,7 @@ function clearSearch() {
 function getFormData() {
     const nama = $('p-nama').value.trim();
     const kategori = $('p-kategori').value.trim().toLowerCase();
+    const isi = $('p-isi').value.trim();
     const hargaRaw = $('p-harga').value.trim();
     const hppRaw = $('p-hpp').value.trim();
     const stokRaw = $('p-stok').value.trim();
@@ -496,7 +503,7 @@ function getFormData() {
     if (!Number.isFinite(stok) || stok < 0 || !Number.isInteger(stok)) throw new Error('Stok harus berupa angka bulat 0 atau lebih.');
     if (foto && !validImageUrl(foto)) throw new Error('URL foto tidak valid.');
 
-    return { nama, kategori, harga, hpp, stok, foto, deskripsi };
+    return { nama, kategori, isi: isi || null, harga, hpp, stok, foto, deskripsi };
 }
 
 // =========================================================
@@ -506,6 +513,7 @@ function resetForm() {
     if($('p-id')) $('p-id').value = '';
     if($('p-nama')) $('p-nama').value = '';
     if($('p-kategori')) $('p-kategori').value = '';
+    if($('p-isi')) $('p-isi').value = '';
     if($('p-harga')) $('p-harga').value = '';
     if($('p-hpp')) $('p-hpp').value = '';
     if($('p-stok')) $('p-stok').value = '';
@@ -535,6 +543,7 @@ function editProduct(id) {
     if($('p-id')) $('p-id').value = product.id ?? '';
     if($('p-nama')) $('p-nama').value = getProductName(product);
     if($('p-kategori')) $('p-kategori').value = getProductCategory(product);
+    if($('p-isi')) $('p-isi').value = getProductIsi(product);
     if($('p-harga')) $('p-harga').value = getProductPrice(product) || '';
     if($('p-hpp')) $('p-hpp').value = getProductHpp(product) || '';
     if($('p-stok')) $('p-stok').value = getProductStock(product);
