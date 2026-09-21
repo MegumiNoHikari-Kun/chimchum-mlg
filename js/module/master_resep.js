@@ -381,7 +381,8 @@ function renderCalc() {
     const ready = !!(prod && recipe && batch > 0 && lines.length);
 
     //['btnCopy', 'btnProduce', 'btnOrder'].forEach(id => { $(id).disabled = !ready; });
-    ['btnOrder'].forEach(id => { $(id).disabled = !ready; });
+    ['btnProduce', 'btnOrder'].forEach(id => { $(id).disabled = !ready; });
+    // ['btnOrder'].forEach(id => { $(id).disabled = !ready; });
     $('calcSummary').innerHTML = '';
 
     if (!prod) {
