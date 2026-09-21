@@ -50,6 +50,7 @@
             </h1>
             <p class="mt-0.5 max-w-2xl text-xs text-slate-500">
                 Kelola pesanan bahan baku ke supplier. PO berstatus <b>Selesai</b> otomatis menambah stok bahan.
+                Semua waktu dalam WIB (GMT+7).
             </p>
         </div>
         <button id="btn-create" class="btn-primary"><i class="fa-solid fa-plus"></i> Buat PO baru</button>
@@ -118,10 +119,13 @@
 
         <div class="flex-1 space-y-4 overflow-y-auto px-6 py-5">
             <div>
-                <label for="po-supplier" class="mb-1 block text-xs font-semibold text-slate-600">Supplier</label>
-                <select id="po-supplier" required class="field font-medium">
-                    <option value="">Pilih supplier</option>
-                </select>
+                <label for="po-supplier-search" class="mb-1 block text-xs font-semibold text-slate-600">Supplier</label>
+                <div>
+                    <input type="text" id="po-supplier-search" data-combo="supplier" required autocomplete="off"
+                           placeholder="Cari supplier…" role="combobox" aria-expanded="false" aria-controls="combo-menu"
+                           class="field font-medium">
+                    <input type="hidden" id="po-supplier">
+                </div>
                 <p id="phone-warning" class="mt-1 hidden text-[11px] text-amber-600">
                     <i class="fa-solid fa-triangle-exclamation mr-1"></i>Supplier ini belum punya nomor WhatsApp, jadi tombol kirim WA tidak aktif.
                 </p>
@@ -171,6 +175,10 @@
             <button type="button" id="po-cancel" class="btn-ghost">Batal</button>
         </div>
     </form>
+
+    <!-- Daftar pilihan combobox supplier & bahan (dipakai bersama); harus di dalam <dialog> agar tampil di atasnya -->
+    <ul id="combo-menu" role="listbox"
+        class="fixed z-[300] hidden overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-xl"></ul>
 </dialog>
 
 <!-- Pesan -->
