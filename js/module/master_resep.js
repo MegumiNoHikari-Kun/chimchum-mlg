@@ -378,7 +378,8 @@ function renderCalc() {
     const body = $('calcBody'), label = $('calcLabel');
     const ready = !!(prod && recipe && batch > 0 && lines.length);
 
-    ['btnCopy', 'btnProduce', 'btnOrder'].forEach(id => { $(id).disabled = !ready; });
+    //['btnCopy', 'btnProduce', 'btnOrder'].forEach(id => { $(id).disabled = !ready; });
+    ['btnOrder'].forEach(id => { $(id).disabled = !ready; });
     $('calcSummary').innerHTML = '';
 
     if (!prod) {
