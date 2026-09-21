@@ -838,7 +838,7 @@ async function saveProduct() {
                 throw new Error('UPDATE gagal. ID tidak ditemukan atau RLS policy memblokir.');
             }
 
-            showStatus('Produk berhasil diperbarui dari database Supabase.', 'success');
+            showStatus('Produk berhasil diperbarui dari database.', 'success');
             closeModal(); 
             await loadProducts();
             return;
@@ -855,7 +855,7 @@ async function saveProduct() {
             throw new Error('INSERT tidak menghasilkan row baru.');
         }
 
-        showStatus('Produk baru berhasil disimpan di Supabase.', 'success');
+        showStatus('Produk baru berhasil disimpan di Database.', 'success');
         closeModal(); 
         await loadProducts();
 
@@ -910,7 +910,7 @@ async function deleteProduct(id) {
             throw new Error('Gagal menghapus. ID tidak ditemukan atau RLS policy memblokir.');
         }
 
-        showStatus('Produk berhasil dihapus dari Supabase.', 'success');
+        showStatus('Produk berhasil dihapus dari Database.', 'success');
         await loadProducts();
         
     } catch (error) {
@@ -946,7 +946,7 @@ function formatSupabaseError(error) {
         return 'Kolom database tidak ditemukan. Pastikan nama kolom products sesuai dengan kode.';
     }
     if (lower.includes('relation') && lower.includes('does not exist')) {
-        return 'Tabel products tidak ditemukan di Supabase.';
+        return 'Tabel products tidak ditemukan di Database.';
     }
     return 'Operasi database gagal: ' + message;
 }
