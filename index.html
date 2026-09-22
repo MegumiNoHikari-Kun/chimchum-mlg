@@ -272,19 +272,21 @@
               }
   
               container.innerHTML = files.map(file => {
-                  const { data: urlData } = supabase.storage.from(TESTI_BUCKET).getPublicUrl(file.name);
-                  const url = urlData?.publicUrl || '';
-                  return `
-                      <div class="flex-shrink-0 snap-start w-56 sm:w-64">
-                          <img
-                              src="${url}"
-                              alt="Testimoni pelanggan"
-                              loading="lazy"
-                              class="w-56 sm:w-64 h-72 object-cover rounded-2xl border border-slate-100 shadow-sm"
-                              onerror="this.closest('.flex-shrink-0').remove()"
-                          >
-                      </div>`;
-              }).join('');
+                const { data: urlData } = supabase.storage.from(TESTI_BUCKET).getPublicUrl(file.name);
+                const url = urlData?.publicUrl || '';
+                return `
+                    <div class="flex-shrink-0 snap-start w-56 sm:w-64">
+                        <div class="w-full aspect-square rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                            <img
+                                src="${url}"
+                                alt="Testimoni pelanggan"
+                                loading="lazy"
+                                class="w-full h-full object-contain p-[2px]"
+                                onerror="this.closest('.flex-shrink-0').remove()"
+                            >
+                        </div>
+                    </div>`;
+            }).join('');
           } catch (err) {
               console.error('Gagal memuat testimoni:', err);
               container.innerHTML = `
