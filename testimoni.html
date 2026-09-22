@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Testimoni - ChimChum</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc;
+        }
+        input, button { font-family: inherit; }
+        .loading-spinner { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .drop-zone.drag-over {
+            border-color: #f97316;
+            background-color: #fff7ed;
+        }
+    </style>
+</head>
+
+<body class="p-4 sm:p-6 text-slate-800">
+
+<div class="max-w-5xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div>
+            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-comment-dots text-orange-500"></i>
+                Upload Testimoni
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">
+                Unggah foto testimoni pelanggan untuk ditampilkan di halaman utama.
+            </p>
+        </div>
+        <a href="./produk.html" class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-600 font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-sm border border-slate-200 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i> Kembali ke Kelola Produk
+        </a>
+    </div>
+
+    <!-- STATUS BOX -->
+    <div id="statusBox" class="hidden mb-5 rounded-xl px-4 py-3 text-xs border"></div>
+
+    <!-- UPLOAD CARD -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
+        <h4 class="font-bold text-sm text-slate-800 mb-4">Tambah Testimoni Baru</h4>
+
+        <label
+            for="testi-file-input"
+            id="dropZone"
+            class="drop-zone cursor-pointer flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-2xl py-10 px-4 text-center hover:border-orange-400 hover:bg-orange-50/50 transition"
+        >
+            <i class="fa-solid fa-cloud-arrow-up text-3xl text-orange-400"></i>
+            <p class="text-sm font-semibold text-slate-700">Klik atau seret gambar ke sini</p>
+            <p class="text-[11px] text-slate-400">JPG, PNG, atau WEBP — bisa pilih beberapa sekaligus (maks 2 MB / file setelah dikompres)</p>
+        </label>
+        <input type="file" id="testi-file-input" accept="image/png,image/jpeg,image/webp" multiple class="hidden">
+
+        <!-- PREVIEW ANTREAN UPLOAD -->
+        <div id="uploadQueue" class="hidden mt-4 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3"></div>
+
+        <div id="uploadProgress" class="hidden mt-4 text-xs text-slate-500">
+            <i class="fa-solid fa-circle-notch loading-spinner mr-1.5"></i>
+            <span id="uploadProgressText">Mengunggah 0 dari 0...</span>
+        </div>
+    </div>
+
+    <!-- GALLERY -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-4">
+            <h4 class="font-bold text-sm text-slate-800">Testimoni Tersimpan</h4>
+            <div class="flex items-center gap-2">
+                <span id="testiCount" class="text-[10px] text-slate-400">Memuat...</span>
+                <button id="btnRefreshTesti" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs transition" title="Refresh">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="testiGallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div class="col-span-full text-center py-10 text-slate-400">
+                <i class="fa-solid fa-circle-notch loading-spinner text-orange-500 mr-2"></i>
+                Memuat testimoni...
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import { requireAuth } from './js/module/auth-guard.js';
+
+    const auth = await requireAuth(['admin']);
+
+    if (auth) {
+        await import('./js/module/testimoni.js');
+    }
+</script>
+</body>
+</html>
