@@ -8,6 +8,29 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      .loading-spinner {
+          animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+          to { transform: rotate(360deg); }
+      }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff5f0',
+                            100: '#ffedd5',
+                            500: '#ff6b35',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
         tailwind.config = {
             theme: {
                 extend: {
@@ -208,6 +231,98 @@
             </div>
         </div>
     </section>
+    
+    <!-- =====================================================
+     TESTIMONI PELANGGAN (Scroll Horizontal dari Supabase Storage)
+  ====================================================== -->
+  <section id="testimoni" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 w-full">
+      <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-6">
+              <div>
+                  <h3 class="text-2xl font-bold text-slate-900 tracking-tight">Testimoni Pelanggan</h3>
+                  <p class="text-slate-500 text-sm">Kata mereka yang sudah mencoba ChimChum.</p>
+              </div>
+              <div class="hidden sm:flex items-center gap-2">
+                  <button id="testi-prev" class="w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition">
+                      <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <button id="testi-next" class="w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition">
+                      <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+              </div>
+          </div>
+  
+          <div id="testi-scroll" class="flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth snap-x snap-mandatory pb-2">
+              <div class="flex-shrink-0 w-full text-center py-10 text-slate-400 text-sm">
+                  <i class="fa-solid fa-circle-notch loading-spinner mr-2"></i> Memuat testimoni...
+              </div>
+          </div>
+      </div>
+  </section>
+  
+  <script type="module">
+      import { supabase } from './js/supabase.js';
+  
+      const TESTI_BUCKET = 'testimoni'; // ganti sesuai nama bucket kamu di Supabase Storage
+  
+      async function loadTestimonials() {
+          const container = document.getElementById('testi-scroll');
+          if (!container) return;
+  
+          try {
+              const { data, error } = await supabase.storage
+                  .from(TESTI_BUCKET)
+                  .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+  
+              if (error) throw error;
+  
+              const files = (data || []).filter(f => f.name && !f.name.endsWith('/'));
+  
+              if (files.length === 0) {
+                  container.innerHTML = `
+                      <div class="flex-shrink-0 w-full text-center py-10 text-slate-400 text-sm">
+                          Belum ada testimoni yang ditampilkan.
+                      </div>`;
+                  return;
+              }
+  
+              container.innerHTML = files.map(file => {
+                const { data: urlData } = supabase.storage.from(TESTI_BUCKET).getPublicUrl(file.name);
+                const url = urlData?.publicUrl || '';
+                return `
+                    <div class="flex-shrink-0 snap-start w-56 sm:w-64">
+                        <div class="w-full aspect-square rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                            <img
+                                src="${url}"
+                                alt="Testimoni pelanggan"
+                                loading="lazy"
+                                class="w-full h-full object-contain p-[2px]"
+                                onerror="this.closest('.flex-shrink-0').remove()"
+                            >
+                        </div>
+                    </div>`;
+            }).join('');
+          } catch (err) {
+              console.error('Gagal memuat testimoni:', err);
+              container.innerHTML = `
+                  <div class="flex-shrink-0 w-full text-center py-10 text-red-400 text-sm">
+                      Gagal memuat testimoni.
+                  </div>`;
+          }
+      }
+  
+      function scrollTesti(direction) {
+          const container = document.getElementById('testi-scroll');
+          if (!container) return;
+          const amount = container.clientWidth * 0.8;
+          container.scrollBy({ left: direction === 'next' ? amount : -amount, behavior: 'smooth' });
+      }
+  
+      document.getElementById('testi-prev')?.addEventListener('click', () => scrollTesti('prev'));
+      document.getElementById('testi-next')?.addEventListener('click', () => scrollTesti('next'));
+  
+      loadTestimonials();
+  </script>
 
     <footer class="bg-white border-t border-slate-200 py-8 text-center text-slate-500 text-sm">
         <div class="max-w-7xl mx-auto px-4">
