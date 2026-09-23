@@ -268,6 +268,8 @@ function renderTable() {
                 <td class="p-3 font-medium text-slate-700 text-xs">
                     ${o.payment_method || 'Cash'}<br>
                     ${paymentStatusSelect(key, o.payment_status)}<br>
+                    ${paymentProofLink(o.payment_proof)}<br>
+                    
                     <span class="font-normal text-[11px] text-slate-400">${o.address || '-'}</span>
                 </td>
                 <td class="p-3">
@@ -277,9 +279,8 @@ function renderTable() {
                         <option value="dikirim" ${status === 'dikirim' ? 'selected' : ''}>Dikirim</option>
                         <option value="selesai" ${status === 'selesai' ? 'selected' : ''}>Selesai</option>
                         <option value="cancel" ${status === 'cancel' ? 'selected' : ''}>Cancel</option>
+                        ${o.stock_restored ? '<span class="block mt-1 text-[10px] font-semibold text-emerald-600"><i class="fa-solid fa-rotate-left"></i> Stok dikembalikan</span>' : ''}
                     </select>
-                    <br>
-                    ${paymentProofLink(o.payment_proof)}
                 </td>
                 <td class="p-3 max-w-xs text-slate-600 text-xs">${items}</td>
                 <td class="p-3 font-bold text-emerald-600 text-xs">${rupiah(o.grand_total || 0)}</td>
@@ -384,23 +385,37 @@ function cetakStrukThermal(noMeja, waPelanggan, items, grandTotal, metodeBayar, 
 }
 
 window.updateStatus = async function(key, val) {
+    if (val === 'cancel' && !confirm('Batalkan pesanan ini? Stok produk akan dikembalikan.')) {
+        renderTable(); // kembalikan dropdown ke nilai sebelumnya
+        return;
+    }
+
     await authReady;
+    let restored;
     try {
-        let q = supabase.from('orders').update({ status: val });
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) q = q.eq('id', key);
-        else q = q.eq('order_id', key);
-        await q;
-    } catch(e) { console.warn(e); }
+        const { data, error } = await supabase.rpc('update_order_status', {
+            p_key: String(key),
+            p_status: val
+        });
+        if (error) throw error;
+        restored = data?.stock_restored;
+    } catch (e) {
+        console.error('Gagal update status:', e);
+        alert('Gagal mengubah status: ' + (e.message || e));
+        renderTable(); // revert dropdown
+        return;
+    }
+
+    const match = o => String(o.id) === String(key) || String(o.order_id) === String(key);
     cachedOrders = cachedOrders.map(o => {
-        if (String(o.id) === String(key) || String(o.order_id) === String(key)) o.status = val;
+        if (match(o)) { o.status = val; o.stock_restored = restored; }
         return o;
     });
+
     let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
-    localOrders = localOrders.map(o => {
-        if (String(o.id) === String(key) || String(o.order_id) === String(key)) o.status = val;
-        return o;
-    });
+    localOrders = localOrders.map(o => { if (match(o)) o.status = val; return o; });
     localStorage.setItem('local_orders', JSON.stringify(localOrders));
+
     renderSummary(cachedOrders);
     renderTable();
 };
