@@ -103,30 +103,6 @@
             </div>
         </div>
 
-        <!-- ================= RINCIAN BIAYA BAHAN ================= -->
-        <div class="card overflow-hidden">
-            <div class="p-4 flex items-center justify-between border-b border-slate-100">
-                <h3 class="font-bold text-sm">Rincian biaya bahan</h3>
-                <span id="hppLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu...</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="tbl">
-                    <thead>
-                        <tr><th>Bahan baku</th><th>Per 1 pcs</th><th id="hppColTotal">Kebutuhan total</th><th class="text-right">Subtotal</th></tr>
-                    </thead>
-                    <tbody id="hppBody">
-                        <tr><td colspan="4" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
-                    </tbody>
-                    <tfoot>
-                        <tr class="border-t border-slate-200 bg-slate-50">
-                            <td class="font-bold" colspan="3">Total biaya bahan (1 menu)</td>
-                            <td class="text-right font-bold text-orange-600" id="hppTotalBahan">Rp 0</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-
         <!-- ================= HASIL PERHITUNGAN ================= -->
         <div id="hppResult" class="hidden card p-4 sm:p-5 space-y-4">
             <h3 class="font-bold text-sm">Hasil perhitungan HPP</h3>
@@ -173,6 +149,31 @@
                         <p class="font-bold" id="hppMarginAktual">0%</p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ================= RINCIAN BIAYA BAHAN ================= -->
+        <div class="card overflow-hidden">
+            <div class="p-4 flex items-center justify-between border-b border-slate-100">
+                <h3 class="font-bold text-sm">Rincian biaya bahan</h3>
+                <span id="hppLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu...</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="tbl">
+                    <thead>
+                        <tr><th>Bahan baku</th><th>Per 1 pcs</th><th id="hppColTotal">Kebutuhan total</th><th class="text-right">Subtotal</th></tr>
+                    </thead>
+                    <tfoot>
+                        <tr class="border-t border-slate-200 bg-slate-50">
+                            <td class="font-bold" colspan="3">Total biaya bahan (1 menu)</td>
+                            <td class="text-right font-bold text-orange-600" id="hppTotalBahan">Rp 0</td>
+                        </tr>
+                    </tfoot>
+                    <tbody id="hppBody">
+                        <tr><td colspan="4" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
+                    </tbody>
+                    
+                </table>
             </div>
         </div>
     </main>
