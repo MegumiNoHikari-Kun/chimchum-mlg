@@ -160,15 +160,15 @@
             </div>
             <div class="overflow-x-auto">
                 <table class="tbl">
+                    <div class="border-t border-slate-200 bg-slate-50 p-3 mb-2 flex justify-between items-center">
+                        <span class="font-bold">Total biaya bahan (1 menu)</span>
+                        <span class="font-bold text-orange-600" id="hppTotalBahan">Rp 0</span>
+                    </div>
+                    
                     <thead>
                         <tr><th>Bahan baku</th><th>Per 1 pcs</th><th id="hppColTotal">Kebutuhan total</th><th class="text-right">Subtotal</th></tr>
                     </thead>
-                    <tfoot>
-                        <tr class="border-t border-slate-200 bg-slate-50">
-                            <td class="font-bold" colspan="3">Total biaya bahan (1 menu)</td>
-                            <td class="text-right font-bold text-orange-600" id="hppTotalBahan">Rp 0</td>
-                        </tr>
-                    </tfoot>
+                    
                     <tbody id="hppBody">
                         <tr><td colspan="4" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
                     </tbody>
