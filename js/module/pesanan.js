@@ -31,6 +31,34 @@ function paymentStatusSelect(key, current) {
         </select>`;
 }
 
+function paymentProofLink(proof) {
+    if (!proof || proof === 'Pending / Cash') {
+        return `<span class="block mt-1.5 text-[10px] text-slate-400">Belum ada bukti</span>`;
+    }
+
+    // Fallback base64 (kalau upload ke storage gagal): buka lewat tab baru
+    if (proof.startsWith('data:image')) {
+        return `<a href="#" onclick="openProofImage(this); return false;" data-src="${proof}" class="inline-flex items-center gap-1 mt-1.5 text-[11px] font-semibold text-orange-600 hover:text-orange-700 underline">
+                    <i class="fa-solid fa-image"></i> Lihat Bukti
+                </a>`;
+    }
+
+    return `<a href="${proof}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1.5 text-[11px] font-semibold text-orange-600 hover:text-orange-700 underline">
+                <i class="fa-solid fa-image"></i> Lihat Bukti
+            </a>`;
+}
+
+window.openProofImage = function(el) {
+    const src = el.dataset.src;
+    const w = window.open('', '_blank');
+    if (w) {
+        w.document.write(`<title>Bukti Pembayaran</title><body style="margin:0;background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh"><img src="${src}" style="max-width:100%;max-height:100vh"></body>`);
+        w.document.close();
+    }
+};
+
+
+
 window.loadOrders = async function() {
     await authReady;
     let orders = [];
@@ -250,6 +278,8 @@ function renderTable() {
                         <option value="selesai" ${status === 'selesai' ? 'selected' : ''}>Selesai</option>
                         <option value="cancel" ${status === 'cancel' ? 'selected' : ''}>Cancel</option>
                     </select>
+                    <br>
+                    ${paymentProofLink(o.payment_proof)}
                 </td>
                 <td class="p-3 max-w-xs text-slate-600 text-xs">${items}</td>
                 <td class="p-3 font-bold text-emerald-600 text-xs">${rupiah(o.grand_total || 0)}</td>
