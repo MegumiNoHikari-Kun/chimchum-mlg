@@ -279,8 +279,8 @@ function renderTable() {
                         <option value="dikirim" ${status === 'dikirim' ? 'selected' : ''}>Dikirim</option>
                         <option value="selesai" ${status === 'selesai' ? 'selected' : ''}>Selesai</option>
                         <option value="cancel" ${status === 'cancel' ? 'selected' : ''}>Cancel</option>
-                        ${o.stock_restored ? '<span class="block mt-1 text-[10px] font-semibold text-emerald-600"><i class="fa-solid fa-rotate-left"></i> Stok dikembalikan</span>' : ''}
-                    </select>
+                    </select><br>
+                     ${o.stock_restored ? '<span class="block mt-1 text-[10px] font-semibold text-emerald-600"><i class="fa-solid fa-rotate-left"></i> Stok dikembalikan</span>' : ''}
                 </td>
                 <td class="p-3 max-w-xs text-slate-600 text-xs">${items}</td>
                 <td class="p-3 font-bold text-emerald-600 text-xs">${rupiah(o.grand_total || 0)}</td>
