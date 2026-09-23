@@ -248,6 +248,12 @@ function normalizeOrder(order) {
             order?.payment_proof ||
             '',
 
+       payment_status:
+          normalizePaymentStatus(order?.payment_status),
+      
+      stock_restored:
+          Boolean(order?.stock_restored),
+
         status:
             normalizeStatus(order?.status),
 
@@ -332,6 +338,7 @@ function applyFilters() {
                 order.phone,
                 order.address,
                 order.payment_method,
+                order.payment_status,
                 order.status
             ]
                 .map(value => String(value || '').toLowerCase())
@@ -636,8 +643,12 @@ function renderOrderRow(order) {
             <td class="px-4 py-3 align-top">
 
                 <div class="font-medium text-slate-700">
-                    ${escapeHTML(order.payment_method)}
-                </div>
+                   ${escapeHTML(order.payment_method)}
+               </div>
+               
+               <div class="mt-1">
+                   ${paymentStatusSelect(order)}
+               </div>
 
                 ${
                     proofAvailable
@@ -670,9 +681,15 @@ function renderOrderRow(order) {
 
             <!-- STATUS -->
             <td class="px-4 py-3 align-top">
-                <span class="${status.className}">
-                    ${escapeHTML(status.label)}
-                </span>
+               <span class="${status.className}">
+                   ${escapeHTML(status.label)}
+               </span>
+               
+               ${order.stock_restored ? `
+                   <div class="mt-1 text-[10px] font-semibold text-emerald-600">
+                       <i class="fa-solid fa-rotate-left"></i> Stok dikembalikan
+                   </div>
+               ` : ''}
             </td>
 
 
@@ -1084,6 +1101,13 @@ function renderDetailContent(order) {
                     order.payment_method
                 )}
 
+                <div class="bg-slate-50 rounded-xl border border-slate-100 p-3">
+                   <p class="text-[10px] uppercase tracking-wide font-semibold text-slate-400 mb-1.5">
+                       Status Pembayaran
+                   </p>
+                   ${paymentStatusSelect(order)}
+               </div>
+
                 ${detailBox(
                     'Waktu Pemesanan',
                     formatFullDate(order.created_at)
@@ -1256,44 +1280,37 @@ function renderStatusOptions(currentStatus) {
 
 window.updateOrderStatus = async function() {
 
-    if (!selectedOrder) {
-        return;
-    }
+    if (!selectedOrder) return;
 
-
-    const select =
-        document.getElementById(
-            'detailStatusSelect'
-        );
-
-
+    const select = document.getElementById('detailStatusSelect');
     if (!select) return;
 
-
-    const newStatus =
-        normalizeStatus(select.value);
-
-
-    const oldStatus =
-        normalizeStatus(selectedOrder.status);
-
+    const newStatus = normalizeStatus(select.value);
+    const oldStatus = normalizeStatus(selectedOrder.status);
 
     if (newStatus === oldStatus) {
-
-        showToast(
-            'Status tidak berubah.',
-            'info'
-        );
-
+        showToast('Status tidak berubah.', 'info');
         return;
     }
 
+    if (
+        newStatus === 'cancel' &&
+        !confirm('Batalkan pesanan ini? Stok produk akan dikembalikan.')
+    ) {
+        select.value = oldStatus;
+        return;
+    }
 
-    const button =
-        document.querySelector(
-            '#detailContent button[onclick="window.updateOrderStatus()"]'
-        );
+    const button = document.querySelector(
+        '#detailContent button[onclick="window.updateOrderStatus()"]'
+    );
 
+    const resetButton = () => {
+        if (!button) return;
+        button.disabled = false;
+        button.innerHTML =
+            '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Status';
+    };
 
     if (button) {
         button.disabled = true;
@@ -1301,170 +1318,69 @@ window.updateOrderStatus = async function() {
             '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
     }
 
+    let stockRestored = selectedOrder.stock_restored;
 
-    let updated = false;
-
-
-    /*
-     * UPDATE SUPABASE
-     */
     try {
-
         await authReady;
 
+        // Ubah status + kembalikan/kurangi stok dalam satu transaksi database
+        const { data, error } = await supabase.rpc('update_order_status', {
+            p_key: String(selectedOrder.order_id),
+            p_status: newStatus
+        });
 
-        const {
-            error
-        } = await supabase
-            .from('orders')
-            .update({
-                status: newStatus
-            })
-            .eq(
-                'order_id',
-                selectedOrder.order_id
-            );
+        if (error) throw error;
 
-
-        if (error) {
-
-            console.error(
-                '[MANAGE ORDER] Update error:',
-                error
-            );
-
-        } else {
-
-            updated = true;
-
-            console.log(
-                '[MANAGE ORDER] Status updated:',
-                selectedOrder.order_id,
-                newStatus
-            );
-        }
+        stockRestored = Boolean(data?.stock_restored);
 
     } catch (error) {
-
-        console.error(
-            '[MANAGE ORDER] Update exception:',
-            error
-        );
-    }
-
-
-    /*
-     * LOCAL STORAGE
-     *
-     * Jika Supabase gagal, tetap update lokal.
-     */
-    if (!updated) {
-
-        try {
-
-            const localOrders =
-                JSON.parse(
-                    localStorage.getItem(
-                        'local_orders'
-                    ) || '[]'
-                );
-
-
-            if (Array.isArray(localOrders)) {
-
-                const index =
-                    localOrders.findIndex(
-                        item =>
-                            String(
-                                item?.order_id || ''
-                            ).toUpperCase() ===
-                            String(
-                                selectedOrder.order_id
-                            ).toUpperCase()
-                    );
-
-
-                if (index !== -1) {
-
-                    localOrders[index].status =
-                        newStatus;
-
-
-                    localStorage.setItem(
-                        'local_orders',
-                        JSON.stringify(localOrders)
-                    );
-
-
-                    updated = true;
-                }
-            }
-
-        } catch (error) {
-
-            console.error(
-                '[MANAGE ORDER] Local update error:',
-                error
-            );
-        }
-    }
-
-
-    if (!updated) {
-
-        if (button) {
-            button.disabled = false;
-            button.innerHTML =
-                '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Status';
-        }
-
-
-        showToast(
-            'Gagal mengubah status pesanan.',
-            'error'
-        );
-
+        console.error('[MANAGE ORDER] Update error:', error);
+        resetButton();
+        showToast(error?.message || 'Gagal mengubah status pesanan.', 'error');
         return;
     }
 
-
-    /*
-     * UPDATE STATE LOCAL
-     */
-    selectedOrder.status =
-        newStatus;
-
-
-    const target =
-        allOrders.find(
-            order =>
-                String(order.order_id).toUpperCase() ===
+    // Sinkronkan localStorage (cadangan)
+    try {
+        const localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+        if (Array.isArray(localOrders)) {
+            const item = localOrders.find(o =>
+                String(o?.order_id || '').toUpperCase() ===
                 String(selectedOrder.order_id).toUpperCase()
-        );
-
-
-    if (target) {
-        target.status = newStatus;
+            );
+            if (item) {
+                item.status = newStatus;
+                item.stock_restored = stockRestored;
+                localStorage.setItem('local_orders', JSON.stringify(localOrders));
+            }
+        }
+    } catch (e) {
+        console.warn('[MANAGE ORDER] Local sync error:', e);
     }
 
+    selectedOrder.status = newStatus;
+    selectedOrder.stock_restored = stockRestored;
+
+    const target = allOrders.find(o =>
+        String(o.order_id).toUpperCase() ===
+        String(selectedOrder.order_id).toUpperCase()
+    );
+    if (target) {
+        target.status = newStatus;
+        target.stock_restored = stockRestored;
+    }
 
     applyFilters();
 
-
-    /*
-     * Render kembali detail agar badge ikut berubah
-     */
-    const detailContent =
-        document.getElementById('detailContent');
-
+    const detailContent = document.getElementById('detailContent');
     if (detailContent) {
-        detailContent.innerHTML =
-            renderDetailContent(selectedOrder);
+        detailContent.innerHTML = renderDetailContent(selectedOrder);
     }
 
-
     showToast(
-        'Status pesanan berhasil diperbarui.',
+        newStatus === 'cancel'
+            ? 'Pesanan dibatalkan, stok dikembalikan.'
+            : 'Status pesanan berhasil diperbarui.',
         'success'
     );
 };
@@ -1789,6 +1705,43 @@ function getStatusMeta(status) {
     };
 }
 
+
+const PAYMENT_STATUS_OPTIONS = [
+    ['unpaid', 'Belum Bayar'],
+    ['pending', 'Menunggu Verifikasi'],
+    ['paid', 'Lunas'],
+    ['failed', 'Gagal'],
+    ['refunded', 'Refund']
+];
+
+const PAYMENT_STATUS_STYLES = {
+    unpaid:   'bg-rose-50 text-rose-700 border-rose-200',
+    pending:  'bg-amber-50 text-amber-700 border-amber-200',
+    paid:     'bg-emerald-50 text-emerald-700 border-emerald-200',
+    failed:   'bg-slate-100 text-slate-600 border-slate-300',
+    refunded: 'bg-purple-50 text-purple-700 border-purple-200'
+};
+
+function normalizePaymentStatus(status) {
+    const value = String(status || 'unpaid').trim().toLowerCase();
+    const aliases = { lunas: 'paid', sukses: 'paid', success: 'paid', refund: 'refunded' };
+    const result = aliases[value] || value;
+    return PAYMENT_STATUS_STYLES[result] ? result : 'unpaid';
+}
+
+function paymentStatusSelect(order, extraClass = '') {
+    const current = normalizePaymentStatus(order.payment_status);
+
+    return `
+        <select
+            onchange="window.updatePaymentStatus('${escapeJS(order.order_id)}', this.value)"
+            class="border rounded-lg px-2 py-1 text-[11px] font-semibold cursor-pointer outline-none ${PAYMENT_STATUS_STYLES[current]} ${extraClass}">
+            ${PAYMENT_STATUS_OPTIONS.map(([value, label]) => `
+                <option value="${value}" ${value === current ? 'selected' : ''}>${label}</option>
+            `).join('')}
+        </select>
+    `;
+}
 
 /* =========================================================
    MODAL
