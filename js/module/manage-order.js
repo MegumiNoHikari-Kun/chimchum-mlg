@@ -1385,6 +1385,79 @@ window.updateOrderStatus = async function() {
     );
 };
 
+window.updatePaymentStatus = async function(orderId, value) {
+
+    const newStatus = normalizePaymentStatus(value);
+
+    const order = allOrders.find(o =>
+        String(o.order_id).toUpperCase() === String(orderId).toUpperCase()
+    );
+
+    if (!order) {
+        showToast('Pesanan tidak ditemukan.', 'error');
+        return;
+    }
+
+    try {
+        await authReady;
+
+        const { data, error } = await supabase
+            .from('orders')
+            .update({ payment_status: newStatus })
+            .eq('order_id', order.order_id)
+            .select('order_id');
+
+        if (error) throw error;
+
+        // RLS yang memblokir UPDATE tidak memberi error, hanya 0 baris berubah
+        if (!data || data.length === 0) {
+            throw new Error('Tidak ada baris yang berubah. Cek policy UPDATE (RLS) di tabel orders.');
+        }
+
+    } catch (error) {
+        console.error('[MANAGE ORDER] Payment status error:', error);
+        showToast(error?.message || 'Gagal mengubah status pembayaran.', 'error');
+        applyFilters(); // kembalikan dropdown ke nilai sebelumnya
+        return;
+    }
+
+    order.payment_status = newStatus;
+    if (selectedOrder && selectedOrder.order_id === order.order_id) {
+        selectedOrder.payment_status = newStatus;
+    }
+
+    try {
+        const localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
+        if (Array.isArray(localOrders)) {
+            const item = localOrders.find(o =>
+                String(o?.order_id || '').toUpperCase() ===
+                String(order.order_id).toUpperCase()
+            );
+            if (item) {
+                item.payment_status = newStatus;
+                localStorage.setItem('local_orders', JSON.stringify(localOrders));
+            }
+        }
+    } catch (e) {
+        console.warn('[MANAGE ORDER] Local sync error:', e);
+    }
+
+    applyFilters();
+
+    const detailContent = document.getElementById('detailContent');
+    const detailModal = document.getElementById('detailModal');
+    if (
+        selectedOrder &&
+        detailContent &&
+        detailModal &&
+        !detailModal.classList.contains('hidden')
+    ) {
+        detailContent.innerHTML = renderDetailContent(selectedOrder);
+    }
+
+    showToast('Status pembayaran diperbarui.', 'success');
+};
+
 
 /* =========================================================
    PAYMENT PROOF
