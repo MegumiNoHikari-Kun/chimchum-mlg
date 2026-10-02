@@ -874,7 +874,13 @@ window.fetchOrderStatus = async function() {
             <div class="bg-slate-50 p-4 rounded-2xl space-y-2 text-sm">
                 <div class="flex justify-between"><span class="text-slate-500">ID Pesanan:</span><span class="font-bold">${foundOrder.order_id}</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">Nama Pemesan:</span><span class="font-semibold">${foundOrder.customer_name}</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">Total Harga:</span><span class="font-bold text-brand-600">Rp ${Number(foundOrder.discount_amount) > 0 ? `<div class="flex justify-between"><span class="text-slate-500">Diskon (${foundOrder.voucher_code || '-'}):</span><span class="font-semibold text-emerald-600">- Rp ${Number(foundOrder.discount_amount).toLocaleString('id-ID')}</span></div>` : ''}
+        
+                ${Number(foundOrder.discount_amount) > 0 ? `
+                <div class="flex justify-between"><span class="text-slate-500">Subtotal:</span><span class="font-semibold">Rp ${Number(foundOrder.subtotal || (Number(foundOrder.grand_total) + Number(foundOrder.discount_amount))).toLocaleString('id-ID')}</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Diskon (${foundOrder.voucher_code || '-'}):</span><span class="font-semibold text-emerald-600">- Rp ${Number(foundOrder.discount_amount).toLocaleString('id-ID')}</span></div>
+                ` : ''}
+        
+                <div class="flex justify-between"><span class="text-slate-500">Total Harga:</span><span class="font-bold text-brand-600">Rp ${Number(foundOrder.grand_total || foundOrder.total_price || 0).toLocaleString('id-ID')}</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">Status:</span><span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase">${foundOrder.status}</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">Pembayaran:</span><span class="font-semibold uppercase">${foundOrder.payment_status || '-'}</span></div>
                 ${proofDisplay}
