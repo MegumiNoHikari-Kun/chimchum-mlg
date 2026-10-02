@@ -363,10 +363,28 @@
 
             <!-- Cart Footer -->
             <div class="p-4 border-t border-slate-100 bg-slate-50 space-y-2">
+                <!-- Voucher -->
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-600 mb-1">Kode Voucher</label>
+                    <div class="flex gap-1.5">
+                        <input type="text" id="voucher-code" placeholder="Masukkan kode voucher"
+                               class="flex-grow px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] uppercase focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <button type="button" id="voucher-apply-btn" onclick="applyVoucher()"
+                                class="bg-slate-900 hover:bg-slate-800 text-white px-3 rounded-lg text-[11px] font-semibold transition">Pakai</button>
+                        <button type="button" id="voucher-remove-btn" onclick="removeVoucher()"
+                                class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-[11px] font-semibold transition">✕</button>
+                    </div>
+                    <p id="voucher-msg" class="text-[10px] mt-1"></p>
+                </div>
+                
                 <div class="space-y-1">
                     <div class="flex justify-between text-[11px] text-slate-500">
                         <span>Subtotal</span>
                         <span id="cart-subtotal">Rp 0</span>
+                    </div>
+                    <div id="cart-discount-row" class="hidden flex justify-between text-[11px] text-emerald-600 font-medium">
+                        <span id="cart-discount-label">Diskon</span>
+                        <span id="cart-discount">- Rp 0</span>
                     </div>
                     <div class="flex justify-between text-xs font-bold text-slate-900 pt-1 border-t border-slate-200">
                         <span>Total Pembayaran</span>
