@@ -8,6 +8,8 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+        .shake { animation: shake .3s ease-in-out; }
       .loading-spinner {
           animation: spin 0.8s linear infinite;
       }
@@ -369,10 +371,7 @@
                     <div class="flex gap-1.5">
                         <input type="text" id="voucher-code" placeholder="Masukkan kode voucher"
                                class="flex-grow px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] uppercase focus:outline-none focus:ring-1 focus:ring-brand-500">
-                        <button type="button" id="voucher-apply-btn" onclick="applyVoucher()"
-                                class="bg-slate-900 hover:bg-slate-800 text-white px-3 rounded-lg text-[11px] font-semibold transition">Pakai</button>
-                        <button type="button" id="voucher-remove-btn" onclick="removeVoucher()"
-                                class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 rounded-lg text-[11px] font-semibold transition">✕</button>
+                        <div id="voucher-msg" class="hidden mt-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium"></div>
                     </div>
                     <p id="voucher-msg" class="text-[10px] mt-1"></p>
                 </div>
