@@ -299,55 +299,100 @@ function updateCartUI() {
     renderCartTotals(subtotal);
 }
 
-window.applyVoucher = async function () {
+
+function setVoucherMsg(text, isError = false) {
+    const el = document.getElementById('voucher-msg');
+    if (!el) return;
+
+    if (!text) {
+        el.textContent = '';
+        el.className = 'hidden mt-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium';
+        return;
+    }
+
+    el.textContent = (isError ? '❌ ' : '✅ ') + text;
+    el.className = `mt-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border ${
+        isError
+            ? 'bg-red-50 text-red-600 border-red-200'
+            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    }`;
+}
+
+const VOUCHER_REASON = {
+    not_found:   'Kode voucher tidak ditemukan.',
+    not_started: 'Voucher belum berlaku.',
+    expired:     'Voucher sudah kedaluwarsa.',
+    quota_full:  'Kuota voucher sudah habis.'
+};
+async function applyVoucher() {
     const input = document.getElementById('voucher-code');
+    const btn = document.getElementById('voucher-apply-btn');
     const code = (input?.value || '').trim().toUpperCase();
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
-    if (!code) return setVoucherMsg('Masukkan kode voucher.', true);
-    if (cart.length === 0) return setVoucherMsg('Pilih menu dulu sebelum memakai voucher.', true);
+    const fail = (msg) => {
+        setVoucherMsg(msg, true);
+        input?.classList.add('shake', 'border-red-400');
+        setTimeout(() => input?.classList.remove('shake'), 400);
+    };
 
-    const btn = document.getElementById('voucher-apply-btn');
-    if (btn) btn.disabled = true;
+    input?.classList.remove('border-red-400');
+
+    if (!code) return fail('Masukkan kode voucher terlebih dahulu.');
+    if (cart.length === 0) return fail('Pilih menu dulu sebelum memakai voucher.');
+
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
 
     try {
         await authReady;
         const { data, error } = await supabase.rpc('check_voucher', { p_code: code });
         if (error) throw error;
 
-        const v = Array.isArray(data) ? data[0] : data;
-        if (!v) {
-            setVoucherMsg('Voucher tidak valid, kedaluwarsa, atau kuota habis.', true);
-            return;
+        if (!data || !data.valid) {
+            return fail(VOUCHER_REASON[data?.reason] || 'Voucher tidak valid.');
         }
+
+        const v = data.voucher;
+
         if (subtotal < Number(v.min_purchase || 0)) {
-            setVoucherMsg(`Minimal belanja ${rp(v.min_purchase)} untuk voucher ini.`, true);
-            return;
+            return fail(`Minimal belanja ${rp(v.min_purchase)} untuk memakai voucher ${v.code}.`);
         }
 
         appliedVoucher = v;
         input.value = v.code;
         input.disabled = true;
+        input.classList.remove('border-red-400');
         document.getElementById('voucher-remove-btn')?.classList.remove('hidden');
-        if (btn) btn.classList.add('hidden');
-        updateCartUI();
+        btn?.classList.add('hidden');
+        updateCartUI();   // pesan sukses ditampilkan oleh renderCartTotals
     } catch (err) {
         console.error('[VOUCHER] Error:', err);
-        setVoucherMsg('Gagal memeriksa voucher. Coba lagi.', true);
+        fail('Gagal memeriksa voucher. Periksa koneksi lalu coba lagi.');
     } finally {
-        if (btn) btn.disabled = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Pakai'; }
     }
-};
+}
 
-window.removeVoucher = function () {
+function removeVoucher() {
     appliedVoucher = null;
     const input = document.getElementById('voucher-code');
-    if (input) { input.value = ''; input.disabled = false; }
+    if (input) { input.value = ''; input.disabled = false; input.classList.remove('border-red-400'); }
     document.getElementById('voucher-remove-btn')?.classList.add('hidden');
     document.getElementById('voucher-apply-btn')?.classList.remove('hidden');
     setVoucherMsg('');
     updateCartUI();
-};
+}
+
+// tetap diekspor ke window, karena confirmAndSubmitOrder memanggil window.removeVoucher()
+window.applyVoucher = applyVoucher;
+window.removeVoucher = removeVoucher;
+
+// pasang event langsung, tidak bergantung pada onclick di HTML
+document.getElementById('voucher-apply-btn')?.addEventListener('click', applyVoucher);
+document.getElementById('voucher-remove-btn')?.addEventListener('click', removeVoucher);
+document.getElementById('voucher-code')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); applyVoucher(); }
+});
 
 window.proceedToPayment = function() {
     if (cart.length === 0) {
