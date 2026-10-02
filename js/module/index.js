@@ -34,13 +34,6 @@ function computeVoucherDiscount(voucher, subtotal) {
     return Math.min(Math.round(disc), subtotal);
 }
 
-function setVoucherMsg(text, isError = false) {
-    const el = document.getElementById('voucher-msg');
-    if (!el) return;
-    el.textContent = text;
-    el.className = `text-[10px] mt-1 ${isError ? 'text-red-500' : 'text-emerald-600'}`;
-}
-
 function renderCartTotals(subtotal) {
     const discount = computeVoucherDiscount(appliedVoucher, subtotal);
     const total = Math.max(0, subtotal - discount);
