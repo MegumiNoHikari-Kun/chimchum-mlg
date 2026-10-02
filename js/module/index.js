@@ -318,6 +318,7 @@ const VOUCHER_REASON = {
     quota_full:  'Kuota voucher sudah habis.'
 };
 async function applyVoucher() {
+    
     const input = document.getElementById('voucher-code');
     const btn = document.getElementById('voucher-apply-btn');
     const code = (input?.value || '').trim().toUpperCase();
@@ -354,6 +355,7 @@ async function applyVoucher() {
         appliedVoucher = v;
         input.value = v.code;
         input.disabled = true;
+        input.classList.add('bg-emerald-50');
         input.classList.remove('border-red-400');
         document.getElementById('voucher-remove-btn')?.classList.remove('hidden');
         btn?.classList.add('hidden');
@@ -366,15 +368,25 @@ async function applyVoucher() {
     }
 }
 
-function removeVoucher() {
+function removeVoucher(focusInput = true) {
     appliedVoucher = null;
+
     const input = document.getElementById('voucher-code');
-    if (input) { input.value = ''; input.disabled = false; input.classList.remove('border-red-400'); }
+    if (input) {
+        input.value = '';
+        input.disabled = false;
+        input.classList.remove('border-red-400', 'bg-emerald-50');
+        if (focusInput) input.focus();
+    }
+
     document.getElementById('voucher-remove-btn')?.classList.add('hidden');
     document.getElementById('voucher-apply-btn')?.classList.remove('hidden');
+
     setVoucherMsg('');
-    updateCartUI();
+    updateCartUI();   // total kembali tanpa diskon
 }
+
+window.removeVoucher = () => removeVoucher(false);   // dipakai confirmAndSubmitOrder, tanpa fokus ke input
 
 // tetap diekspor ke window, karena confirmAndSubmitOrder memanggil window.removeVoucher()
 window.applyVoucher = applyVoucher;
@@ -382,14 +394,24 @@ window.removeVoucher = removeVoucher;
 
 // pasang event langsung, tidak bergantung pada onclick di HTML
 document.getElementById('voucher-apply-btn')?.addEventListener('click', applyVoucher);
-document.getElementById('voucher-remove-btn')?.addEventListener('click', removeVoucher);
+document.getElementById('voucher-remove-btn')?.addEventListener('click', () => removeVoucher(true));
 document.getElementById('voucher-code')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); applyVoucher(); }
 });
 
 window.proceedToPayment = function() {
     if (cart.length === 0) {
-        showNotification('Perhatian', 'Keranjang belanja masih kosong.', 'warning');
+        container.innerHTML = `
+            <div class="text-center py-8 text-slate-400">
+                <i class="fa-solid fa-basket-shopping text-2xl mb-1.5"></i>
+                <p class="text-[11px]">Keranjang Anda masih kosong</p>
+            </div>
+        `;
+        if (appliedVoucher) {
+            removeVoucher(false);   // ini memanggil updateCartUI lagi, aman karena appliedVoucher sudah null
+            return;
+        }
+        renderCartTotals(0);
         return;
     }
     const name = document.getElementById('customer-name').value.trim();
