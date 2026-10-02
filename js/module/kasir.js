@@ -531,36 +531,47 @@ window.setUangPas = function () {
 
 function buildStrukHTML(order) {
     const tanggal = new Date(order.created_at).toLocaleString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
     });
-   const reprintInfo = order.isReprint
-    ? `
-        <div class="struk-line"></div>
-        <div class="struk-center bold" style="font-size:11px;">
-            REPRINT
-        </div>
-        <div class="struk-center" style="font-size:10px;">
-            Waktu Reprint: ${escapeHtml(order.reprintTime)}
-        </div>
-    `
-    : '';
+
+    const reprintInfo = order.isReprint
+        ? `
+            <div class="struk-line"></div>
+            <div class="struk-center bold" style="font-size:11px;">REPRINT</div>
+            <div class="struk-center" style="font-size:10px;">
+                Waktu Reprint: ${escapeHtml(order.reprintTime)}
+            </div>
+        `
+        : '';
 
     const itemsRows = order.items.map(i => {
         const subtotal = Number(i.harga) * Number(i.qty);
-
         return `
             <div class="struk-row">
-                <span class="struk-item-name">
-                    ${escapeHtml(i.nama)} x${i.qty}
-                </span>
+                <span class="struk-item-name">${escapeHtml(i.nama)} x${i.qty}</span>
                 <span>${rupiah(subtotal)}</span>
             </div>
         `;
     }).join('');
+
+    // ===== DISKON =====
+    const diskon = Number(order.discount_amount) || 0;
+    // fallback untuk order lama yang belum punya kolom subtotal
+    const subtotal = Number(order.subtotal) || (Number(order.grand_total) + diskon);
+
+    const diskonRows = diskon > 0
+        ? `
+            <div class="struk-row">
+                <span>Subtotal</span>
+                <span>${rupiah(subtotal)}</span>
+            </div>
+            <div class="struk-row">
+                <span>Diskon${order.voucher_code ? ` (${escapeHtml(order.voucher_code)})` : ''}</span>
+                <span>- ${rupiah(diskon)}</span>
+            </div>
+        `
+        : '';
 
     const bayarRows = order.payment_method === 'Cash'
         ? `
@@ -568,7 +579,6 @@ function buildStrukHTML(order) {
                 <span>Tunai Diterima</span>
                 <span>${rupiah(order._uangBayar)}</span>
             </div>
-
             <div class="struk-row">
                 <span>Kembalian</span>
                 <span>${rupiah(order._kembalian)}</span>
@@ -576,18 +586,6 @@ function buildStrukHTML(order) {
         `
         : '';
 
-   const diskonRows = Number(order.discount_amount) > 0
-    ? `
-        <div class="struk-row">
-            <span>Subtotal</span>
-            <span>${rupiah(order.subtotal)}</span>
-        </div>
-        <div class="struk-row">
-            <span>Diskon${order.voucher_code ? ` (${escapeHtml(order.voucher_code)})` : ''}</span>
-            <span>- ${rupiah(order.discount_amount)}</span>
-        </div>
-    `
-    : '';
     return `
         <div class="struk-center">
             <div class="center">
@@ -597,7 +595,7 @@ function buildStrukHTML(order) {
             <div style="font-size:10px;">Dimsum &amp; Snack</div>
             <div style="font-size:10px;">Sawojajar, Malang</div>
         </div>
-         ${reprintInfo}
+        ${reprintInfo}
 
         <div class="struk-line"></div>
 
@@ -605,13 +603,14 @@ function buildStrukHTML(order) {
         <div>${escapeHtml(tanggal)}</div>
         <div>Meja/Nama: ${escapeHtml(order.customer_name)}</div>
         <div>Jenis: ${escapeHtml(order.order_type || 'Offline')}</div>
-       
 
         <div class="struk-line"></div>
 
         ${itemsRows}
 
         <div class="struk-line"></div>
+
+        ${diskonRows}
 
         <div class="struk-row bold">
             <span>TOTAL</span>
@@ -630,17 +629,15 @@ function buildStrukHTML(order) {
         <div class="struk-center">
             <div style="font-size:10px;margin-bottom:3px;">Tersedia juga di:</div>
             <div class="delivery-badges">
-                <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GOFOOD</span>
-               <span style="background-color: #ff5722; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">SHOPEEFOOD</span>
-               <span style="background-color: #28a745; color: #white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">GRABFOOD</span>
+                <span style="background-color:#28a745;color:#fff;padding:4px 8px;border-radius:4px;font-weight:bold;">GOFOOD</span>
+                <span style="background-color:#ff5722;color:#fff;padding:4px 8px;border-radius:4px;font-weight:bold;">SHOPEEFOOD</span>
+                <span style="background-color:#28a745;color:#fff;padding:4px 8px;border-radius:4px;font-weight:bold;">GRABFOOD</span>
             </div>
         </div>
 
         <div class="struk-line"></div>
 
-        <div class="struk-center">
-            Terima kasih atas kunjungan Anda!
-        </div>
+        <div class="struk-center">Terima kasih atas kunjungan Anda!</div>
         <div class="center" style="font-size:10px; margin-top:8px;">Jazakumullahu Khairan</div>
     `;
 }
