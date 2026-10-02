@@ -764,6 +764,8 @@ window.submitKasirOrder = async function () {
         const dd = String(now.getDate()).padStart(2, '0');
         const hh = String(now.getHours()).padStart(2, '0');
         const min = String(now.getMinutes()).padStart(2, '0');
+
+        const randomNum = Math.floor(10 + Math.random() * 9000);
         
         const prefix = ORDER_TYPE_PREFIX[jenisPesanan] || 'ORDER';
         const order_id = `${prefix}-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
