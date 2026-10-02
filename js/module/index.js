@@ -14,6 +14,58 @@ let cart = [];
 let currentFilter = 'all';
 let pendingOrderData = null;
 const WA_TARGET_NUMBER = '6285723785380';
+let appliedVoucher = null;
+
+function rp(n) {
+    return `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+}
+
+function computeVoucherDiscount(voucher, subtotal) {
+    if (!voucher || subtotal <= 0) return 0;
+    if (subtotal < Number(voucher.min_purchase || 0)) return 0;
+
+    let disc = voucher.discount_type === 'percent'
+        ? subtotal * Number(voucher.discount_value) / 100
+        : Number(voucher.discount_value);
+
+    if (voucher.discount_type === 'percent' && voucher.max_discount) {
+        disc = Math.min(disc, Number(voucher.max_discount));
+    }
+    return Math.min(Math.round(disc), subtotal);
+}
+
+function setVoucherMsg(text, isError = false) {
+    const el = document.getElementById('voucher-msg');
+    if (!el) return;
+    el.textContent = text;
+    el.className = `text-[10px] mt-1 ${isError ? 'text-red-500' : 'text-emerald-600'}`;
+}
+
+function renderCartTotals(subtotal) {
+    const discount = computeVoucherDiscount(appliedVoucher, subtotal);
+    const total = Math.max(0, subtotal - discount);
+
+    document.getElementById('cart-subtotal').innerText = rp(subtotal);
+    document.getElementById('cart-total').innerText = rp(total);
+
+    const row = document.getElementById('cart-discount-row');
+    if (row) {
+        row.classList.toggle('hidden', discount <= 0);
+        row.classList.toggle('flex', discount > 0);
+        document.getElementById('cart-discount-label').innerText =
+            appliedVoucher ? `Diskon (${appliedVoucher.code})` : 'Diskon';
+        document.getElementById('cart-discount').innerText = `- ${rp(discount)}`;
+    }
+
+    // Pesan status voucher mengikuti isi keranjang (minimal belanja bisa berubah)
+    if (appliedVoucher) {
+        if (discount > 0) {
+            setVoucherMsg(`Voucher ${appliedVoucher.code} dipakai, hemat ${rp(discount)}`);
+        } else {
+            setVoucherMsg(`Belum memenuhi minimal belanja ${rp(appliedVoucher.min_purchase)}`, true);
+        }
+    }
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
     await loadProductsFromSupabase();
@@ -208,8 +260,6 @@ window.updateCartQty = function(productId, change) {
 function updateCartUI() {
     const container = document.getElementById('cart-items-container');
     const badge = document.getElementById('cart-badge');
-    const subtotalEl = document.getElementById('cart-subtotal');
-    const totalEl = document.getElementById('cart-total');
 
     if (!container || !badge) return;
 
@@ -223,8 +273,7 @@ function updateCartUI() {
                 <p class="text-[11px]">Keranjang Anda masih kosong</p>
             </div>
         `;
-        subtotalEl.innerText = 'Rp 0';
-        totalEl.innerText = 'Rp 0';
+        renderCartTotals(0);
         return;
     }
 
@@ -247,9 +296,58 @@ function updateCartUI() {
         `;
     });
 
-    subtotalEl.innerText = `Rp ${subtotal.toLocaleString('id-ID')}`;
-    totalEl.innerText = `Rp ${(subtotal).toLocaleString('id-ID')}`;
+    renderCartTotals(subtotal);
 }
+
+window.applyVoucher = async function () {
+    const input = document.getElementById('voucher-code');
+    const code = (input?.value || '').trim().toUpperCase();
+    const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+
+    if (!code) return setVoucherMsg('Masukkan kode voucher.', true);
+    if (cart.length === 0) return setVoucherMsg('Pilih menu dulu sebelum memakai voucher.', true);
+
+    const btn = document.getElementById('voucher-apply-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+        await authReady;
+        const { data, error } = await supabase.rpc('check_voucher', { p_code: code });
+        if (error) throw error;
+
+        const v = Array.isArray(data) ? data[0] : data;
+        if (!v) {
+            setVoucherMsg('Voucher tidak valid, kedaluwarsa, atau kuota habis.', true);
+            return;
+        }
+        if (subtotal < Number(v.min_purchase || 0)) {
+            setVoucherMsg(`Minimal belanja ${rp(v.min_purchase)} untuk voucher ini.`, true);
+            return;
+        }
+
+        appliedVoucher = v;
+        input.value = v.code;
+        input.disabled = true;
+        document.getElementById('voucher-remove-btn')?.classList.remove('hidden');
+        if (btn) btn.classList.add('hidden');
+        updateCartUI();
+    } catch (err) {
+        console.error('[VOUCHER] Error:', err);
+        setVoucherMsg('Gagal memeriksa voucher. Coba lagi.', true);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+};
+
+window.removeVoucher = function () {
+    appliedVoucher = null;
+    const input = document.getElementById('voucher-code');
+    if (input) { input.value = ''; input.disabled = false; }
+    document.getElementById('voucher-remove-btn')?.classList.add('hidden');
+    document.getElementById('voucher-apply-btn')?.classList.remove('hidden');
+    setVoucherMsg('');
+    updateCartUI();
+};
 
 window.proceedToPayment = function() {
     if (cart.length === 0) {
@@ -277,7 +375,8 @@ window.proceedToPayment = function() {
     const randomNum = Math.floor(100 + Math.random() * 9000);
     const orderId = `ORD-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
     const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-    const grandTotal = subtotal;
+    const discount = computeVoucherDiscount(appliedVoucher, subtotal);
+    const grandTotal = Math.max(0, subtotal - discount);
 
     const jakartaOffset = 7 * 60;
     const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOffset) * 60000);
@@ -289,8 +388,12 @@ window.proceedToPayment = function() {
         phone: phone,
         address: address,
         items: cart,
+        subtotal: subtotal,
+        voucher_code: discount > 0 ? appliedVoucher.code : null,
+        discount_amount: discount,
         grand_total: grandTotal,
         payment_method: paymentMethod,
+        order_type: 'Website',
         status: 'new',
         created_at: jakartaISOString
     };
@@ -548,6 +651,16 @@ window.confirmAndSubmitOrder = async function() {
 
     try {
         await authReady;
+
+        // Pakai voucher secara atomik (cek kuota & masa berlaku di server)
+        if (pendingOrderData.voucher_code) {
+            const { data: ok, error: vErr } = await supabase
+                .rpc('redeem_voucher', { p_code: pendingOrderData.voucher_code });
+            if (vErr) throw vErr;
+            if (!ok) {
+                throw new Error('Voucher sudah tidak berlaku (kuota habis / kedaluwarsa). Hapus voucher lalu coba lagi.');
+            }
+        }
     
         // Simpan order
         const { data: insertedOrder, error: orderError } =
@@ -625,7 +738,9 @@ ID Pesanan: ${pendingOrderData.order_id}
 *Detail Item:*
 ${itemsListStr}
 ────────────────
-Subtotal: Rp ${(pendingOrderData.grand_total).toLocaleString('id-ID')}
+Subtotal: ${rp(pendingOrderData.subtotal)}${pendingOrderData.discount_amount > 0
+    ? `\nDiskon (${pendingOrderData.voucher_code}): - ${rp(pendingOrderData.discount_amount)}`
+    : ''}
 *Total: Rp ${pendingOrderData.grand_total.toLocaleString('id-ID')}*
 
 *Data Pemesan:*
@@ -640,6 +755,7 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
 
     closePaymentModal();
     cart = [];
+    window.removeVoucher();   // <- tambahkan ini
     updateCartUI();
     if (fileInput) fileInput.value = '';
 
@@ -698,7 +814,7 @@ window.fetchOrderStatus = async function() {
             <div class="bg-slate-50 p-4 rounded-2xl space-y-2 text-sm">
                 <div class="flex justify-between"><span class="text-slate-500">ID Pesanan:</span><span class="font-bold">${foundOrder.order_id}</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">Nama Pemesan:</span><span class="font-semibold">${foundOrder.customer_name}</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">Total Harga:</span><span class="font-bold text-brand-600">Rp ${Number(foundOrder.grand_total || foundOrder.total_price || 0).toLocaleString('id-ID')}</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Total Harga:</span><span class="font-bold text-brand-600">Rp ${Number(foundOrder.discount_amount) > 0 ? `<div class="flex justify-between"><span class="text-slate-500">Diskon (${foundOrder.voucher_code || '-'}):</span><span class="font-semibold text-emerald-600">- Rp ${Number(foundOrder.discount_amount).toLocaleString('id-ID')}</span></div>` : ''}
                 <div class="flex justify-between"><span class="text-slate-500">Status:</span><span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase">${foundOrder.status}</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">Pembayaran:</span><span class="font-semibold uppercase">${foundOrder.payment_status || '-'}</span></div>
                 ${proofDisplay}
