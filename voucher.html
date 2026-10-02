@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kelola Voucher - ChimChum</title>
+  <link rel="icon" type="image/png" href="./assets/logo-transparan.png">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="./css/kasir.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .v-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+    .v-grid label { display:block; }
+    .v-grid input, .v-grid select { width:100%; margin:0; box-sizing:border-box; }
+    .v-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+    .v-badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; }
+    .v-btn { padding:6px 10px; font-size:12px; border:1px solid #e2e8f0; background:#f1f5f9; border-radius:6px; cursor:pointer; }
+    .v-btn--danger { color:#dc2626; }
+    .v-hint { font-size:11px; color:#777; margin-top:2px; display:block; }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <a class="app-header__logo" href="kasir.html">
+      <img src="./assets/logo-transparan.png" alt="Logo" onerror="this.style.display='none'">
+      <h2 class="app-header__title">ChimChum <span>Kelola Voucher</span></h2>
+    </a>
+    <div class="header-controls">
+      <a href="kasir.html" class="btn-secondary" style="text-decoration:none;">
+        <i class="fa-solid fa-arrow-left"></i> Kembali ke Kasir
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- FORM -->
+    <section class="card" style="padding:18px;margin-bottom:18px;">
+      <h3 id="voucherFormTitle"><i class="fa-solid fa-ticket"></i> Tambah Voucher</h3>
+
+      <input type="hidden" id="vId">
+
+      <div class="v-grid" style="margin-top:12px;">
+        <label>
+          <span class="field-label">Kode *</span>
+          <input type="text" id="vCode" placeholder="DISKON10" style="text-transform:uppercase;">
+        </label>
+        <label>
+          <span class="field-label">Deskripsi</span>
+          <input type="text" id="vDesc" placeholder="Diskon 10% maks 20rb">
+        </label>
+        <label>
+          <span class="field-label">Jenis Diskon *</span>
+          <select id="vType" onchange="window.onVoucherTypeChange()">
+            <option value="percent">Persen (%)</option>
+            <option value="nominal">Nominal (Rp)</option>
+          </select>
+        </label>
+        <label>
+          <span class="field-label" id="vValueLabel">Nilai Diskon (%) *</span>
+          <input type="number" id="vValue" min="1" placeholder="10">
+        </label>
+        <label id="vMaxWrap">
+          <span class="field-label">Maks. Diskon (Rp)</span>
+          <input type="number" id="vMax" min="0" placeholder="20000">
+          <small class="v-hint">Kosongkan jika tanpa batas</small>
+        </label>
+        <label>
+          <span class="field-label">Minimal Belanja (Rp)</span>
+          <input type="number" id="vMin" min="0" value="0">
+        </label>
+        <label>
+          <span class="field-label">Kuota</span>
+          <input type="number" id="vQuota" min="1" placeholder="Tanpa batas">
+          <small class="v-hint">Kosongkan jika tanpa batas</small>
+        </label>
+        <label>
+          <span class="field-label">Mulai Berlaku</span>
+          <input type="datetime-local" id="vStart">
+        </label>
+        <label>
+          <span class="field-label">Berakhir</span>
+          <input type="datetime-local" id="vEnd">
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:22px;">
+          <input type="checkbox" id="vActive" checked style="width:auto;margin:0;">
+          <span>Voucher aktif</span>
+        </label>
+      </div>
+
+      <div class="v-actions">
+        <button type="button" class="btn-submit" id="btnSaveVoucher" style="width:auto;padding:10px 20px;" onclick="window.saveVoucher()">
+          <i class="fa-solid fa-floppy-disk"></i> Simpan
+        </button>
+        <button type="button" class="btn-secondary" id="btnCancelEdit" style="display:none;" onclick="window.resetVoucherForm()">
+          Batal Edit
+        </button>
+      </div>
+    </section>
+
+    <!-- LIST -->
+    <section>
+      <div class="card orders-toolbar">
+        <div>
+          <h3><i class="fa-solid fa-list"></i> Daftar Voucher</h3>
+          <p>Kelola voucher diskon yang bisa dipakai di kasir.</p>
+        </div>
+        <button type="button" class="btn-secondary" onclick="window.loadVouchers()">
+          <i class="fa-solid fa-rotate-right"></i> Refresh
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Diskon</th>
+              <th>Min. Belanja</th>
+              <th>Pemakaian</th>
+              <th>Periode</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="voucherTableBody">
+            <tr><td colspan="7" class="table-empty">Memuat voucher...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module">
+    import { requireAuth } from './js/module/auth-guard.js';
+
+    try {
+      // Sesuaikan role. Contoh hanya admin: ['admin']
+      const auth = await requireAuth(['admin', 'kasir']);
+      if (auth) {
+        await import('./js/module/voucher.js');
+      } else {
+        console.error('AUTH GAGAL');
+      }
+    } catch (error) {
+      console.error('ERROR AUTH / IMPORT VOUCHER:', error);
+    }
+  </script>
+
+</body>
+</html>
