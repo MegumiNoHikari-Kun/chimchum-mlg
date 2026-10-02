@@ -756,11 +756,6 @@ window.submitKasirOrder = async function () {
         const addressNote = metodeBayar === 'Cash'
             ? `${jenisPesanan} | Uang diterima: ${rupiah(uangBayar)} | Kembalian: ${rupiah(kembalian)}`
             : jenisPesanan;
-      
-        const kembalian = uangBayar - currentKasirGrandTotal;
-        const addressNote = metodeBayar === 'Cash'
-            ? `Dine-In | Uang diterima: ${rupiah(uangBayar)} | Kembalian: ${rupiah(kembalian)}`
-            : 'Dine-In';
 
         const now = new Date();
 
