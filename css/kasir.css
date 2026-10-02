@@ -141,6 +141,9 @@ textarea {
   background: #ecfdf5;
 }
 
+.order-type-group { display:flex; gap:6px; flex-wrap:wrap; }
+.order-type-group .chip { cursor:pointer; }
+
 .btn-hide-header,
 .btn-fullscreen {
   display: flex;
