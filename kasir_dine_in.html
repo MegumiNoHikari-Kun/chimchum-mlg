@@ -128,6 +128,16 @@
               <input type="text" id="kasirWaPelanggan" placeholder="08123...">
             </div>
             <div class="field--full">
+              <label class="field-label">Jenis Pesanan *</label>
+              <input type="hidden" id="kasirJenisPesanan" value="Offline">
+              <div class="order-type-group" id="orderTypeGroup">
+                <button type="button" class="chip chip--primary" data-type="Offline"    onclick="window.setJenisPesanan('Offline')">Offline</button>
+                <button type="button" class="chip" data-type="GrabFood"   onclick="window.setJenisPesanan('GrabFood')">GrabFood</button>
+                <button type="button" class="chip" data-type="ShopeeFood" onclick="window.setJenisPesanan('ShopeeFood')">ShopeeFood</button>
+                <button type="button" class="chip" data-type="GoFood"     onclick="window.setJenisPesanan('GoFood')">GoFood</button>
+              </div>
+            </div>
+            <div class="field--full">
               <label class="field-label" for="kasirMetodeBayar">Metode Pembayaran *</label>
               <select id="kasirMetodeBayar" onchange="window.toggleCashSection()">
                 <option value="Cash">Cash (Tunai)</option>
@@ -135,6 +145,28 @@
                 <option value="Transfer">Transfer Bank</option>
               </select>
             </div>
+            <div class="voucher-box" style="margin:8px 0;">
+            <label class="field-label" for="kasirVoucherCode">Voucher</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="kasirVoucherCode" placeholder="Kode voucher, mis. DISKON10"
+                     style="text-transform:uppercase;margin:0;flex:1;">
+              <button type="button" class="btn-secondary" id="btnApplyVoucher" onclick="window.applyVoucher()">Pakai</button>
+              <button type="button" class="btn-secondary" id="btnRemoveVoucher" onclick="window.removeVoucher()" style="display:none;">✕</button>
+            </div>
+            <small id="kasirVoucherMsg" style="display:block;margin-top:4px;font-size:12px;"></small>
+          </div>
+          
+          <div class="receipt-total" style="flex-direction:column;align-items:stretch;gap:4px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:#777;">
+              <span>Subtotal</span><span id="kasirSubtotal">Rp 0</span>
+            </div>
+            <div id="rowDiskon" style="display:none;justify-content:space-between;font-size:13px;color:#059669;">
+              <span id="labelDiskon">Diskon</span><span id="kasirDiskon">- Rp 0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span>Total</span><strong id="kasirGrandTotal">Rp 0</strong>
+            </div>
+          </div>
           </div>
 
           <div id="sectionKalkulatorCash" class="cash-box">
@@ -202,6 +234,11 @@
     </section>
 
   </main>
+
+  <!-- ===== SCRIPTS ===== -->
+
+  <!-- Layout toggle (header/fullscreen) + pagination menu -->
+  <script type="module" src="./js/module/kasir-ui.js"></script>
 
   <!-- ===== SCRIPTS ===== -->
 
