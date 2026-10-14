@@ -546,9 +546,9 @@ async function compressImage(file, maxWidth = 1600, quality = 0.75) {
                             }
                         );
 
-                        console.log(
-                            `📦 Compress: ${(file.size / 1024).toFixed(0)} KB → ${(compressedFile.size / 1024).toFixed(0)} KB`
-                        );
+                        // console.log(
+                        //     `📦 Compress: ${(file.size / 1024).toFixed(0)} KB → ${(compressedFile.size / 1024).toFixed(0)} KB`
+                        // );
 
                         resolve(compressedFile);
                     },
@@ -577,11 +577,11 @@ async function reduceProductStock(items) {
             continue;
         }
 
-        console.log('[STOCK] Mengurangi stok:', {
-            productId: item.id,
-            name: item.name,
-            qty: qty
-        });
+        // console.log('[STOCK] Mengurangi stok:', {
+        //     productId: item.id,
+        //     name: item.name,
+        //     qty: qty
+        // });
 
         const { data, error } = await supabase.rpc(
             'reduce_product_stock',
@@ -609,9 +609,9 @@ async function reduceProductStock(items) {
             );
         }
 
-        console.log(
-            `[STOCK] ${item.name}: berhasil dikurangi ${qty} pcs`
-        );
+        // console.log(
+        //     `[STOCK] ${item.name}: berhasil dikurangi ${qty} pcs`
+        // );
     }
 }
 
@@ -724,15 +724,15 @@ window.confirmAndSubmitOrder = async function() {
             throw orderError;
         }
     
-        console.log(
-            '[ORDER] Order berhasil dibuat:',
-            insertedOrder
-        );
+        // console.log(
+        //     '[ORDER] Order berhasil dibuat:',
+        //     insertedOrder
+        // );
     
         // Kurangi stok setelah order berhasil
         await reduceProductStock(pendingOrderData.items);
     
-        console.log('[STOCK] Semua stok berhasil diperbarui.');
+        // console.log('[STOCK] Semua stok berhasil diperbarui.');
     
     } catch (dbErr) {
         console.error('[ORDER] Gagal submit order / update stok:', {
