@@ -934,3 +934,77 @@ window.closeNotification = async function() {
 
     await loadProductsFromSupabase();
 };
+
+
+//TESTIMONI
+const TESTI_BUCKET = 'testimoni';
+
+async function loadTestimonials() {
+    // console.log('[TESTI] Mulai load testimonial...');
+    await authReady;
+    // console.log('[TESTI] authReady selesai, session:', await supabase.auth.getSession());
+
+    const container = document.getElementById('testi-scroll');
+    if (!container) {
+        console.warn('[TESTI] Container #testi-scroll tidak ditemukan di DOM.');
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase.storage
+            .from(TESTI_BUCKET)
+            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+
+        // console.log('[TESTI] Hasil list():', { data, error });
+
+        if (error) throw error;
+
+        const files = (data || []).filter(f => f.name && !f.name.endsWith('/'));
+        // console.log(`[TESTI] Jumlah file ditemukan: ${files.length}`, files.map(f => f.name));
+
+        if (files.length === 0) {
+            container.innerHTML = `
+                <div class="flex-shrink-0 w-full text-center py-10 text-slate-400 text-sm">
+                    Belum ada testimoni yang ditampilkan.
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = files.map(file => {
+            const { data: urlData } = supabase.storage.from(TESTI_BUCKET).getPublicUrl(file.name);
+            const url = urlData?.publicUrl || '';
+            // console.log('[TESTI] URL publik:', url);
+            return `
+                <div class="flex-shrink-0 snap-start w-56 sm:w-64">
+                    <div class="w-full aspect-square rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                        <img
+                            src="${url}"
+                            alt="Testimoni pelanggan"
+                            loading="lazy"
+                            class="w-full h-full object-contain p-[2px]"
+                            // onload="console.log('[TESTI] Berhasil load gambar:', this.src)"
+                            onerror="console.error('[TESTI] GAGAL load gambar:', this.src); this.closest('.flex-shrink-0').style.outline='2px solid red';"
+                        >
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (err) {
+        console.error('[TESTI] Error fatal saat load testimoni:', err);
+        container.innerHTML = `
+            <div class="flex-shrink-0 w-full text-center py-10 text-red-400 text-sm">
+                Gagal memuat testimoni.
+            </div>`;
+    }
+}
+
+function scrollTesti(direction) {
+    const container = document.getElementById('testi-scroll');
+    if (!container) return;
+    const amount = container.clientWidth * 0.8;
+    container.scrollBy({ left: direction === 'next' ? amount : -amount, behavior: 'smooth' });
+}
+
+document.getElementById('testi-prev')?.addEventListener('click', () => scrollTesti('prev'));
+document.getElementById('testi-next')?.addEventListener('click', () => scrollTesti('next'));
+
+loadTestimonials();
