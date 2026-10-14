@@ -86,6 +86,13 @@ async function loadProductsFromSupabase() {
         console.warn('Fallback to sample products:', e);
         window.products = sampleProducts;
     }
+    
+    // Urutkan berdasarkan nama produk A-Z (tidak peduli huruf besar/kecil)
+    window.products.sort((a, b) =>
+        String(a.name || '').localeCompare(String(b.name || ''), 'id', { sensitivity: 'base' })
+    );
+
+    
     if (typeof buildDynamicCategories === 'function') {
         buildDynamicCategories();
     }
