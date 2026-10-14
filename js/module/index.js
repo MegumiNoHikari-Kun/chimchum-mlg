@@ -87,9 +87,11 @@ async function loadProductsFromSupabase() {
         window.products = sampleProducts;
     }
     
-    // Urutkan berdasarkan nama produk A-Z (tidak peduli huruf besar/kecil)
+    // Urutkan: nama → kategori → qty
     window.products.sort((a, b) =>
-        String(a.name || '').localeCompare(String(b.name || ''), 'id', { sensitivity: 'base' })
+        productCollator.compare(String(a.name || ''), String(b.name || '')) ||
+        productCollator.compare(String(a.category || ''), String(b.category || '')) ||
+        Number(a.stock || 0) - Number(b.stock || 0)
     );
 
     
