@@ -88,9 +88,11 @@ async function loadProductsFromSupabase() {
     }
     
     // Urutkan: nama → kategori → qty
+    const collator = new Intl.Collator('id', { sensitivity: 'base', numeric: true });
+
     window.products.sort((a, b) =>
-        productCollator.compare(String(a.name || ''), String(b.name || '')) ||
-        productCollator.compare(String(a.category || ''), String(b.category || '')) ||
+        collator.compare(String(a.name || ''), String(b.name || '')) ||
+        collator.compare(String(a.category || ''), String(b.category || '')) ||
         Number(a.stock || 0) - Number(b.stock || 0)
     );
 
