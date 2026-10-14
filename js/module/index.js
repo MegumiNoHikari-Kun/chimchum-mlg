@@ -145,7 +145,7 @@ function renderProducts(items) {
                             </div>
                             <div class="p-5">
                                 <h4 class="font-bold text-slate-900 mb-1">${item.name}</h4>
-                                <p class="text-xs text-slate-500 line-clamp-2 mb-4">${item.desc}</p>
+                                <p class="text-xs text-slate-500 line-clamp-4 mb-4">${item.desc}</p>
                             </div>
                         </div>
                         <div class="p-5 pt-0 flex items-center justify-between">
