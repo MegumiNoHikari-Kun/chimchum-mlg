@@ -390,7 +390,7 @@ window.removeVoucher = () => removeVoucher(false);   // dipakai confirmAndSubmit
 
 // tetap diekspor ke window, karena confirmAndSubmitOrder memanggil window.removeVoucher()
 window.applyVoucher = applyVoucher;
-window.removeVoucher = removeVoucher;
+// window.removeVoucher = removeVoucher;
 
 // pasang event langsung, tidak bergantung pada onclick di HTML
 document.getElementById('voucher-apply-btn')?.addEventListener('click', applyVoucher);
@@ -401,17 +401,9 @@ document.getElementById('voucher-code')?.addEventListener('keydown', (e) => {
 
 window.proceedToPayment = function() {
     if (cart.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-8 text-slate-400">
-                <i class="fa-solid fa-basket-shopping text-2xl mb-1.5"></i>
-                <p class="text-[11px]">Keranjang Anda masih kosong</p>
-            </div>
-        `;
-        if (appliedVoucher) {
-            removeVoucher(false);   // ini memanggil updateCartUI lagi, aman karena appliedVoucher sudah null
-            return;
-        }
-        renderCartTotals(0);
+        showNotification('Perhatian', 'Keranjang Anda masih kosong.', 'warning');
+        return;
+    }
         return;
     }
     const name = document.getElementById('customer-name').value.trim();
