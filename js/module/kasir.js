@@ -126,9 +126,22 @@ async function initKasirDashboard() {
    LOAD PRODUCTS FROM SUPABASE
 ========================================================= */
 
-window.loadProducts = async () => {
-    // console.log('🟠 loadProducts() MULAI');
+// Helper pengurutan (taruh di atas window.loadProducts)
+const collator = new Intl.Collator('id', { sensitivity: 'base', numeric: true });
 
+function sortProducts(list) {
+    const getCategory = p => (p.category ?? p.kategori ?? '').toString().trim();
+    const getName     = p => (p.name ?? p.nama ?? '').toString().trim();
+    const getQty      = p => Number(p.stock ?? p.stok ?? 0);
+
+    return [...list].sort((a, b) =>
+        collator.compare(getCategory(a), getCategory(b)) ||
+        collator.compare(getName(a), getName(b)) ||
+        getQty(a) - getQty(b)
+    );
+}
+
+window.loadProducts = async () => {
     try {
         await authReady;
 
@@ -140,11 +153,10 @@ window.loadProducts = async () => {
             .from('products')
             .select('*');
 
-        // console.log('📦 DATA PRODUCTS:', data, '🔴 ERROR:', error);
-
         if (error) throw error;
 
-        cachedProducts = data || [];
+        // Urutkan: kategori → nama → qty
+        cachedProducts = sortProducts(data || []);
 
         const kategoriMap = new Map();
         cachedProducts.forEach(product => {
