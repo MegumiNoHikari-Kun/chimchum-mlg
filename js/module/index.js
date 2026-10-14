@@ -946,7 +946,7 @@ async function loadTestimonials() {
 
     const container = document.getElementById('testi-scroll');
     if (!container) {
-        console.warn('[TESTI] Container #testi-scroll tidak ditemukan di DOM.');
+        // console.warn('[TESTI] Container #testi-scroll tidak ditemukan di DOM.');
         return;
     }
 
@@ -975,15 +975,22 @@ async function loadTestimonials() {
             const url = urlData?.publicUrl || '';
             // console.log('[TESTI] URL publik:', url);
             return `
-                <div class="flex-shrink-0 snap-start w-56 sm:w-64">
+               <div class="flex-shrink-0 snap-start w-56 sm:w-64">
                     <div class="w-full aspect-square rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                        <!--
                         <img
                             src="${url}"
                             alt="Testimoni pelanggan"
                             loading="lazy"
                             class="w-full h-full object-contain p-[2px]"
-                            // onload="console.log('[TESTI] Berhasil load gambar:', this.src)"
                             onerror="console.error('[TESTI] GAGAL load gambar:', this.src); this.closest('.flex-shrink-0').style.outline='2px solid red';"
+                        >
+                        -->
+                        <img
+                            src="${url}"
+                            alt="Testimoni pelanggan"
+                            loading="lazy"
+                            class="w-full h-full object-contain p-[2px]"
                         >
                     </div>
                 </div>`;
