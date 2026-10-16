@@ -174,7 +174,7 @@ function renderProducts(items) {
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition ${isOutOfStock ? 'opacity-75 bg-slate-50' : ''}">
                     <div>
                         <div class="h-48 overflow-hidden relative">
-                            <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover hover:scale-105 transition duration-300 ${isOutOfStock ? 'grayscale' : ''}" onerror="this.src='https://placehold.co/500x300/ff6b35/ffffff?text=ChimChum'">
+                            <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover hover:scale-105 transition duration-300 ${isOutOfStock ?  ''}" onerror="this.src='https://placehold.co/500x300/ff6b35/ffffff?text=ChimChum'">
                             <span class="absolute top-3 left-3 bg-white/90 backdrop-blur text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-lg uppercase">${item.category}</span>
                             ${isOutOfStock 
                                 ? '<span class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center font-bold text-white text-sm">Stok Habis</span>'
