@@ -7,12 +7,15 @@ async function loadProductHpp() {
     const byId = {};
     const byName = {};
     try {
-        const { data, error } = await supabase.from('products').select('id, nama, name, hpp');
+        const { data, error } = await supabase.from('products').select('*');
         if (error) throw error;
+
+        if (data && data[0]) console.log('Kolom products:', Object.keys(data[0]));
+
         (data || []).forEach(p => {
             const hpp = Number(p.hpp || 0);
             if (p.id !== undefined && p.id !== null) byId[String(p.id)] = hpp;
-            const nm = (p.nama || p.name || '').toString().trim().toLowerCase();
+            const nm = (p.nama || p.name || p.nama_produk || p.title || '').toString().trim().toLowerCase();
             if (nm) byName[nm] = hpp;
         });
     } catch (e) {
