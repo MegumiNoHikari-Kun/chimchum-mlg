@@ -1,9 +1,9 @@
 import { supabase, authReady } from '../supabase.js';
 
 /* ================= STATE ================= */
-let allOrders = [];        // semua order valid (non-cancel), sudah diberi _jk (tanggal/jam WIB) & _cid
-let customers = new Map(); // semua pelanggan (seluruh riwayat)
-let view = null;           // hasil analisa periode terpilih
+let allOrders = [];        // semua order valid (non-cancel)
+let customers = new Map(); // pelanggan teridentifikasi (seluruh riwayat)
+let view = null;
 let segFilter = 'all';
 let custQuery = '';
 const charts = {};
@@ -11,6 +11,25 @@ const charts = {};
 const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const WD_MAP = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 const WINBACK_DAYS = 30;
+
+/* ============ KONFIGURASI TIPE PESANAN ============
+   Field di tabel `orders` yang dicek untuk mendeteksi tipe pesanan.
+   Kalau tipe pesanan Anda disimpan di kolom lain, tambahkan nama kolomnya di sini.
+   Aturan: mengandung "shopee" -> ShopeeFood, mengandung "grab" -> GrabFood, selain itu -> Offline. */
+const CHANNEL_FIELDS = ['order_type', 'tipe', 'type', 'channel', 'source', 'platform', 'payment_method'];
+const CHANNELS = {
+    offline:    { label: 'Offline',    cls: 'bg-slate-100 text-slate-700 border-slate-300' },
+    shopeefood: { label: 'ShopeeFood', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+    grabfood:   { label: 'GrabFood',   cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+};
+const chBadge = k => `<span class="px-2 py-0.5 rounded-full border text-[10px] font-semibold ${CHANNELS[k].cls}">${CHANNELS[k].label}</span>`;
+
+function channelOf(o) {
+    const raw = CHANNEL_FIELDS.map(f => String(o[f] || '').toLowerCase()).join(' ');
+    if (raw.includes('shopee')) return 'shopeefood';
+    if (raw.includes('grab')) return 'grabfood';
+    return 'offline';
+}
 
 /* ================= HELPERS ================= */
 const rupiah = n => 'Rp ' + Math.round(Number(n || 0)).toLocaleString('id-ID');
@@ -38,12 +57,75 @@ function normPhone(raw) {
     return d;
 }
 
-// Identitas pelanggan: no. HP (dinormalisasi) -> kalau kosong pakai nama
-function customerId(o) {
-    const ph = normPhone(o.phone);
-    if (ph.length >= 9) return 'p:' + ph;
-    const nm = String(o.customer_name || '').trim().toLowerCase();
-    return nm ? 'n:' + nm : 'anon:' + (o.id || o.order_id);
+/* ============ PENANGANAN NAMA TYPO (fuzzy matching) ============ */
+const HONORIFICS = new Set(['kak', 'kakak', 'kk', 'ka', 'mas', 'mbak', 'mba', 'bu', 'ibu', 'pak', 'bapak', 'bang', 'abang', 'om', 'tante', 'sis', 'bro']);
+// Nama yang sebenarnya bukan nama orang (nomor meja, dll) -> dianggap anonim
+const TABLE_LIKE = /^(meja|mj|table|tbl|no\.?|nomor|take\s?away|takeaway|ta|dine\s?in|dinein|walk\s?in|walkin|pelanggan|customer|umum|guest|tamu)\b/i;
+
+// "Kak Enny" -> "eni" ; huruf y disamakan dengan i, huruf kembar dilebur, sapaan dibuang
+function normName(raw) {
+    const s = String(raw || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z\s]/g, ' ');
+    const joined = s.split(/\s+/).filter(t => t && !HONORIFICS.has(t)).join('');
+    return joined.replace(/y/g, 'i').replace(/(.)\1+/g, '$1');
+}
+
+function lev(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+        const cur = [i];
+        for (let j = 1; j <= n; j++) {
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        }
+        prev = cur;
+    }
+    return prev[n];
+}
+
+// Nama pendek (≤4 huruf) harus sama persis setelah normalisasi (supaya "rina" ≠ "dina").
+// 5–8 huruf boleh beda 1 huruf, >8 huruf boleh beda 2 huruf. Huruf pertama harus sama.
+function similar(a, b) {
+    if (a === b) return true;
+    const L = Math.max(a.length, b.length);
+    if (L <= 4 || a[0] !== b[0]) return false;
+    const d = lev(a, b);
+    return L <= 8 ? d <= 1 : d <= 2;
+}
+
+/* Beri setiap order sebuah ID pelanggan (_cid):
+   1. Ada no. WA valid          -> p:<nomor>            (lintas channel)
+   2. Tidak ada WA, ada nama    -> n:<channel>:<nama>   (nama mirip digabung, hanya dalam channel yang sama)
+   3. Nama kosong / nomor meja  -> '' (anonim, tidak masuk analisa pelanggan) */
+function assignCustomerIds(orders) {
+    const nameCount = new Map();
+    orders.forEach(o => {
+        o._phone = normPhone(o.phone);
+        o._ch = channelOf(o);
+        const raw = String(o.customer_name || '').trim();
+        o._norm = raw && !TABLE_LIKE.test(raw) ? normName(raw) : '';
+        if (o._phone.length >= 9 || o._norm.length < 2) return;
+        const m = nameCount.get(o._ch) || new Map();
+        m.set(o._norm, (m.get(o._norm) || 0) + 1);
+        nameCount.set(o._ch, m);
+    });
+
+    const repMap = new Map();
+    nameCount.forEach((m, ch) => {
+        const reps = [];
+        [...m.entries()].sort((a, b) => b[1] - a[1]).forEach(([n]) => {
+            const rep = reps.find(r => similar(r, n));
+            if (rep) repMap.set(ch + '|' + n, rep);
+            else { reps.push(n); repMap.set(ch + '|' + n, n); }
+        });
+    });
+
+    orders.forEach(o => {
+        if (o._phone.length >= 9) o._cid = 'p:' + o._phone;
+        else if (o._norm.length >= 2) o._cid = 'n:' + o._ch + ':' + repMap.get(o._ch + '|' + o._norm);
+        else o._cid = '';
+    });
 }
 
 const itemName = i => String(i.nama || i.name || 'Tanpa Nama').trim();
@@ -62,8 +144,14 @@ const SEG_STYLE = {
 };
 const segBadge = seg => `<span class="px-2 py-0.5 rounded-full border text-[10px] font-semibold ${SEG_STYLE[seg][1]}">${SEG_STYLE[seg][0]}</span>`;
 
-function topItemOf(c, n = 2) {
-    return [...c.items.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, q]) => `${esc(k)} (${q}x)`).join(', ') || '-';
+function topItemsText(c, n = 2) {
+    return [...c.items.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, q]) => `${k} (${q}x)`).join(', ') || '-';
+}
+const topItemOf = (c, n = 2) => esc(topItemsText(c, n));
+
+// Variasi penulisan nama selain nama utama
+function otherVariants(c) {
+    return [...c.variants.values()].filter(v => v.n.toLowerCase() !== c.name.toLowerCase()).map(v => v.n);
 }
 
 /* ================= LOAD DATA ================= */
@@ -80,25 +168,38 @@ window.loadAnalytics = async function () {
 
     allOrders = orders
         .filter(o => (o.status || 'new').toLowerCase() !== 'cancel' && o.created_at)
-        .map(o => ({ ...o, _jk: jk(new Date(o.created_at)), _cid: customerId(o) }))
+        .map(o => ({ ...o, _jk: jk(new Date(o.created_at)) }))
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-    // Bangun profil pelanggan dari SELURUH riwayat
+    assignCustomerIds(allOrders);
+
     customers = new Map();
     allOrders.forEach(o => {
+        if (!o._cid) return;
         let c = customers.get(o._cid);
         if (!c) {
-            c = { id: o._cid, name: o.customer_name || '-', phone: normPhone(o.phone), orders: [], total: 0, items: new Map(), first: o.created_at, last: o.created_at };
+            c = { id: o._cid, name: '', phone: '', channel: 'offline', orders: [], total: 0, items: new Map(), first: o.created_at, last: o.created_at, variants: new Map(), channels: new Map() };
             customers.set(o._cid, c);
         }
         c.orders.push(o);
         c.total += Number(o.grand_total || 0);
         c.last = o.created_at;
-        if (o.customer_name) c.name = o.customer_name; // pakai nama terbaru
-        if (!c.phone) c.phone = normPhone(o.phone);
+        if (!c.phone) c.phone = o._phone;
+        const raw = String(o.customer_name || '').trim();
+        if (raw) {
+            const k = raw.toLowerCase();
+            const v = c.variants.get(k) || { n: raw, c: 0 };
+            v.c++;
+            c.variants.set(k, v);
+        }
+        c.channels.set(o._ch, (c.channels.get(o._ch) || 0) + 1);
         (Array.isArray(o.items) ? o.items : []).forEach(i => {
             c.items.set(itemName(i), (c.items.get(itemName(i)) || 0) + itemQty(i));
         });
+    });
+    customers.forEach(c => {
+        c.name = [...c.variants.values()].sort((a, b) => b.c - a.c)[0]?.n || '-';
+        c.channel = [...c.channels.entries()].sort((a, b) => b[1] - a[1])[0][0];
     });
 
     analyze();
@@ -112,34 +213,41 @@ function periodStart() {
     return jk(new Date(Date.now() - (parseInt(v, 10) - 1) * 864e5)).date;
 }
 
+const custOf = o => customers.get(o._cid);
+const isRepOrder = o => { const c = custOf(o); return !!c && c.orders.length >= 2; };
+
 function analyze() {
     const start = periodStart();
-    const orders = allOrders.filter(o => o._jk.date >= start);
+    const chSel = document.getElementById('channelSelect').value;
+    const periodOrders = allOrders.filter(o => o._jk.date >= start);
+    const orders = chSel === 'all' ? periodOrders : periodOrders.filter(o => o._ch === chSel);
 
-    // Pelanggan aktif di periode
-    const activeIds = new Set(orders.map(o => o._cid));
-    const active = [...activeIds].map(id => customers.get(id));
-    const isRepeat = c => c.orders.length >= 2;
-
-    const newCust = active.filter(c => !isRepeat(c));
-    const repCust = active.filter(isRepeat);
+    const identified = orders.filter(o => o._cid);
+    const anonCount = orders.length - identified.length;
+    const active = [...new Set(identified.map(o => o._cid))].map(id => customers.get(id));
+    const newCust = active.filter(c => c.orders.length < 2);
+    const repCust = active.filter(c => c.orders.length >= 2);
 
     const revenue = orders.reduce((s, o) => s + Number(o.grand_total || 0), 0);
-    const revRepeat = orders.filter(o => isRepeat(customers.get(o._cid))).reduce((s, o) => s + Number(o.grand_total || 0), 0);
-    const ordersRepeat = orders.filter(o => isRepeat(customers.get(o._cid))).length;
+    const repOrders = orders.filter(isRepOrder);
+    const revRepeat = repOrders.reduce((s, o) => s + Number(o.grand_total || 0), 0);
 
-    // Statistik menu
-    const menu = new Map();
-    const pairs = new Map();
-    const hours = Array(24).fill(0);
-    const days = Array(7).fill(0);
-    const pay = new Map();
+    // Perbandingan channel (selalu semua channel di periode terpilih)
+    const chStats = Object.keys(CHANNELS).map(k => {
+        const os = periodOrders.filter(o => o._ch === k);
+        const ids = new Set(os.filter(o => o._cid).map(o => o._cid));
+        const rep = [...ids].filter(id => customers.get(id).orders.length >= 2).length;
+        const rev = os.reduce((s, o) => s + Number(o.grand_total || 0), 0);
+        return { key: k, orders: os.length, rev, aov: os.length ? rev / os.length : 0, cust: ids.size, rep, anon: os.filter(o => !o._cid).length };
+    });
+
+    const menu = new Map(), pairs = new Map(), pay = new Map();
+    const hours = Array(24).fill(0), days = Array(7).fill(0);
 
     orders.forEach(o => {
-        const rep = isRepeat(customers.get(o._cid));
-        const its = Array.isArray(o.items) ? o.items : [];
+        const rep = isRepOrder(o);
         const names = new Set();
-        its.forEach(i => {
+        (Array.isArray(o.items) ? o.items : []).forEach(i => {
             const n = itemName(i);
             const m = menu.get(n) || { name: n, qty: 0, revenue: 0, orders: 0, repQty: 0 };
             m.qty += itemQty(i);
@@ -162,9 +270,10 @@ function analyze() {
         pay.set(pm, p);
     });
 
-    view = { start, orders, active, newCust, repCust, revenue, revRepeat, ordersRepeat, menu: [...menu.values()], pairs, hours, days, pay };
+    view = { start, chSel, orders, anonCount, active, newCust, repCust, revenue, revRepeat, ordersRepeat: repOrders.length, chStats, menu: [...menu.values()], pairs, hours, days, pay };
 
     renderKPI();
+    renderChannel();
     renderTrend();
     renderSplit();
     renderMenu();
@@ -174,6 +283,7 @@ function analyze() {
     renderWinback();
     renderSegFilter();
     renderCustomers();
+    renderMerged();
 }
 
 /* ================= RENDER ================= */
@@ -181,15 +291,16 @@ function renderKPI() {
     const v = view;
     const nOrders = v.orders.length;
     const nCust = v.active.length;
+    const identifiedOrders = nOrders - v.anonCount;
     const cards = [
-        { t: 'Pelanggan Aktif', val: nCust, sub: 'unik di periode ini', icon: 'fa-users', cls: 'bg-slate-100 text-slate-600' },
+        { t: 'Pelanggan Aktif', val: nCust, sub: v.anonCount ? `${v.anonCount} order tanpa identitas tidak dihitung` : 'unik di periode ini', icon: 'fa-users', cls: 'bg-slate-100 text-slate-600' },
         { t: 'Pelanggan Baru', val: v.newCust.length, sub: `${pct(v.newCust.length, nCust)}% dari pelanggan`, icon: 'fa-user-plus', cls: 'bg-sky-50 text-sky-600' },
         { t: 'Pelanggan Repeat', val: v.repCust.length, sub: `${pct(v.repCust.length, nCust)}% dari pelanggan`, icon: 'fa-repeat', cls: 'bg-emerald-50 text-emerald-600' },
         { t: 'Repeat Rate', val: pct(v.repCust.length, nCust) + '%', sub: 'target sehat: > 25–30%', icon: 'fa-chart-line', cls: 'bg-orange-50 text-orange-600' },
-        { t: 'Total Order', val: nOrders, sub: `${pct(v.ordersRepeat, nOrders)}% dari repeat`, icon: 'fa-receipt', cls: 'bg-purple-50 text-purple-600' },
+        { t: 'Total Order', val: nOrders, sub: `${pct(v.ordersRepeat, identifiedOrders)}% dari pelanggan repeat`, icon: 'fa-receipt', cls: 'bg-purple-50 text-purple-600' },
         { t: 'Omzet', val: rupiah(v.revenue), sub: `${pct(v.revRepeat, v.revenue)}% dari repeat`, icon: 'fa-sack-dollar', cls: 'bg-amber-50 text-amber-600' },
         { t: 'Rata-rata / Order (AOV)', val: rupiah(nOrders ? v.revenue / nOrders : 0), sub: 'nilai keranjang', icon: 'fa-basket-shopping', cls: 'bg-indigo-50 text-indigo-600' },
-        { t: 'Order / Pelanggan', val: nCust ? (nOrders / nCust).toFixed(2) : '0', sub: 'frekuensi beli', icon: 'fa-arrows-rotate', cls: 'bg-rose-50 text-rose-600' }
+        { t: 'Order / Pelanggan', val: nCust ? (identifiedOrders / nCust).toFixed(2) : '0', sub: 'frekuensi beli', icon: 'fa-arrows-rotate', cls: 'bg-rose-50 text-rose-600' }
     ];
     document.getElementById('kpiCards').innerHTML = cards.map(c => `
         <div class="rounded-xl p-4 border border-slate-200 flex items-center justify-between gap-2">
@@ -200,6 +311,20 @@ function renderKPI() {
             </div>
             <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.cls}"><i class="fa-solid ${c.icon}"></i></div>
         </div>`).join('');
+}
+
+function renderChannel() {
+    const body = document.getElementById('channelBody');
+    body.innerHTML = view.chStats.map(s => `
+        <tr class="hover:bg-slate-50/80">
+            <td class="p-3">${chBadge(s.key)}</td>
+            <td class="p-3 font-semibold">${s.orders}</td>
+            <td class="p-3 text-emerald-600 font-semibold">${rupiah(s.rev)}</td>
+            <td class="p-3 text-slate-600">${rupiah(s.aov)}</td>
+            <td class="p-3">${s.cust}</td>
+            <td class="p-3">${s.rep} <span class="text-slate-400">(${pct(s.rep, s.cust)}%)</span></td>
+            <td class="p-3 text-slate-500">${s.anon}</td>
+        </tr>`).join('');
 }
 
 function makeChart(id, config) {
@@ -216,8 +341,10 @@ function renderTrend() {
     const map = new Map();
     view.orders.forEach(o => {
         const k = bucket(o);
-        const r = map.get(k) || { baru: 0, repeat: 0 };
-        if (customers.get(o._cid).orders.length >= 2) r.repeat++; else r.baru++;
+        const r = map.get(k) || { baru: 0, repeat: 0, anon: 0 };
+        if (!o._cid) r.anon++;
+        else if (isRepOrder(o)) r.repeat++;
+        else r.baru++;
         map.set(k, r);
     });
     const keys = [...map.keys()].sort();
@@ -227,7 +354,8 @@ function renderTrend() {
             labels: keys.map(k => (byMonth ? k : k.slice(8) + '/' + k.slice(5, 7))),
             datasets: [
                 { label: 'Pelanggan Baru', data: keys.map(k => map.get(k).baru), backgroundColor: '#38bdf8' },
-                { label: 'Pelanggan Repeat', data: keys.map(k => map.get(k).repeat), backgroundColor: '#10b981' }
+                { label: 'Pelanggan Repeat', data: keys.map(k => map.get(k).repeat), backgroundColor: '#10b981' },
+                { label: 'Tanpa Identitas', data: keys.map(k => map.get(k).anon), backgroundColor: '#cbd5e1' }
             ]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { position: 'bottom' } } }
@@ -302,9 +430,7 @@ function renderPay() {
         : `<div class="text-slate-400">Belum ada data.</div>`;
 }
 
-function waLink(phone, text) {
-    return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : '';
-}
+const waLink = (phone, text) => (phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : '');
 
 function renderWinback() {
     const now = Date.now();
@@ -319,12 +445,14 @@ function renderWinback() {
         const link = waLink(c.phone, `Halo kak ${c.name}, sudah lama nih tidak mampir ke ChimChum. Ada promo spesial untuk kakak, yuk order lagi! 😊`);
         return `
         <tr class="hover:bg-slate-50/80">
-            <td class="p-3 font-semibold text-slate-800">${esc(c.name)}</td>
+            <td class="p-3 font-semibold text-slate-800">${esc(c.name)} ${chBadge(c.channel)}</td>
             <td class="p-3">${c.orders.length}x</td>
             <td class="p-3 text-emerald-600 font-semibold">${rupiah(c.total)}</td>
             <td class="p-3 text-slate-600">${fmtDate(c.last)} <span class="text-rose-500">(${days} hari lalu)</span></td>
             <td class="p-3 text-slate-600">${topItemOf(c)}</td>
-            <td class="p-3">${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-semibold transition"><i class="fa-brands fa-whatsapp"></i> WA</a>` : '<span class="text-slate-300">-</span>'}</td>
+            <td class="p-3">${link
+                ? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg font-semibold transition"><i class="fa-brands fa-whatsapp"></i> WA</a>`
+                : '<span class="text-[10px] text-slate-400">Tidak ada no. WA (via aplikasi)</span>'}</td>
         </tr>`;
     }).join('');
 }
@@ -340,7 +468,11 @@ function renderSegFilter() {
 function filteredCustomers() {
     let list = view.active.map(c => ({ c, seg: segmentOf(c.orders.length) }));
     if (segFilter !== 'all') list = list.filter(x => x.seg === segFilter);
-    if (custQuery) list = list.filter(({ c }) => c.name.toLowerCase().includes(custQuery) || c.phone.includes(custQuery.replace(/\D/g, '') || '\u0000'));
+    if (custQuery) {
+        const digits = custQuery.replace(/\D/g, '');
+        list = list.filter(({ c }) =>
+            [...c.variants.values()].some(v => v.n.toLowerCase().includes(custQuery)) || (digits && c.phone.includes(digits)));
+    }
     return list.sort((a, b) => b.c.total - a.c.total);
 }
 
@@ -348,10 +480,13 @@ function renderCustomers() {
     const list = filteredCustomers();
     const body = document.getElementById('custBody');
     const shown = list.slice(0, 100);
-    body.innerHTML = shown.length ? shown.map(({ c, seg }) => `
+    body.innerHTML = shown.length ? shown.map(({ c, seg }) => {
+        const vars = otherVariants(c);
+        return `
         <tr class="hover:bg-slate-50/80">
-            <td class="p-3 font-semibold text-slate-800">${esc(c.name)}</td>
-            <td class="p-3 text-slate-600">${c.phone ? `<a class="hover:underline text-emerald-600" target="_blank" rel="noopener noreferrer" href="https://wa.me/${c.phone}">${esc(c.phone)}</a>` : '-'}</td>
+            <td class="p-3 font-semibold text-slate-800">${esc(c.name)}${vars.length ? `<div class="font-normal text-[10px] text-amber-600" title="Nama-nama ini digabung otomatis">≈ ${esc(vars.join(', '))}</div>` : ''}</td>
+            <td class="p-3">${chBadge(c.channel)}</td>
+            <td class="p-3 text-slate-600">${c.phone ? `<a class="hover:underline text-emerald-600" target="_blank" rel="noopener noreferrer" href="https://wa.me/${c.phone}">${esc(c.phone)}</a>` : '<span class="text-slate-300">-</span>'}</td>
             <td class="p-3">${segBadge(seg)}</td>
             <td class="p-3 font-semibold">${c.orders.length}x</td>
             <td class="p-3 text-emerald-600 font-semibold">${rupiah(c.total)}</td>
@@ -359,8 +494,23 @@ function renderCustomers() {
             <td class="p-3 text-slate-500">${fmtDate(c.first)}</td>
             <td class="p-3 text-slate-500">${fmtDate(c.last)}</td>
             <td class="p-3 text-slate-600 max-w-xs">${topItemOf(c)}</td>
-        </tr>`).join('') : `<tr><td colspan="9" class="text-center py-8 text-slate-400">Tidak ada pelanggan ditemukan.</td></tr>`;
+        </tr>`;
+    }).join('') : `<tr><td colspan="10" class="text-center py-8 text-slate-400">Tidak ada pelanggan ditemukan.</td></tr>`;
     document.getElementById('custFooter').textContent = `Menampilkan ${shown.length} dari ${list.length} pelanggan` + (list.length > 100 ? ' (gunakan pencarian atau Export CSV untuk data lengkap)' : '');
+}
+
+// Daftar nama yang digabung otomatis, supaya bisa dicek kebenarannya
+function renderMerged() {
+    const merged = [...customers.values()].filter(c => otherVariants(c).length > 0).sort((a, b) => b.orders.length - a.orders.length);
+    document.getElementById('mergedCount').textContent = merged.length;
+    document.getElementById('mergedBody').innerHTML = merged.length
+        ? merged.map(c => `
+            <tr class="hover:bg-slate-50/80">
+                <td class="p-3">${chBadge(c.channel)}</td>
+                <td class="p-3 font-semibold text-slate-800">${[...c.variants.values()].sort((a, b) => b.c - a.c).map(v => `${esc(v.n)} <span class="font-normal text-slate-400">(${v.c}x)</span>`).join(' &nbsp;·&nbsp; ')}</td>
+                <td class="p-3 font-semibold">${c.orders.length}x</td>
+            </tr>`).join('')
+        : `<tr><td colspan="3" class="text-center py-6 text-slate-400">Tidak ada nama yang digabung otomatis.</td></tr>`;
 }
 
 /* ================= EVENTS ================= */
@@ -369,9 +519,9 @@ window.setSegFilter = k => { segFilter = k; renderSegFilter(); renderCustomers()
 window.exportCustomersCSV = function () {
     if (!view) return;
     const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = [['Nama', 'WhatsApp', 'Segmen', 'Jumlah Order', 'Total Belanja', 'Order Pertama', 'Order Terakhir', 'Menu Favorit']];
+    const rows = [['Nama', 'Variasi Nama', 'Channel', 'WhatsApp', 'Segmen', 'Jumlah Order', 'Total Belanja', 'Order Pertama', 'Order Terakhir', 'Menu Favorit']];
     [...customers.values()].sort((a, b) => b.total - a.total).forEach(c => {
-        rows.push([c.name, c.phone, SEG_STYLE[segmentOf(c.orders.length)][0], c.orders.length, Math.round(c.total), fmtDate(c.first), fmtDate(c.last), topItemOf(c, 3).replace(/&amp;/g, '&')]);
+        rows.push([c.name, otherVariants(c).join(', '), CHANNELS[c.channel].label, c.phone, SEG_STYLE[segmentOf(c.orders.length)][0], c.orders.length, Math.round(c.total), fmtDate(c.first), fmtDate(c.last), topItemsText(c, 3)]);
     });
     const csv = '\uFEFF' + rows.map(r => r.map(q).join(',')).join('\n');
     const a = document.createElement('a');
@@ -381,7 +531,8 @@ window.exportCustomersCSV = function () {
     URL.revokeObjectURL(a.href);
 };
 
-document.getElementById('periodSelect').addEventListener('change', () => { if (allOrders) analyze(); });
+document.getElementById('periodSelect').addEventListener('change', () => allOrders.length && analyze());
+document.getElementById('channelSelect').addEventListener('change', () => allOrders.length && analyze());
 document.getElementById('menuSort').addEventListener('change', () => view && renderMenu());
 document.getElementById('custSearch').addEventListener('input', e => { custQuery = (e.target.value || '').toLowerCase().trim(); view && renderCustomers(); });
 
