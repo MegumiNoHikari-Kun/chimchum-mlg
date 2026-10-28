@@ -425,38 +425,37 @@ window.proceedToPayment = function() {
     }
 
     const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    
     const randomNum = Math.floor(100 + Math.random() * 9000);
+    
+    // 1. Ambil komponen waktu Indonesia menggunakan Intl.DateTimeFormat (Hanya 1 deklarasi 'p')
     const p = Object.fromEntries(
       new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Jakarta',
         year: '2-digit', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hourCycle: 'h23'
       }).formatToParts(now).map(x => [x.type, x.value])
     );
-    const orderId = `ORD-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
+
+    // Format string untuk created_at di Supabase: YYYY-MM-DDTHH:mm:ss+07:00
+    // (Perlu 4-digit tahun untuk ISO string database, ambil dari '20' + p.year atau DateTimeFormat 'numeric')
+    const pFull = Object.fromEntries(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hourCycle: 'h23'
+      }).formatToParts(now).map(x => [x.type, x.value])
+    );
+
+    const jakartaISOString = `${pFull.year}-${pFull.month}-${pFull.day}T${pFull.hour}:${pFull.minute}:${pFull.second}+07:00`;
+
+    // 2. Buat Order ID berbasis waktu Jakarta (WIB)
+    const orderId = `ORD-${p.year}${p.month}${p.day}${p.hour}${p.minute}-${randomNum}`;
+    
     const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     const discount = computeVoucherDiscount(appliedVoucher, subtotal);
     const grandTotal = Math.max(0, subtotal - discount);
-
-    // 1. Ambil komponen waktu Indonesia menggunakan Intl.DateTimeFormat
-    const p = Object.fromEntries(
-        new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Asia/Jakarta',
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', second: '2-digit',
-            hourCycle: 'h23'
-        }).formatToParts(now).map(x => [x.type, x.value])
-    );
-
-    // Format string menjadi: YYYY-MM-DDTHH:mm:ss+07:00
-    const jakartaISOString = `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+07:00`;
 
     pendingOrderData = {
         order_id: orderId,
@@ -471,7 +470,7 @@ window.proceedToPayment = function() {
         payment_method: paymentMethod,
         order_type: 'Website',
         status: 'new',
-        created_at: jakartaISOString // <-- Uncomment dan gunakan variabel ini
+        created_at: jakartaISOString
     };
 
     const instructionBox = document.getElementById('payment-instruction-box');
