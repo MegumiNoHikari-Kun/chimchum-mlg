@@ -445,9 +445,18 @@ window.proceedToPayment = function() {
     const discount = computeVoucherDiscount(appliedVoucher, subtotal);
     const grandTotal = Math.max(0, subtotal - discount);
 
-    const jakartaOffset = 7 * 60;
-    const localTime = new Date(now.getTime() + (now.getTimezoneOffset() + jakartaOffset) * 60000);
-    const jakartaISOString = localTime.toISOString().replace('Z', '+07:00');
+    // 1. Ambil komponen waktu Indonesia menggunakan Intl.DateTimeFormat
+    const p = Object.fromEntries(
+        new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hourCycle: 'h23'
+        }).formatToParts(now).map(x => [x.type, x.value])
+    );
+
+    // Format string menjadi: YYYY-MM-DDTHH:mm:ss+07:00
+    const jakartaISOString = `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+07:00`;
 
     pendingOrderData = {
         order_id: orderId,
@@ -462,7 +471,7 @@ window.proceedToPayment = function() {
         payment_method: paymentMethod,
         order_type: 'Website',
         status: 'new',
-        // created_at: jakartaISOString
+        created_at: jakartaISOString // <-- Uncomment dan gunakan variabel ini
     };
 
     const instructionBox = document.getElementById('payment-instruction-box');
