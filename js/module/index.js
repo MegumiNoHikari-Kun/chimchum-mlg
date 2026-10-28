@@ -433,6 +433,13 @@ window.proceedToPayment = function() {
     const ss = String(now.getSeconds()).padStart(2, '0');
     
     const randomNum = Math.floor(100 + Math.random() * 9000);
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jakarta',
+        year: '2-digit', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).formatToParts(now).map(x => [x.type, x.value])
+    );
     const orderId = `ORD-${yy}${mm}${dd}${hh}${min}-${randomNum}`;
     const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
     const discount = computeVoucherDiscount(appliedVoucher, subtotal);
@@ -455,7 +462,7 @@ window.proceedToPayment = function() {
         payment_method: paymentMethod,
         order_type: 'Website',
         status: 'new',
-        created_at: jakartaISOString
+        // created_at: jakartaISOString
     };
 
     const instructionBox = document.getElementById('payment-instruction-box');
