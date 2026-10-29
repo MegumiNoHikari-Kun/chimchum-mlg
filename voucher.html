@@ -10,78 +10,134 @@
   <link rel="stylesheet" href="./css/kasir.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* ===== FIX SCROLL (override kasir.css yang mengunci tinggi layar) ===== */
-    html, body { height:auto !important; min-height:100%; overflow-y:auto !important; overflow-x:hidden; }
+    /* ===== LAYOUT: satu layar penuh, hanya daftar voucher yang scroll ===== */
+    html, body { height:100% !important; margin:0; overflow:hidden !important; }
     body { background:#f8fafc; font-family:'Poppins',sans-serif; color:#1e293b; }
-    main.container { max-width:1100px; margin:0 auto; padding:20px 16px 48px; height:auto !important; max-height:none !important; overflow:visible !important; }
-    .table-wrap { max-height:none !important; }
+    main.container { height:100% !important; max-height:none !important; max-width:1200px; margin:0 auto; padding:12px 14px; box-sizing:border-box; overflow:hidden !important; display:flex; flex-direction:column; }
+    .v-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 1px 3px rgba(15,23,42,.06); overflow:hidden; }
     tr[hidden] { display:none !important; }
 
-    /* ===== TAMPILAN ===== */
-    main.container .card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
-    main.container h3 { font-size:15px; font-weight:600; margin:0; color:#1e293b; }
-    main.container h3 i { color:#f97316; margin-right:6px; }
-    main.container .card p { font-size:12px; color:#64748b; margin:2px 0 0; }
-    .orders-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 18px; margin-bottom:12px; }
-
-    .v-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
-    .v-grid label { display:block; }
-    .v-grid .field-label { display:block; font-size:12px; font-weight:500; color:#475569; margin-bottom:4px; }
-    .v-grid input, .v-grid select { width:100%; margin:0; box-sizing:border-box; padding:9px 12px; border:1px solid #e2e8f0; border-radius:10px; font:inherit; font-size:13px; background:#fff; transition:border-color .15s, box-shadow .15s; }
-    .v-grid input:focus, .v-grid select:focus { outline:none; border-color:#f97316; box-shadow:0 0 0 3px rgba(249,115,22,.15); }
-    .v-actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-    .v-badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; }
-    .v-btn { padding:6px 10px; font-size:12px; border:1px solid #e2e8f0; background:#f1f5f9; border-radius:8px; cursor:pointer; transition:background .15s; }
-    .v-btn:hover { background:#e2e8f0; }
-    .v-btn--danger { color:#dc2626; }
-    .v-btn--danger:hover { background:#fee2e2; }
-    .v-hint { font-size:11px; color:#94a3b8; margin-top:2px; display:block; }
-
-    /* Tabel */
-    .table-wrap { overflow-x:auto; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
-    .table-wrap table { width:100%; border-collapse:collapse; font-size:13px; }
-    .table-wrap thead th { background:#fff7ed; color:#334155; font-size:12px; font-weight:600; text-align:left; padding:12px 14px; white-space:nowrap; }
-    .table-wrap tbody td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
-    .table-wrap tbody tr:hover { background:#f8fafc; }
-    .table-empty { text-align:center; color:#94a3b8; padding:32px 14px !important; }
-
-    /* Cari + pagination */
+    /* ===== HEADER / TOOLBAR ===== */
+    .v-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 14px; border-bottom:1px solid #f1f5f9; }
+    .v-title { font-size:15px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px; }
+    .v-title i { color:#f97316; }
+    .v-count { font-size:11px; font-weight:500; background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:999px; }
     .v-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .v-search { position:relative; }
     .v-search i { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:12px; pointer-events:none; }
-    .v-search input { padding:8px 12px 8px 30px; width:230px; max-width:100%; border:1px solid #e2e8f0; border-radius:10px; font:inherit; font-size:12px; background:#f8fafc; }
+    .v-search input { padding:8px 12px 8px 30px; width:240px; max-width:100%; border:1px solid #e2e8f0; border-radius:10px; font:inherit; font-size:12px; background:#f8fafc; box-sizing:border-box; }
     .v-search input:focus { outline:none; border-color:#f97316; background:#fff; box-shadow:0 0 0 3px rgba(249,115,22,.15); }
-    .v-pager { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 4px; font-size:12px; color:#64748b; }
-    .v-pager select { border:1px solid #e2e8f0; border-radius:8px; padding:4px 8px; font:inherit; font-size:12px; background:#fff; margin-left:8px; }
-    .v-pager button { padding:6px 12px; border:1px solid #e2e8f0; background:#fff; border-radius:8px; font:inherit; font-size:12px; font-weight:500; cursor:pointer; }
+    .v-iconbtn { width:34px; height:34px; border:1px solid #e2e8f0; background:#fff; border-radius:10px; cursor:pointer; color:#475569; }
+    .v-iconbtn:hover { background:#f1f5f9; }
+    .v-addbtn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border:0; border-radius:10px; background:#f97316; color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+    .v-addbtn:hover { background:#ea580c; }
+
+    /* ===== TABEL (area scroll) ===== */
+    .v-scroll { flex:1; min-height:0; overflow:auto; }
+    .v-panel table { width:100%; border-collapse:collapse; font-size:12px; }
+    .v-panel thead th { position:sticky; top:0; z-index:1; background:#fff7ed; color:#334155; font-size:11px; font-weight:600; text-align:left; padding:9px 12px; white-space:nowrap; box-shadow:0 1px 0 #fed7aa; }
+    .v-panel tbody td { padding:8px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .v-panel tbody tr:hover { background:#f8fafc; }
+    .table-empty { text-align:center; color:#94a3b8; padding:32px 12px !important; }
+    #vNoResult { display:none; text-align:center; color:#94a3b8; font-size:13px; padding:28px 0; }
+    .v-badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; }
+    .v-btn { padding:4px 9px; font-size:11px; border:1px solid #e2e8f0; background:#f1f5f9; border-radius:8px; cursor:pointer; }
+    .v-btn:hover { background:#e2e8f0; }
+    .v-btn--danger { color:#dc2626; }
+    .v-btn--danger:hover { background:#fee2e2; }
+
+    /* ===== PAGINATION ===== */
+    .v-pager { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:8px 14px; border-top:1px solid #f1f5f9; background:#fff; font-size:11px; color:#64748b; }
+    .v-pager select { border:1px solid #e2e8f0; border-radius:8px; padding:3px 6px; font:inherit; font-size:11px; background:#fff; margin-left:8px; }
+    .v-pager button { padding:5px 11px; border:1px solid #e2e8f0; background:#fff; border-radius:8px; font:inherit; font-size:11px; font-weight:500; cursor:pointer; }
     .v-pager button:hover:not(:disabled) { background:#f1f5f9; }
     .v-pager button:disabled { opacity:.4; cursor:not-allowed; }
-    #vNoResult { display:none; text-align:center; color:#94a3b8; font-size:13px; padding:24px 0; }
+
+    /* ===== MODAL FORM TAMBAH / EDIT ===== */
+    .v-modal { position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; padding:14px; z-index:50; }
+    .v-modal.open { display:flex; }
+    .v-modal__box { background:#fff; border-radius:16px; width:min(720px,100%); max-height:92vh; overflow:auto; padding:16px 18px 18px; box-shadow:0 20px 50px rgba(15,23,42,.25); }
+    .v-modal__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .v-modal__head h3 { font-size:15px; font-weight:600; margin:0; }
+    .v-modal__head h3 i { color:#f97316; margin-right:6px; }
+    .v-close { border:0; background:transparent; font-size:18px; color:#94a3b8; cursor:pointer; padding:4px 8px; }
+    .v-close:hover { color:#475569; }
+    .v-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px 12px; }
+    .v-grid label { display:block; }
+    .v-grid .field-label { display:block; font-size:11px; font-weight:500; color:#475569; margin-bottom:3px; }
+    .v-grid input, .v-grid select { width:100%; margin:0; box-sizing:border-box; padding:8px 10px; border:1px solid #e2e8f0; border-radius:10px; font:inherit; font-size:12px; background:#fff; }
+    .v-grid input:focus, .v-grid select:focus { outline:none; border-color:#f97316; box-shadow:0 0 0 3px rgba(249,115,22,.15); }
+    .v-hint { font-size:10px; color:#94a3b8; margin-top:2px; display:block; }
+    .v-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
   </style>
 </head>
 <body>
 
-  <!-- <header class="app-header">
-    <a class="app-header__logo" href="kasir.html">
-      <img src="./assets/logo-transparan.png" alt="Logo" onerror="this.style.display='none'">
-      <h2 class="app-header__title">ChimChum <span>Kelola Voucher</span></h2>
-    </a>
-    <div class="header-controls">
-      <a href="kasir.html" class="btn-secondary" style="text-decoration:none;">
-        <i class="fa-solid fa-arrow-left"></i> Kembali ke Kasir
-      </a>
-    </div>
-  </header> -->
-
   <main class="container">
+    <!-- DAFTAR VOUCHER (memenuhi layar; hanya area tabel yang scroll) -->
+    <section class="v-panel">
+      <div class="v-head">
+        <h3 class="v-title"><i class="fa-solid fa-ticket"></i> Voucher <span class="v-count" id="vCount">0</span></h3>
+        <div class="v-tools">
+          <div class="v-search">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="vSearch" placeholder="Cari kode, diskon, status...">
+          </div>
+          <button type="button" class="v-iconbtn" title="Refresh" onclick="window.loadVouchers()"><i class="fa-solid fa-rotate-right"></i></button>
+          <button type="button" class="v-addbtn" id="vOpenAdd"><i class="fa-solid fa-plus"></i> Tambah Voucher</button>
+        </div>
+      </div>
 
-    <!-- FORM -->
-    <section class="card" style="padding:18px;margin-bottom:18px;">
-      <h3 id="voucherFormTitle"><i class="fa-solid fa-ticket"></i> Tambah Voucher</h3>
+      <div class="v-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Diskon</th>
+              <th>Min. Belanja</th>
+              <th>Pemakaian</th>
+              <th>Periode</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="voucherTableBody">
+            <tr><td colspan="7" class="table-empty">Memuat voucher...</td></tr>
+          </tbody>
+        </table>
+        <div id="vNoResult">Tidak ada voucher yang cocok dengan pencarian.</div>
+      </div>
+
+      <div class="v-pager">
+        <div>
+          <span id="vPagerInfo">-</span>
+          <select id="vPerPage">
+            <option value="10">10 / halaman</option>
+            <option value="25" selected>25 / halaman</option>
+            <option value="50">50 / halaman</option>
+            <option value="100">100 / halaman</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button type="button" id="vPrev">Prev</button>
+          <span id="vPageLabel" style="padding:0 6px;font-weight:500;color:#334155;">Halaman 1 dari 1</span>
+          <button type="button" id="vNext">Next</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL FORM (ID semua field tetap sama agar voucher.js tetap jalan) -->
+  <div class="v-modal" id="vModal">
+    <div class="v-modal__box">
+      <div class="v-modal__head">
+        <h3 id="voucherFormTitle"><i class="fa-solid fa-ticket"></i> Tambah Voucher</h3>
+        <button type="button" class="v-close" id="vClose" title="Tutup">&times;</button>
+      </div>
 
       <input type="hidden" id="vId">
 
-      <div class="v-grid" style="margin-top:12px;">
+      <div class="v-grid">
         <label>
           <span class="field-label">Kode *</span>
           <input type="text" id="vCode" placeholder="DISKON10" style="text-transform:uppercase;">
@@ -123,88 +179,32 @@
           <span class="field-label">Berakhir</span>
           <input type="datetime-local" id="vEnd">
         </label>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:22px;">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:20px;">
           <input type="checkbox" id="vActive" checked style="width:auto;margin:0;">
-          <span>Voucher aktif</span>
+          <span style="font-size:12px;">Voucher aktif</span>
         </label>
       </div>
 
       <div class="v-actions">
-        <button type="button" class="btn-submit" id="btnSaveVoucher" style="width:auto;padding:10px 20px;" onclick="window.saveVoucher()">
+        <button type="button" class="btn-submit" id="btnSaveVoucher" style="width:auto;padding:9px 20px;" onclick="window.saveVoucher()">
           <i class="fa-solid fa-floppy-disk"></i> Simpan
         </button>
         <button type="button" class="btn-secondary" id="btnCancelEdit" style="display:none;" onclick="window.resetVoucherForm()">
           Batal Edit
         </button>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- LIST -->
-    <section>
-      <div class="card orders-toolbar">
-        <div>
-          <h3><i class="fa-solid fa-list"></i> Daftar Voucher</h3>
-          <p>Kelola voucher diskon yang bisa dipakai di kasir.</p>
-        </div>
-        <div class="v-tools">
-          <div class="v-search">
-            <i class="fa-solid fa-search"></i>
-            <input type="text" id="vSearch" placeholder="Cari kode, diskon, status...">
-          </div>
-          <button type="button" class="btn-secondary" onclick="window.loadVouchers()">
-            <i class="fa-solid fa-rotate-right"></i> Refresh
-          </button>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Diskon</th>
-              <th>Min. Belanja</th>
-              <th>Pemakaian</th>
-              <th>Periode</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="voucherTableBody">
-            <tr><td colspan="7" class="table-empty">Memuat voucher...</td></tr>
-          </tbody>
-        </table>
-        <div id="vNoResult">Tidak ada voucher yang cocok dengan pencarian.</div>
-      </div>
-
-      <div class="v-pager">
-        <div>
-          <span id="vPagerInfo">-</span>
-          <select id="vPerPage">
-            <option value="5">5 per halaman</option>
-            <option value="10" selected>10 per halaman</option>
-            <option value="25">25 per halaman</option>
-            <option value="50">50 per halaman</option>
-          </select>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <button type="button" id="vPrev">Prev</button>
-          <span id="vPageLabel" style="padding:0 8px;font-weight:500;color:#334155;">Halaman 1 dari 1</span>
-          <button type="button" id="vNext">Next</button>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- PENCARIAN + PAGINATION (bekerja di atas baris yang digambar voucher.js, tanpa mengubah voucher.js) -->
+  <!-- PENCARIAN + PAGINATION + MODAL (bekerja di atas voucher.js, tanpa mengubah voucher.js) -->
   <script>
     (function () {
-      const tbody = document.getElementById('voucherTableBody');
       const $ = id => document.getElementById(id);
-      let page = 1, perPage = 10, q = '', timer;
+      const tbody = $('voucherTableBody');
+      const modal = $('vModal');
 
-      // Baris "Memuat..." / "Belum ada voucher" (satu sel melebar) bukan data voucher
+      /* ---------- Search + Pagination ---------- */
+      let page = 1, perPage = 25, q = '', timer;
       const isDataRow = tr => !tr.querySelector('td.table-empty') && !(tr.children.length === 1 && tr.children[0].colSpan > 1);
 
       function apply() {
@@ -222,9 +222,10 @@
           tr.hidden = i < start || i >= end;
         });
 
+        $('vCount').textContent = data.length;
         $('vNoResult').style.display = data.length > 0 && match.length === 0 ? 'block' : 'none';
         $('vPagerInfo').textContent = match.length
-          ? `Menampilkan ${start + 1}-${Math.min(end, match.length)} dari ${match.length} voucher`
+          ? `${start + 1}-${Math.min(end, match.length)} dari ${match.length} voucher`
           : (data.length ? 'Tidak ada hasil' : 'Belum ada voucher');
         $('vPageLabel').textContent = `Halaman ${page} dari ${pages}`;
         $('vPrev').disabled = page <= 1;
@@ -235,13 +236,54 @@
         clearTimeout(timer);
         timer = setTimeout(() => { q = (e.target.value || '').toLowerCase().trim(); page = 1; apply(); }, 150);
       });
-      $('vPerPage').addEventListener('change', e => { perPage = parseInt(e.target.value, 10) || 10; page = 1; apply(); });
-      $('vPrev').addEventListener('click', () => { page--; apply(); });
-      $('vNext').addEventListener('click', () => { page++; apply(); });
+      $('vPerPage').addEventListener('change', e => { perPage = parseInt(e.target.value, 10) || 25; page = 1; apply(); });
+      $('vPrev').addEventListener('click', () => { page--; apply(); $('vNoResult').parentElement.scrollTop = 0; });
+      $('vNext').addEventListener('click', () => { page++; apply(); $('vNoResult').parentElement.scrollTop = 0; });
 
-      // Saat voucher.js menggambar ulang tabel (load/simpan/hapus/refresh), terapkan lagi.
-      // Hanya memantau penambahan/penghapusan baris; menyembunyikan baris (atribut hidden) tidak memicu loop.
-      new MutationObserver(apply).observe(tbody, { childList: true });
+      /* ---------- Modal Tambah / Edit ---------- */
+      const isOpen = () => modal.classList.contains('open');
+      const editing = () => getComputedStyle($('btnCancelEdit')).display !== 'none' || !!$('vId').value;
+      let wasEditing = false, savePending = 0;
+
+      function openModal() {
+        modal.classList.add('open');
+        setTimeout(() => $('vCode').focus(), 50);
+      }
+      function closeModal(reset) {
+        modal.classList.remove('open');
+        wasEditing = false;
+        if (reset && typeof window.resetVoucherForm === 'function' && (editing() || $('vCode').value)) {
+          window.resetVoucherForm();
+        }
+      }
+
+      $('vOpenAdd').addEventListener('click', () => {
+        if (editing() && typeof window.resetVoucherForm === 'function') window.resetVoucherForm(); // mulai dari form kosong
+        openModal();
+      });
+      $('vClose').addEventListener('click', () => closeModal(true));
+      modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal(true); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) closeModal(true); });
+
+      // Klik "Simpan": setelah daftar berhasil dimuat ulang, tutup modal
+      $('btnSaveVoucher').addEventListener('click', () => { savePending = Date.now(); });
+
+      // Saat tombol Edit di tabel diklik, voucher.js mengisi form -> modal otomatis terbuka
+      function syncEdit() {
+        const e = editing();
+        if (e && !isOpen()) openModal();
+        wasEditing = e;
+      }
+      const mo = new MutationObserver(syncEdit);
+      mo.observe($('btnCancelEdit'), { attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+      mo.observe($('voucherFormTitle'), { childList: true, characterData: true, subtree: true });
+
+      // Tabel digambar ulang oleh voucher.js (load / simpan / hapus / refresh)
+      new MutationObserver(() => {
+        apply();
+        if (savePending && Date.now() - savePending < 8000 && isOpen()) { savePending = 0; closeModal(true); }
+      }).observe(tbody, { childList: true });
+
       apply();
     })();
   </script>
