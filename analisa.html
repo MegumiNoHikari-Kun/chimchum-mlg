@@ -9,77 +9,130 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <style>body { font-family: 'Poppins', sans-serif; }</style>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+
+        /* Chip filter */
+        .chip { padding: .4rem .8rem; border-radius: .6rem; font-size: .75rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid transparent; transition: background .15s, color .15s; white-space: nowrap; cursor: pointer; }
+        .chip:hover { background: #e2e8f0; }
+        .chip.active { background: #f97316; color: #fff; }
+        .chip:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+
+        /* Header tabel menempel saat scroll */
+        .tbl-scroll { max-height: 34rem; overflow: auto; }
+        .tbl thead th { position: sticky; top: 0; z-index: 1; background: inherit; }
+        th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+        th[data-sort]:hover { color: #ea580c; }
+
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    </style>
 </head>
-<body class="bg-white p-6 overflow-y-auto">
-    <div class="max-w-6xl mx-auto">
+<body class="bg-slate-50 text-slate-800 overflow-y-auto">
 
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
-            <div>
-                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-chart-pie text-orange-500 mr-2"></i> Analisa Pelanggan</h2>
-                <p class="text-xs text-slate-500">Pelanggan baru vs repeat order, menu terlaris, dan statistik penting lainnya. Pesanan berstatus Cancel tidak dihitung.</p>
+    <!-- Header & filter (menempel di atas) -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-3">
+            <div class="flex justify-between items-center gap-3 flex-wrap">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-chart-pie text-orange-500 mr-2"></i>Analisa Pelanggan</h2>
+                    <p class="text-[11px] text-slate-500">Transaksi, menu terlaris, pelanggan baru dan repeat. Pesanan berstatus Cancel tidak dihitung. <span id="lastUpdated" class="text-slate-400"></span></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="exportWrap" class="relative">
+                        <button onclick="toggleExportMenu()" aria-haspopup="true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                            <i class="fa-solid fa-file-csv"></i> Export CSV <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                        </button>
+                        <div id="exportMenu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-40">
+                            <p class="px-3 pt-2 pb-1 text-[11px] text-slate-400">Isi file mengikuti periode dan channel yang sedang dipilih.</p>
+                            <button onclick="exportOrdersCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
+                                <i class="fa-solid fa-receipt text-orange-500 mt-0.5"></i>
+                                <span><span class="block text-xs font-semibold text-slate-700">Detail transaksi</span><span class="block text-[11px] text-slate-400">Satu baris per order, lengkap dengan menu</span></span>
+                            </button>
+                            <button onclick="exportMenuCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
+                                <i class="fa-solid fa-utensils text-rose-500 mt-0.5"></i>
+                                <span><span class="block text-xs font-semibold text-slate-700">Penjualan per menu</span><span class="block text-[11px] text-slate-400">Jumlah terjual dan omzet tiap menu</span></span>
+                            </button>
+                            <button onclick="exportCustomersCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
+                                <i class="fa-solid fa-users text-indigo-500 mt-0.5"></i>
+                                <span><span class="block text-xs font-semibold text-slate-700">Daftar pelanggan</span><span class="block text-[11px] text-slate-400">Sesuai segmen dan pencarian di tabel pelanggan</span></span>
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="loadAnalytics()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                        <i id="refreshIcon" class="fa-solid fa-rotate-right"></i> Refresh
+                    </button>
+                </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <select id="channelSelect" class="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none cursor-pointer">
-                    <option value="all">Semua Channel</option>
-                    <option value="offline">Offline</option>
-                    <option value="shopeefood">ShopeeFood</option>
-                    <option value="grabfood">GrabFood</option>
-                </select>
-                <select id="periodSelect" class="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none cursor-pointer">
-                    <option value="all">Semua Waktu</option>
-                    <option value="7">7 Hari Terakhir</option>
-                    <option value="30" selected>30 Hari Terakhir</option>
-                    <option value="90">90 Hari Terakhir</option>
-                    <option value="month">Bulan Ini</option>
-                </select>
-                <button onclick="exportCustomersCSV()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
-                    <i class="fa-solid fa-file-csv"></i> Export CSV
-                </button>
-                <button onclick="loadAnalytics()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
-                    <i class="fa-solid fa-rotate-right"></i> Refresh Data
-                </button>
+
+            <div class="flex items-center gap-x-6 gap-y-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[11px] font-medium text-slate-500">Periode</span>
+                    <div id="periodChips" class="flex flex-wrap gap-1.5" role="group" aria-label="Pilih periode">
+                        <button class="chip" data-period="7">7 Hari</button>
+                        <button class="chip active" data-period="30">30 Hari</button>
+                        <button class="chip" data-period="90">90 Hari</button>
+                        <button class="chip" data-period="month">Bulan Ini</button>
+                        <button class="chip" data-period="all">Semua</button>
+                        <button class="chip" data-period="custom"><i class="fa-regular fa-calendar mr-1"></i>Pilih Tanggal</button>
+                    </div>
+                    <div id="customRange" class="hidden">
+                        <div class="flex items-center gap-2">
+                            <input type="date" id="dateStart" aria-label="Tanggal mulai" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+                            <span class="text-xs text-slate-400">sampai</span>
+                            <input type="date" id="dateEnd" aria-label="Tanggal akhir" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[11px] font-medium text-slate-500">Channel</span>
+                    <div id="channelChips" class="flex flex-wrap gap-1.5" role="group" aria-label="Pilih channel">
+                        <button class="chip active" data-channel="all">Semua</button>
+                        <button class="chip" data-channel="offline">Offline</button>
+                        <button class="chip" data-channel="shopeefood">ShopeeFood</button>
+                        <button class="chip" data-channel="grabfood">GrabFood</button>
+                    </div>
+                </div>
             </div>
         </div>
+    </header>
 
-        <!-- Kartu ringkasan -->
-        <div id="kpiCards" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
 
-        <!-- Perbandingan channel -->
-        <div class="border border-slate-100 rounded-2xl shadow-sm overflow-hidden mb-6">
-            <div class="p-4">
-                <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-store text-orange-500 mr-1"></i> Perbandingan Channel</h3>
-                <p class="text-[11px] text-slate-400">ShopeeFood &amp; GrabFood tidak memberi no. WA, jadi pelanggan dikenali dari nama (nama mirip seperti "Eni" / "Eny" digabung otomatis). Repeat rate di channel online bersifat <b>perkiraan</b>.</p>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-orange-50 text-slate-700 font-semibold">
-                        <tr><th class="p-3">Channel</th><th class="p-3">Order</th><th class="p-3">Omzet</th><th class="p-3">Rata-rata/Order</th><th class="p-3">Pelanggan</th><th class="p-3">Repeat</th><th class="p-3" title="Order tanpa nama / nomor meja">Tanpa Identitas</th></tr>
-                    </thead>
-                    <tbody id="channelBody" class="divide-y divide-slate-100"></tbody>
-                </table>
-            </div>
+        <!-- Filter aktif -->
+        <div id="filterSummary" class="flex flex-wrap gap-2 mb-4"></div>
+
+        <div id="emptyNotice" class="hidden mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-xs">
+            <i class="fa-solid fa-circle-info mr-1"></i> Belum ada transaksi pada periode dan channel ini. Coba pilih periode yang lebih panjang atau channel lain.
         </div>
+
+        <!-- Ringkasan utama -->
+        <section aria-label="Ringkasan penjualan">
+            <div id="heroCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3"></div>
+        </section>
+
+        <!-- Ringkasan pelanggan -->
+        <section aria-label="Ringkasan pelanggan">
+            <div id="kpiCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
+        </section>
 
         <!-- Grafik -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="lg:col-span-2 border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Tren Order: Pelanggan Baru vs Repeat</h3>
+            <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                <h3 class="text-sm font-semibold text-slate-700 mb-3">Tren order: pelanggan baru dan repeat</h3>
                 <div class="relative h-64"><canvas id="trendChart"></canvas></div>
             </div>
-            <div class="border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Komposisi Pelanggan</h3>
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                <h3 class="text-sm font-semibold text-slate-700 mb-3">Komposisi pelanggan</h3>
                 <div class="relative h-64"><canvas id="splitChart"></canvas></div>
             </div>
         </div>
 
         <!-- Menu terlaris + Kombo -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="lg:col-span-2 border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+            <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div class="p-4 flex items-center justify-between flex-wrap gap-2">
-                    <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-trophy text-amber-500 mr-1"></i> Menu Paling Sering Dipesan</h3>
-                    <select id="menuSort" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none">
+                    <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-trophy text-amber-500 mr-1"></i> Menu paling sering dipesan</h3>
+                    <select id="menuSort" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs cursor-pointer">
                         <option value="qty">Urutkan: Jumlah Terjual</option>
                         <option value="revenue">Urutkan: Omzet</option>
                         <option value="orders">Urutkan: Jumlah Order</option>
@@ -96,35 +149,56 @@
                         <tbody id="menuBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
+                <div class="px-4 py-3 border-t border-slate-100">
+                    <button id="menuToggle" class="hidden text-xs font-semibold text-orange-600 hover:text-orange-700"></button>
+                </div>
             </div>
-            <div class="border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3"><i class="fa-solid fa-link text-orange-500 mr-1"></i> Menu Sering Dibeli Bersamaan</h3>
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                <h3 class="text-sm font-semibold text-slate-700 mb-3"><i class="fa-solid fa-link text-orange-500 mr-1"></i> Menu sering dibeli bersamaan</h3>
                 <div id="pairsList" class="space-y-2 text-xs"></div>
-                <p class="text-[10px] text-slate-400 mt-3">Cocok untuk dijadikan paket hemat / bundling.</p>
+                <p class="text-[11px] text-slate-400 mt-3">Cocok dijadikan paket hemat atau bundling.</p>
             </div>
         </div>
 
         <!-- Jam ramai, hari ramai, metode bayar -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Jam Paling Ramai (WIB)</h3>
-                <div class="relative h-52"><canvas id="hourChart"></canvas></div>
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                <h3 class="text-sm font-semibold text-slate-700 mb-1">Jam paling ramai (WIB)</h3>
+                <p id="hourInsight" class="text-[11px] text-slate-500 mb-3 min-h-[16px]"></p>
+                <div class="relative h-48"><canvas id="hourChart"></canvas></div>
             </div>
-            <div class="border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Hari Paling Ramai</h3>
-                <div class="relative h-52"><canvas id="dayChart"></canvas></div>
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                <h3 class="text-sm font-semibold text-slate-700 mb-1">Hari paling ramai</h3>
+                <p id="dayInsight" class="text-[11px] text-slate-500 mb-3 min-h-[16px]"></p>
+                <div class="relative h-48"><canvas id="dayChart"></canvas></div>
             </div>
-            <div class="border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Metode Pembayaran</h3>
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                <h3 class="text-sm font-semibold text-slate-700 mb-3">Metode pembayaran</h3>
                 <div id="payList" class="space-y-3 text-xs"></div>
             </div>
         </div>
 
-        <!-- Win-back -->
-        <div class="border border-slate-100 rounded-2xl shadow-sm overflow-hidden mb-6">
+        <!-- Perbandingan channel -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
             <div class="p-4">
-                <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-bullhorn text-rose-500 mr-1"></i> Perlu Di-follow Up (Pelanggan Repeat yang Lama Tidak Order)</h3>
-                <p class="text-[11px] text-slate-400">Pelanggan yang sudah order ≥ 2x tetapi tidak order lagi dalam 30 hari terakhir. Klik tombol WA untuk kirim promo / sapaan.</p>
+                <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-store text-orange-500 mr-1"></i> Perbandingan channel</h3>
+                <p class="text-[11px] text-slate-400">ShopeeFood dan GrabFood tidak memberi no. WA, jadi pelanggan dikenali dari nama (nama mirip seperti "Eni" dan "Eny" digabung otomatis). Repeat rate di channel online bersifat <b>perkiraan</b>. Tabel ini selalu menampilkan semua channel pada periode terpilih.</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-orange-50 text-slate-700 font-semibold">
+                        <tr><th class="p-3">Channel</th><th class="p-3">Transaksi</th><th class="p-3">Menu Terjual</th><th class="p-3">Omzet</th><th class="p-3">Rata-rata/Order</th><th class="p-3">Pelanggan</th><th class="p-3">Repeat</th><th class="p-3" title="Order tanpa nama / nomor meja">Tanpa Identitas</th></tr>
+                    </thead>
+                    <tbody id="channelBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Win-back -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
+            <div class="p-4">
+                <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-bullhorn text-rose-500 mr-1"></i> Perlu di-follow up <span class="ml-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px]" id="winbackCount">0</span></h3>
+                <p class="text-[11px] text-slate-400">Pelanggan yang sudah order 2x atau lebih tetapi tidak order lagi dalam 30 hari terakhir (tidak terpengaruh pilihan periode). Klik tombol WA untuk mengirim promo atau sapaan.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
@@ -137,24 +211,35 @@
         </div>
 
         <!-- Daftar pelanggan -->
-        <div class="border border-slate-100 rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
             <div class="p-4 flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-users text-orange-500 mr-1"></i> Daftar Pelanggan</h3>
-                    <p class="text-[11px] text-slate-400">Baru = 1x order &middot; Repeat = 2–3x &middot; Loyal = ≥ 4x (seluruh riwayat). Hanya menampilkan pelanggan yang aktif di periode terpilih.</p>
+                    <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-users text-orange-500 mr-1"></i> Daftar pelanggan</h3>
+                    <p class="text-[11px] text-slate-400">Baru = 1x order, Repeat = 2–3x, Loyal = 4x atau lebih (seluruh riwayat). Hanya pelanggan yang aktif di periode terpilih. Klik judul kolom untuk mengurutkan.</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <div id="segFilter" class="flex gap-1"></div>
-                    <input id="custSearch" type="text" placeholder="Cari nama / no HP..." class="pl-3 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-orange-400 w-44">
+                    <div id="segFilter" class="flex gap-1 flex-wrap"></div>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                        <input id="custSearch" type="text" placeholder="Cari nama atau no HP" class="pl-8 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-orange-400 w-48">
+                        <button id="custClear" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="Hapus pencarian"><i class="fa-solid fa-xmark text-xs"></i></button>
+                    </div>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-orange-50 text-slate-700 font-semibold">
+            <div class="tbl-scroll">
+                <table class="tbl w-full text-left text-xs">
+                    <thead id="custHead" class="bg-orange-50 text-slate-700 font-semibold">
                         <tr>
-                            <th class="p-3">Pelanggan</th><th class="p-3">Channel</th><th class="p-3">WhatsApp</th><th class="p-3">Segmen</th>
-                            <th class="p-3">Order</th><th class="p-3">Total Belanja</th><th class="p-3">Rata-rata/Order</th>
-                            <th class="p-3">Order Pertama</th><th class="p-3">Order Terakhir</th><th class="p-3">Menu Favorit</th>
+                            <th class="p-3" data-sort="name">Pelanggan<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="channel">Channel<span class="sort-ind"></span></th>
+                            <th class="p-3">WhatsApp</th>
+                            <th class="p-3" data-sort="seg">Segmen<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="orders">Order Periode<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="total">Belanja Periode<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="life">Total Semua Waktu<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="first">Order Pertama<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="last">Order Terakhir<span class="sort-ind"></span></th>
+                            <th class="p-3">Menu Favorit</th>
                         </tr>
                     </thead>
                     <tbody id="custBody" class="divide-y divide-slate-100"></tbody>
@@ -164,10 +249,10 @@
         </div>
 
         <!-- Nama yang digabung otomatis -->
-        <details class="border border-slate-100 rounded-2xl shadow-sm overflow-hidden mb-10">
+        <details class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-10">
             <summary class="p-4 cursor-pointer text-sm font-semibold text-slate-700">
-                <i class="fa-solid fa-code-merge text-amber-500 mr-1"></i> Nama yang Digabung Otomatis (<span id="mergedCount">0</span>)
-                <span class="font-normal text-[11px] text-slate-400 ml-1">— cek apakah penggabungannya sudah benar</span>
+                <i class="fa-solid fa-code-merge text-amber-500 mr-1"></i> Nama yang digabung otomatis (<span id="mergedCount">0</span>)
+                <span class="font-normal text-[11px] text-slate-400 ml-1">Cek apakah penggabungannya sudah benar</span>
             </summary>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
@@ -176,7 +261,9 @@
                 </table>
             </div>
         </details>
-    </div>
+    </main>
+
+    <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
     <script type="module">
         import { requireAuth } from './js/module/auth-guard.js';
