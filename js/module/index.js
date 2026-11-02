@@ -840,11 +840,13 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`
         submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Konfirmasi & Kirim Pesanan</span>';
     }
 
-    showNotification('Pesanan Berhasil Dibuat!', `ID Pesanan: ${pendingOrderData.order_id}. Mengalihkan ke WhatsApp...`, 'success');
-    
-    setTimeout(() => {
-        window.open(`https://wa.me/${WA_TARGET_NUMBER}?text=${waText}`, '_blank');
-    }, 1200);
+    const waUrl = `https://wa.me/${WA_TARGET_NUMBER}?text=${waText}`;
+    showNotification(
+        'Pesanan Berhasil Dibuat!',
+        `ID Pesanan: ${pendingOrderData.order_id}. Klik tombol di bawah untuk mengirim detail pesanan ke WhatsApp admin.`,
+        'success',
+        waUrl
+    );
 };
 
 
@@ -920,7 +922,7 @@ window.openTrackerModal = function() {
     if (modal) modal.classList.toggle('hidden');
 };
 
-window.showNotification = function(title, message, type = 'success') {
+window.showNotification = function(title, message, type = 'success', waUrl = null) {
     const modal = document.getElementById('notification-modal');
     if (!modal) {
         console.warn(`${title}: ${message}`);
@@ -936,6 +938,21 @@ window.showNotification = function(title, message, type = 'success') {
         iconContainer.className = 'w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-2xl mx-auto';
         iconContainer.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
     }
+
+    // Tombol WhatsApp: hanya tampil kalau ada waUrl
+    const waBtn = document.getElementById('notification-wa-btn');
+    if (waBtn) {
+        if (waUrl) {
+            waBtn.href = waUrl;
+            waBtn.classList.remove('hidden');
+            waBtn.classList.add('flex');
+        } else {
+            waBtn.href = '#';
+            waBtn.classList.add('hidden');
+            waBtn.classList.remove('flex');
+        }
+    }
+
     modal.classList.remove('hidden');
 };
 
