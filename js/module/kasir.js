@@ -14,6 +14,7 @@ let currentFilterStatus = 'all';
 let kasirSubtotal = 0;
 let kasirDiscount = 0;
 let appliedVoucher = null;
+let isSubmittingKasir = false; // cegah klik ganda (supaya stok tidak terpotong dua kali)
 
 const ORDER_TYPE_PREFIX = {
     Offline: 'DINEIN',
@@ -723,7 +724,37 @@ function cetakStrukKasir(order) {
    this is the actual missing "write" half of the CRUD.
 ========================================================= */
 
+async function reduceStockForItems(items) {
+    const failed = [];
+
+    for (const item of items) {
+        const qty = Number(item.qty || 0);
+        if (!item.id || qty <= 0) continue;
+
+        // id di keranjang berupa string; kirim sebagai angka bila memang angka
+        const productId = /^\d+$/.test(String(item.id)) ? Number(item.id) : item.id;
+
+        try {
+            const { data, error } = await supabase.rpc('reduce_product_stock', {
+                p_product_id: productId,
+                p_quantity: qty
+            });
+            if (error) throw error;
+            if (data !== true) failed.push(`${item.nama} (stok tidak cukup)`);
+        } catch (err) {
+            console.error('[STOCK] Gagal mengurangi stok:', item.nama, err);
+            failed.push(`${item.nama} (${err?.message || 'error'})`);
+        }
+    }
+
+    return failed;
+}
+
 window.submitKasirOrder = async function () {
+   
+    if (isSubmittingKasir) return;
+    isSubmittingKasir = true;
+    
     try {
         const namaMeja = document.getElementById('kasirNomorMeja')?.value.trim();
         const wa = document.getElementById('kasirWaPelanggan')?.value.trim() || null;
@@ -800,6 +831,8 @@ window.submitKasirOrder = async function () {
             .from('orders')
             .insert(orderPayload)
             .select();
+             // Kurangi stok setelah order tersimpan
+        const stockFailed = await reduceStockForItems(items);
 
         if (error) throw error;
 
@@ -813,7 +846,13 @@ window.submitKasirOrder = async function () {
             });
         }
 
-        alert('Transaksi berhasil disimpan.');
+        if (stockFailed.length) {
+            alert('Transaksi tersimpan, tetapi stok berikut GAGAL dikurangi:\n- '
+                + stockFailed.join('\n- ')
+                + '\n\nMohon sesuaikan stok secara manual / hubungi admin.');
+        } else {
+            alert('Transaksi berhasil disimpan.');
+        }
 
         // reset form
         window.clearKasirCart();
@@ -825,10 +864,13 @@ window.submitKasirOrder = async function () {
         window.removeVoucher();
         window.setJenisPesanan('Offline');
         window.loadOrders();
+        window.loadProducts();
 
-    } catch (error) {
+        } catch (error) {
         console.error('❌ Error submit order:', error);
         alert('Gagal menyimpan transaksi: ' + (error?.message || error));
+    } finally {
+        isSubmittingKasir = false;
     }
 };
 
