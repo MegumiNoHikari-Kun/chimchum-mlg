@@ -831,10 +831,11 @@ window.submitKasirOrder = async function () {
             .from('orders')
             .insert(orderPayload)
             .select();
+        if (error) throw error;
              // Kurangi stok setelah order tersimpan
         const stockFailed = await reduceStockForItems(items);
 
-        if (error) throw error;
+        
 
         // console.log('✅ Order tersimpan:', data);
 
@@ -1270,22 +1271,28 @@ window.reprintOrder = (key) => {
 ========================================================= */
 
 window.updateOrderStatus = async function (id, newStatus) {
+    if (newStatus === 'cancel' && !confirm('Batalkan pesanan ini? Stok produk akan dikembalikan.')) {
+        renderKasirOrders(); // kembalikan dropdown ke nilai sebelumnya
+        return;
+    }
+
     try {
         await authReady;
         if (!supabase) throw new Error('Supabase tidak tersedia.');
 
-        const { error } = await supabase
-            .from('orders')
-            .update({ status: newStatus })
-            .eq('id', id);
-
+        const { error } = await supabase.rpc('update_order_status', {
+            p_key: String(id),
+            p_status: newStatus
+        });
         if (error) throw error;
 
         window.loadOrders();
+        if (newStatus === 'cancel') window.loadProducts(); // refresh angka stok di menu
 
     } catch (error) {
         console.error('❌ Error update status order:', error);
         alert('Gagal mengubah status: ' + (error?.message || error));
+        renderKasirOrders(); // revert dropdown
     }
 };
 
