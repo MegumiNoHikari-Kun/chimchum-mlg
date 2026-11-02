@@ -557,14 +557,34 @@ window.updatePaymentStatus = async function(key, val) {
 };
 
 window.deleteOrder = async function(key) {
-    if (!confirm("Hapus pesanan ini?")) return;
+    const match = o => String(o.id) === String(key) || String(o.order_id) === String(key);
+    const order = cachedOrders.find(match);
+
+    // Stok dikembalikan hanya jika belum pernah dikembalikan (belum cancel)
+    const willRestore = !!order && (order.status || 'new').toLowerCase() !== 'cancel' && !order.stock_restored;
+    const msg = willRestore
+        ? 'Hapus pesanan ini? Stok produk akan dikembalikan.'
+        : 'Hapus pesanan ini?';
+    if (!confirm(msg)) return;
+
     await authReady;
     try {
-        let q = supabase.from('orders').delete();
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key))) q = q.eq('id', key);
-        else q = q.eq('order_id', key);
-        await q;
-    } catch(e) { console.warn(e); }
+        const { data, error } = await supabase.rpc('delete_order', { p_key: String(key) });
+        if (error) throw error;
+
+        // data.deleted === false -> tidak ada di database (mis. hanya tersimpan lokal), lanjut bersihkan tampilan
+        if (data && data.skipped_items > 0) {
+            alert(`Pesanan dihapus, tetapi ${data.skipped_items} produk tidak ditemukan sehingga stoknya tidak bisa dikembalikan. Cek stok produk secara manual.`);
+        }
+    } catch (e) {
+        console.error('Gagal menghapus pesanan:', e);
+        const hint = (e.code === 'PGRST202' || /delete_order/.test(e.message || ''))
+            ? '\n\nPastikan fungsi SQL delete_order sudah dijalankan di Supabase.'
+            : '';
+        alert('Gagal menghapus pesanan: ' + (e.message || e) + hint);
+        return; // jangan hilangkan dari tampilan kalau di database belum terhapus
+    }
+
     cachedOrders = cachedOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
     let localOrders = JSON.parse(localStorage.getItem('local_orders') || '[]');
     localOrders = localOrders.filter(o => String(o.id) !== String(key) && String(o.order_id) !== String(key));
