@@ -183,6 +183,44 @@ function renderLowStock() {
 // =========================================================
 // TAB 1: MASTER RESEP
 // =========================================================
+const RECIPE_PREVIEW = 5; // jumlah bahan yang tampil sebelum "lihat semua"
+
+// Ringkasan satu resep: biaya, bahan per baris, dan batch maksimal dari stok gudang
+function recipeInfo(r) {
+    const rows = (r.items ?? []).map(it => {
+        const ing = ingById(it.ingredientId);
+        const amount = Number(it.amount) || 0;
+        const stock = Number(ing?.stock) || 0;
+        return {
+            ing, amount, stock,
+            cost: amount * (Number(ing?.price) || 0),
+            canMake: ing && amount > 0 ? stock / amount : 0
+        };
+    });
+    const cost = rows.reduce((s, x) => s + x.cost, 0);
+    const valid = rows.filter(x => x.amount > 0);
+    const limiter = valid.reduce((min, x) => (!min || x.canMake < min.canMake ? x : min), null);
+    const maxBatch = limiter ? Math.floor(limiter.canMake * 10) / 10 : 0;
+    // bahan termahal di atas agar komposisi penting terlihat dulu
+    rows.sort((a, b) => b.cost - a.cost || String(a.ing?.name ?? '').localeCompare(String(b.ing?.name ?? ''), 'id'));
+    return { rows, cost, maxBatch, limiter };
+}
+
+function compRow(x, total) {
+    const share = total > 0 ? Math.round(x.cost / total * 100) : 0;
+    const ok = x.ing && x.stock >= x.amount;
+    return `<li class="py-1.5" title="${x.ing ? `Stok ${num(x.stock)} ${esc(x.ing.unit)} · ${rp(x.cost)} (${share}% biaya)` : 'Bahan sudah dihapus'}">
+        <div class="flex items-center justify-between gap-3 text-xs">
+            <span class="flex items-center min-w-0">
+                <span class="dot ${!x.ing ? 'bg-slate-300' : ok ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                ${x.ing ? `<span class="truncate text-slate-700">${esc(x.ing.name)}</span>` : '<em class="text-rose-500">Bahan terhapus</em>'}
+            </span>
+            <span class="whitespace-nowrap text-slate-500"><strong class="text-slate-800">${num(x.amount)}</strong> ${esc(x.ing?.unit)}</span>
+        </div>
+        <div class="h-1 bg-slate-100 rounded-full mt-1 overflow-hidden"><div class="h-full bg-orange-300 rounded-full" style="width:${share}%"></div></div>
+    </li>`;
+}
+
 function renderRecipes() {
     const q = $('recipeSearch').value.toLowerCase().trim();
     const list = S.recipes.filter(r =>
@@ -191,33 +229,71 @@ function renderRecipes() {
         (r.items ?? []).some(it => String(ingById(it.ingredientId)?.name ?? '').toLowerCase().includes(q))
     );
 
-    $('recipeBody').innerHTML = list.length ? list.map(r => {
-        const comp = (r.items ?? []).map(it => {
-            const g = ingById(it.ingredientId);
-            return `<li class="flex justify-between gap-6">
-                <span>${g ? esc(g.name) : '<em class="text-rose-500">Bahan terhapus</em>'}</span>
-                <strong class="text-slate-800 whitespace-nowrap">${num(it.amount)} ${esc(g?.unit)}</strong>
-            </li>`;
-        }).join('');
+    if (!list.length) {
+        $('recipeBody').innerHTML = `<div class="card empty-card sm:col-span-2 xl:col-span-3">${S.recipes.length
+            ? 'Tidak ada resep yang cocok dengan pencarian.'
+            : '<i class="fa-solid fa-book-open text-2xl text-orange-200 block mb-2"></i>Belum ada resep.<br><button class="btn btn-primary mt-3" data-action="new-recipe"><i class="fa-solid fa-plus"></i> Buat resep pertama</button>'}</div>`;
+        return;
+    }
 
-        const menus = S.products.filter(p => same(p.resep_id, r.id)).map(p =>
-            `<div class="flex items-center gap-1.5 flex-wrap mb-1">
-                <button type="button" class="font-semibold text-slate-800 hover:text-orange-600 hover:underline text-left" data-action="calc-product" data-id="${esc(p.id)}" title="Hitung produksi">${esc(pName(p))}</button>
-                ${stockBadge(pStock(p))}
-            </div>`
-        ).join('');
+    $('recipeBody').innerHTML = list.map(r => {
+        const { rows, cost, maxBatch, limiter } = recipeInfo(r);
+        const menus = S.products.filter(p => same(p.resep_id, r.id));
+        const head = rows.slice(0, RECIPE_PREVIEW), rest = rows.slice(RECIPE_PREVIEW);
 
-        return `<tr>
-            <td class="font-semibold text-orange-600">${esc(recName(r))}</td>
-            <td><ul class="space-y-0.5 text-slate-600 max-w-xs">${comp || '<li class="text-slate-400">Tidak ada bahan</li>'}</ul></td>
-            <td class="whitespace-nowrap font-semibold">${rp(recipeCost(r.items))}</td>
-            <td>${menus || '<span class="text-slate-400 italic">Belum dipakai menu mana pun</span>'}</td>
-            <td class="text-right whitespace-nowrap">
-                <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-recipe" data-id="${esc(r.id)}" title="Edit resep" aria-label="Edit resep"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn btn-sm bg-rose-50 text-rose-600 hover:bg-rose-100" data-action="delete-recipe" data-id="${esc(r.id)}" title="Hapus resep" aria-label="Hapus resep"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        </tr>`;
-    }).join('') : emptyRow(5, S.recipes.length ? 'Tidak ada resep yang cocok dengan pencarian.' : 'Belum ada resep. Klik "Buat resep baru" untuk memulai.');
+        const batchTone = maxBatch >= 1 ? 'text-emerald-600' : maxBatch > 0 ? 'text-amber-600' : 'text-rose-600';
+        const limitTxt = limiter?.ing && rows.length > 1 ? `Dibatasi ${esc(limiter.ing.name)}` : '&nbsp;';
+
+        const menuChips = menus.length
+            ? menus.map(p => {
+                const st = pStock(p);
+                const tone = st <= 0 ? 'border-rose-200 text-rose-700 bg-rose-50' : st <= LOW_STOCK ? 'border-amber-200 text-amber-700 bg-amber-50' : 'border-slate-200 text-slate-700 bg-white';
+                return `<button type="button" class="badge border ${tone} hover:border-orange-300" data-action="calc-product" data-id="${esc(p.id)}" title="Hitung produksi ${esc(pName(p))}">
+                    ${esc(pName(p))} <span class="ml-1 opacity-60">${st}</span></button>`;
+            }).join('')
+            : '<button type="button" class="text-[11px] text-slate-400 italic hover:text-orange-600" data-tab="mapping">Belum dipakai menu. Hubungkan <i class="fa-solid fa-arrow-right text-[9px]"></i></button>';
+
+        return `<article class="card recipe-card p-4 flex flex-col gap-3">
+            <header class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <h3 class="font-bold text-sm text-slate-800 leading-snug">${esc(recName(r))}</h3>
+                    <p class="text-[11px] text-slate-400">${rows.length} bahan · ${menus.length} menu</p>
+                </div>
+                <div class="acts flex gap-1 shrink-0">
+                    <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-recipe" data-id="${esc(r.id)}" title="Edit resep" aria-label="Edit resep ${esc(recName(r))}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-sm bg-rose-50 text-rose-600 hover:bg-rose-100" data-action="delete-recipe" data-id="${esc(r.id)}" title="Hapus resep" aria-label="Hapus resep ${esc(recName(r))}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div class="rounded-xl bg-slate-50 px-3 py-2">
+                    <p class="text-[10px] font-semibold text-slate-400">Biaya / batch</p>
+                    <p class="text-sm font-bold text-slate-800">${cost ? rp(cost) : '<span class="text-slate-400 font-medium text-xs">Harga belum diisi</span>'}</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 px-3 py-2 min-w-0">
+                    <p class="text-[10px] font-semibold text-slate-400">Stok cukup untuk</p>
+                    <p class="text-sm font-bold ${batchTone}">${num(maxBatch)} batch</p>
+                    <p class="text-[10px] text-slate-400 truncate">${limitTxt}</p>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Komposisi per batch</p>
+                ${rows.length ? `<ul class="divide-y divide-slate-50">${head.map(x => compRow(x, cost)).join('')}</ul>
+                ${rest.length ? `<details${q ? ' open' : ''}>
+                    <summary class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 pt-1">
+                        <span class="more-label">+ ${rest.length} bahan lainnya</span><span class="less-label">Sembunyikan</span>
+                    </summary>
+                    <ul class="divide-y divide-slate-50">${rest.map(x => compRow(x, cost)).join('')}</ul>
+                </details>` : ''}` : '<p class="text-xs text-slate-400 py-2">Tidak ada bahan</p>'}
+            </div>
+
+            <footer class="pt-3 border-t border-slate-100 mt-auto">
+                <p class="text-[10px] font-semibold text-slate-400 mb-1.5">Dipakai oleh menu <span class="font-normal">(angka = stok jual)</span></p>
+                <div class="flex flex-wrap gap-1.5">${menuChips}</div>
+            </footer>
+        </article>`;
+    }).join('');
 }
 
 function recipeRow(ingId = '', amount = '') {
