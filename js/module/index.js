@@ -1106,10 +1106,37 @@ function renderTimeline(status) {
         </div>`;
 }
 
-function renderRecentOrders() {
+// Hapus order dari salinan lokal (dipakai kalau order ternyata tidak ada di database)
+function forgetLocalOrders(orderIds) {
+    const ids = new Set(orderIds);
+    if (ids.size === 0) return;
+    saveJSON('local_orders', loadJSON('local_orders', []).filter(o => !ids.has(o.order_id)));
+}
+
+async function renderRecentOrders() {
     const box = $('tracker-recent');
     if (!box) return;
-    const recent = loadJSON('local_orders', []).slice(-3).reverse();
+    let recent = loadJSON('local_orders', []).slice(-3).reverse();
+    if (recent.length === 0) { box.innerHTML = ''; return; }
+
+    // Cocokkan dengan database: order yang sudah tidak ada dihapus dari daftar
+    try {
+        await authReady;
+        const ids = recent.map(o => o.order_id);
+        const { data, error } = await supabase.from('orders').select('order_id').in('order_id', ids);
+        if (!error && Array.isArray(data)) {
+            const existing = new Set(data.map(r => r.order_id));
+            const missing = ids.filter(id => !existing.has(id));
+            if (missing.length) {
+                forgetLocalOrders(missing);
+                recent = recent.filter(o => existing.has(o.order_id));
+            }
+        }
+    } catch (e) {
+        // offline / gagal cek → tetap tampilkan daftar lokal
+        console.warn('[TRACKER] Gagal verifikasi pesanan lokal:', e);
+    }
+
     if (recent.length === 0) { box.innerHTML = ''; return; }
 
     box.innerHTML = `
@@ -1144,18 +1171,41 @@ window.fetchOrderStatus = async function () {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch loading-spinner"></i>'; }
 
     let foundOrder = null;
+    let dbChecked = false;     // true = database berhasil dicek (ada / tidak ada)
     try {
         await authReady;
-        const { data } = await supabase.from('orders').select('*').eq('order_id', orderId).maybeSingle();
+        const { data, error } = await supabase.from('orders').select('*').eq('order_id', orderId).maybeSingle();
+        if (error) throw error;
+        dbChecked = true;
         if (data) foundOrder = data;
     } catch (e) {
-        console.error(e);
+        console.error('[TRACKER] Gagal cek database:', e);
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Cek'; }
     }
 
+    let isOfflineCopy = false;
     if (!foundOrder) {
-        foundOrder = loadJSON('local_orders', []).find(o => o.order_id === orderId) || null;
+        if (dbChecked) {
+            // Database menjawab "tidak ada" → salinan lokal sudah tidak valid, hapus
+            forgetLocalOrders([orderId]);
+            renderRecentOrders();
+        } else {
+            // Database tidak bisa dihubungi → tampilkan salinan lokal sebagai cadangan
+            foundOrder = loadJSON('local_orders', []).find(o => o.order_id === orderId) || null;
+            isOfflineCopy = !!foundOrder;
+        }
+    }
+
+    if (!foundOrder && !dbChecked) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `
+            <div class="text-center py-6 text-slate-400 text-sm border-t border-slate-100">
+                <i class="fa-solid fa-wifi text-xl mb-2 block"></i>
+                Gagal terhubung ke server.<br>
+                <span class="text-xs">Periksa koneksi internet lalu coba lagi.</span>
+            </div>`;
+        return;
     }
 
     resultDiv.classList.remove('hidden');
@@ -1199,6 +1249,16 @@ window.fetchOrderStatus = async function () {
                 <i class="fa-brands fa-whatsapp"></i> Tanya admin soal pesanan ini
             </a>
         </div>`;
+
+    if (isOfflineCopy) {
+        // Status di salinan lokal hanya status saat order dibuat, jangan tampilkan seolah-olah terbaru
+        resultDiv.querySelector('.relative, .bg-red-50')?.remove();
+        resultDiv.firstElementChild?.insertAdjacentHTML('afterbegin', `
+            <div class="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-xl p-3 flex gap-2">
+                <i class="fa-solid fa-wifi mt-0.5"></i>
+                <span>Tidak bisa terhubung ke server. Ini salinan pesanan di perangkatmu, <b>status terbaru belum bisa ditampilkan</b>. Coba lagi nanti.</span>
+            </div>`);
+    }
 };
 
 window.openTrackerModal = function () {
