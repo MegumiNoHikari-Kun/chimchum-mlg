@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ea580c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Dashboard KASIR - ChimChum</title>
+
+  <link rel="icon" type="image/png" href="./assets/logo-transparan.png">
+
+  <!-- Fonts & icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="./css/kasir.css">
+
+  <!-- Supabase JS client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+  <!-- ===== HEADER (logo + tab + kontrol) ===== -->
+  <header class="app-header">
+    <a class="brand" href="index.html">
+      <img src="./assets/logo-transparan.png" alt="ChimChum Malang" onerror="this.style.display='none'">
+      <div class="brand__text">
+        <strong>ChimChum</strong>
+        <span>Kasir POS</span>
+      </div>
+    </a>
+
+    <nav class="tabs-nav" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="tab-kasir" role="tab" aria-selected="true"
+              onclick="switchTab('tab-kasir', this)">
+        <i class="fa-solid fa-cash-register"></i><span class="tab-btn__label">Kasir</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="tab-pesanan" role="tab" aria-selected="false"
+              onclick="switchTab('tab-pesanan', this)">
+        <i class="fa-solid fa-receipt"></i><span class="tab-btn__label">Pesanan</span>
+        <span class="tab-badge" id="badgeNewOrders" title="Pesanan berstatus New" hidden>0</span>
+      </button>
+    </nav>
+
+    <div class="header-controls">
+      <span class="clock" id="headerClock"></span>
+      <span class="status-badge" id="connStatus" title="Status koneksi">
+        <i class="fa-solid fa-signal"></i><span>Online</span>
+      </span>
+      <button type="button" class="icon-btn" id="btnFullscreen" onclick="toggleKasirFullscreen()" title="Layar penuh">
+        <i class="fa-solid fa-expand" data-fs-icon></i>
+      </button>
+      <button type="button" class="icon-btn icon-btn--danger" onclick="logoutKasir()" title="Keluar">
+        <i class="fa-solid fa-right-from-bracket"></i><span class="hide-md">Keluar</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ===================== TAB: KASIR ===================== -->
+    <section id="tab-kasir" class="tab-content active" role="tabpanel">
+      <div class="pos">
+
+        <!-- ===== Panel menu ===== -->
+        <div class="pos-menu">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="searchMenuKasir" placeholder="Cari menu…" autocomplete="off" enterkeyhint="search">
+            <button type="button" class="search-clear" id="searchClear" aria-label="Hapus pencarian" hidden>
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="category-bar" id="categoryBar" aria-label="Filter kategori"></div>
+
+          <div class="menu-grid" id="kasirMenuList" aria-live="polite">
+            <div class="menu-skeleton"></div><div class="menu-skeleton"></div><div class="menu-skeleton"></div>
+            <div class="menu-skeleton"></div><div class="menu-skeleton"></div><div class="menu-skeleton"></div>
+          </div>
+
+          <div class="menu-footer">
+            <span id="menuCount">Memuat menu…</span>
+            <span class="kbd-hints">
+              <span><kbd>/</kbd> cari</span>
+              <span><kbd>Enter</kbd> tambah hasil pertama</span>
+              <span><kbd>F9</kbd> bayar</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- ===== Panel keranjang / struk ===== -->
+        <aside class="pos-cart" id="posCart" aria-label="Pesanan">
+          <div class="cart-head">
+            <h3><i class="fa-solid fa-file-invoice-dollar"></i> Pesanan <span class="count-pill" id="cartCount">0</span></h3>
+            <button type="button" class="link-btn link-btn--danger" id="btnClearCart" onclick="clearKasirCart(true)" hidden>
+              <i class="fa-solid fa-trash-can"></i> Kosongkan
+            </button>
+            <button type="button" class="icon-btn icon-btn--ghost cart-close" onclick="toggleCartDrawer(false)" aria-label="Tutup">
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+          </div>
+
+          <div class="cart-body">
+            <div class="cart-items" id="kasirCartItems"></div>
+
+            <div class="cart-section">
+              <div class="field-row">
+                <div class="field">
+                  <label for="kasirNomorMeja">Nama / Meja <span class="req">*</span></label>
+                  <input type="text" class="input" id="kasirNomorMeja" placeholder="Meja 01 / Budi" autocomplete="off" enterkeyhint="next">
+                </div>
+                <div class="field">
+                  <label for="kasirWaPelanggan">WhatsApp <span class="opt">(opsional)</span></label>
+                  <input type="text" class="input" id="kasirWaPelanggan" placeholder="08123…" inputmode="tel" autocomplete="off">
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="field-label">Jenis Pesanan</span>
+                <input type="hidden" id="kasirJenisPesanan" value="Offline">
+                <div class="segmented segmented--types" id="orderTypeGroup">
+                  <button type="button" class="seg-btn is-active" data-type="Offline"    onclick="setJenisPesanan('Offline')">Offline</button>
+                  <button type="button" class="seg-btn" data-type="GrabFood"   onclick="setJenisPesanan('GrabFood')">GrabFood</button>
+                  <button type="button" class="seg-btn" data-type="ShopeeFood" onclick="setJenisPesanan('ShopeeFood')">ShopeeFood</button>
+                  <button type="button" class="seg-btn" data-type="GoFood"     onclick="setJenisPesanan('GoFood')">GoFood</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="kasirVoucherCode">Voucher</label>
+                <div class="voucher-input" id="voucherInputRow">
+                  <input type="text" class="input input--code" id="kasirVoucherCode" placeholder="Kode voucher, mis. DISKON10"
+                         autocomplete="off" autocapitalize="characters" enterkeyhint="done">
+                  <button type="button" class="btn btn-outline" id="btnApplyVoucher" onclick="applyVoucher()">Pakai</button>
+                </div>
+                <div class="voucher-applied" id="voucherApplied" hidden></div>
+                <div class="voucher-msg" id="kasirVoucherMsg" role="status"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cart-foot">
+            <div class="sum-row"><span>Subtotal</span><span id="kasirSubtotal">Rp 0</span></div>
+            <div class="sum-row sum-row--discount" id="rowDiskon" hidden>
+              <span id="labelDiskon">Diskon</span><span id="kasirDiskon">- Rp 0</span>
+            </div>
+            <div class="sum-row sum-row--total"><span>Total</span><strong id="kasirGrandTotal">Rp 0</strong></div>
+            <button type="button" class="btn btn-primary btn-lg btn-block" id="btnCheckout" onclick="openPaymentModal()" disabled>
+              <i class="fa-solid fa-wallet"></i> <span id="btnCheckoutLabel">Bayar</span> <kbd class="kbd-hint">F9</kbd>
+            </button>
+            <div class="checkout-hint" id="checkoutHint"></div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Bar keranjang mengambang (tablet portrait / layar kecil) -->
+      <button type="button" class="cart-fab" id="cartFab" onclick="toggleCartDrawer(true)">
+        <span class="cart-fab__icon"><i class="fa-solid fa-basket-shopping"></i></span>
+        <span class="cart-fab__count" id="fabCount">Keranjang kosong</span>
+        <strong class="cart-fab__total" id="fabTotal">Rp 0</strong>
+        <i class="fa-solid fa-chevron-up"></i>
+      </button>
+      <div class="drawer-backdrop" id="drawerBackdrop" onclick="toggleCartDrawer(false)"></div>
+    </section>
+
+    <!-- ===================== TAB: PESANAN ===================== -->
+    <section id="tab-pesanan" class="tab-content" role="tabpanel">
+      <div class="orders-page">
+        <div class="orders-toolbar">
+          <div>
+            <h3><i class="fa-solid fa-receipt"></i> Riwayat Pesanan</h3>
+            <p id="ordersSubtitle">Online &amp; Dine-In, langsung dari database.</p>
+          </div>
+          <div class="orders-actions">
+            <div class="search-box search-box--sm">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="searchOrders" placeholder="Cari nama, no. order, WA…" autocomplete="off">
+            </div>
+            <select class="select" id="filterPeriode" aria-label="Periode">
+              <option value="today" selected>Hari ini</option>
+              <option value="7d">7 hari terakhir</option>
+              <option value="30d">30 hari terakhir</option>
+              <option value="all">Semua (maks 1000)</option>
+            </select>
+            <button type="button" class="btn btn-outline" id="btnRefreshOrders" onclick="loadOrders(true)">
+              <i class="fa-solid fa-rotate-right"></i><span class="hide-md">Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="order-summary" id="orderSummary"></div>
+
+        <div class="table-wrap">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Pelanggan</th>
+                <th>Tipe / Bayar</th>
+                <th>Item Pesanan</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="orderTableBody">
+              <tr><td colspan="7" class="table-empty">Memuat data pesanan…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="orders-updated" id="ordersUpdated"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== MODAL: PEMBAYARAN ===================== -->
+  <div class="modal" id="paymentModal" hidden>
+    <div class="modal-card modal-card--lg" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+      <div class="modal-head">
+        <h3 id="payTitle"><i class="fa-solid fa-wallet"></i> Pembayaran</h3>
+        <button type="button" class="icon-btn icon-btn--ghost" onclick="closePaymentModal()" aria-label="Tutup">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body pay-grid">
+        <!-- Ringkasan -->
+        <div class="pay-summary">
+          <div class="pay-customer" id="payCustomer"></div>
+          <div class="pay-items" id="payItems"></div>
+          <div class="sum-row"><span>Subtotal</span><span id="paySubtotal">Rp 0</span></div>
+          <div class="sum-row sum-row--discount" id="payDiscountRow" hidden>
+            <span id="payDiscountLabel">Diskon</span><span id="payDiscount">- Rp 0</span>
+          </div>
+          <div class="pay-total">
+            <span>Total Tagihan</span>
+            <strong id="payTotal">Rp 0</strong>
+          </div>
+        </div>
+
+        <!-- Input pembayaran -->
+        <div class="pay-input">
+          <div>
+            <span class="field-label">Metode Pembayaran</span>
+            <input type="hidden" id="kasirMetodeBayar" value="Cash">
+            <div class="segmented segmented--lg" id="payMethodGroup">
+              <button type="button" class="seg-btn is-active" data-method="Cash" onclick="setMetodeBayar('Cash')">
+                <i class="fa-solid fa-money-bill-wave"></i>Cash
+              </button>
+              <button type="button" class="seg-btn" data-method="QRIS" onclick="setMetodeBayar('QRIS')">
+                <i class="fa-solid fa-qrcode"></i>QRIS
+              </button>
+              <button type="button" class="seg-btn" data-method="Transfer" onclick="setMetodeBayar('Transfer')">
+                <i class="fa-solid fa-building-columns"></i>Transfer
+              </button>
+            </div>
+          </div>
+
+          <div id="sectionKalkulatorCash" class="cash-box">
+            <label class="field-label" for="kasirUangBayar">Uang Diterima</label>
+            <div class="money-input">
+              <span>Rp</span>
+              <input type="text" id="kasirUangBayar" inputmode="numeric" autocomplete="off" placeholder="0" enterkeyhint="done">
+              <button type="button" class="icon-btn icon-btn--ghost" onclick="setUangBayar(0)" aria-label="Hapus nominal">
+                <i class="fa-solid fa-delete-left"></i>
+              </button>
+            </div>
+            <div class="cash-quick" id="cashQuick"></div>
+            <div class="change-box" id="changeBox">
+              <span id="changeLabel">Kembalian</span>
+              <strong id="kasirKembalian">Rp 0</strong>
+            </div>
+          </div>
+
+          <div id="sectionNonCash" class="noncash-box" hidden>
+            <i class="fa-solid fa-circle-info"></i>
+            <div>Pastikan pembayaran <strong id="payMethodName">QRIS</strong> sebesar
+              <strong id="payNonCashTotal">Rp 0</strong> sudah diterima sebelum menyelesaikan transaksi.</div>
+          </div>
+
+          <label class="check-row">
+            <input type="checkbox" id="printStrukCheck" checked>
+            <span><i class="fa-solid fa-print"></i> Cetak struk otomatis</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="btnPayBack" onclick="closePaymentModal()">
+          <i class="fa-solid fa-arrow-left"></i> Kembali
+        </button>
+        <button type="button" class="btn btn-primary btn-lg" id="btnSubmitOrder" onclick="submitKasirOrder()">
+          <i class="fa-solid fa-circle-check"></i> <span id="paySubmitLabel">Selesaikan Transaksi</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: TRANSAKSI BERHASIL ===================== -->
+  <div class="modal" id="successModal" hidden>
+    <div class="modal-card success-card" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+      <div class="modal-body">
+        <div class="success-icon"><i class="fa-solid fa-check"></i></div>
+        <h3 id="successTitle">Transaksi Berhasil</h3>
+        <p class="muted" id="successOrderId">-</p>
+
+        <div class="success-change" id="successChangeBox">
+          <span>Kembalian</span>
+          <strong id="successChange">Rp 0</strong>
+        </div>
+
+        <div class="success-meta">
+          <span>Total</span><strong id="successTotal">Rp 0</strong>
+          <span>Metode</span><strong id="successMethod">-</strong>
+          <span id="successPaidLabel">Tunai diterima</span><strong id="successPaid">-</strong>
+        </div>
+
+        <div class="alert-warning" id="successWarning" hidden></div>
+      </div>
+      <div class="modal-foot modal-foot--split">
+        <button type="button" class="btn btn-outline" onclick="printLastReceipt()">
+          <i class="fa-solid fa-print"></i> Cetak Struk
+        </button>
+        <button type="button" class="btn btn-primary" id="btnNewTransaction" onclick="startNewTransaction()">
+          <i class="fa-solid fa-plus"></i> Transaksi Baru
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: KONFIRMASI ===================== -->
+  <div class="modal" id="confirmModal" hidden>
+    <div class="modal-card modal-card--sm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-body">
+        <h3 id="confirmTitle">Konfirmasi</h3>
+        <p id="confirmMessage"></p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="confirmCancel">Batal</button>
+        <button type="button" class="btn btn-primary" id="confirmOk">Ya</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifikasi -->
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <!-- ===== SCRIPTS ===== -->
+  <!-- Layout: fullscreen, jam, status koneksi -->
+  <script type="module" src="./js/module/kasir-ui.js"></script>
+  <!-- Logic kasir + CRUD -->
+  <script type="module" src="./js/module/kasir.js"></script>
+</body>
+</html>
