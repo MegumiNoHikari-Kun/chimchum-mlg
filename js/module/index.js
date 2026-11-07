@@ -1047,17 +1047,30 @@ Mohon segera diproses ya Kak, terima kasih! 🙏`);
    ========================================================= */
 const STATUS_STEPS = [
     { label: 'Diterima', icon: 'fa-receipt' },
-    { label: 'Diproses', icon: 'fa-fire-burner' },
+    { label: 'Disiapkan', icon: 'fa-fire-burner' },
     { label: 'Dikirim', icon: 'fa-motorcycle' },
     { label: 'Selesai', icon: 'fa-circle-check' }
 ];
+// Kunci sudah dinormalisasi: huruf kecil, spasi/underscore/strip → spasi tunggal
 const STATUS_INDEX = {
-    new: 0, baru: 0, pending: 0, received: 0, diterima: 0,
-    process: 1, processing: 1, proses: 1, diproses: 1, cooking: 1, confirmed: 1, ready: 1, siap: 1,
-    delivery: 2, delivering: 2, shipped: 2, shipping: 2, dikirim: 2, otw: 2, pickup: 2,
-    done: 3, completed: 3, complete: 3, selesai: 3, finished: 3, delivered: 3
+    // 0 — Diterima
+    'new': 0, 'baru': 0, 'pending': 0, 'received': 0, 'diterima': 0, 'menunggu': 0, 'menunggu konfirmasi': 0,
+    // 1 — Disiapkan
+    'disiapkan': 1, 'sedang disiapkan': 1, 'siapkan': 1, 'persiapan': 1,
+    'process': 1, 'processing': 1, 'proses': 1, 'diproses': 1, 'sedang diproses': 1,
+    'cooking': 1, 'dimasak': 1, 'confirmed': 1, 'dikonfirmasi': 1, 'preparing': 1,
+    'ready': 1, 'siap': 1, 'siap diambil': 1, 'siap dikirim': 1,
+    // 2 — Dikirim
+    'dikirim': 2, 'sedang dikirim': 2, 'diantar': 2, 'sedang diantar': 2, 'dalam pengiriman': 2,
+    'delivery': 2, 'delivering': 2, 'shipped': 2, 'shipping': 2, 'otw': 2, 'pickup': 2, 'on delivery': 2,
+    // 3 — Selesai
+    'selesai': 3, 'done': 3, 'completed': 3, 'complete': 3, 'finished': 3, 'delivered': 3, 'diterima pelanggan': 3
 };
 const STATUS_CANCELLED = ['cancel', 'canceled', 'cancelled', 'batal', 'dibatalkan', 'rejected', 'ditolak'];
+
+function normalizeStatus(status) {
+    return String(status || '').toLowerCase().replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
 const PAYMENT_LABEL = {
     unpaid: ['Belum dibayar', 'bg-slate-100 text-slate-600'],
     pending: ['Menunggu verifikasi', 'bg-amber-100 text-amber-700'],
@@ -1068,7 +1081,7 @@ const PAYMENT_LABEL = {
 };
 
 function renderTimeline(status) {
-    const s = String(status || '').toLowerCase().trim();
+    const s = normalizeStatus(status);
     if (STATUS_CANCELLED.includes(s)) {
         return `<div class="bg-red-50 border border-red-200 text-red-600 text-sm font-semibold rounded-xl p-3 text-center"><i class="fa-solid fa-ban mr-1.5"></i>Pesanan dibatalkan</div>`;
     }
