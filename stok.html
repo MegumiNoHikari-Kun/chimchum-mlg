@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Stok - ChimChum</title>
+    <title>Stok Siap Jual - ChimChum</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -11,104 +11,170 @@
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; }
 
-        /* Animasi untuk notifikasi (toast) */
+        /* Toast */
         @keyframes slideInDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from { transform: translateY(-16px); opacity: 0; }
+            to   { transform: translateY(0);     opacity: 1; }
         }
-        .toast-enter { animation: slideInDown 0.3s ease-out forwards; }
+        .toast-enter { animation: slideInDown 0.25s ease-out forwards; }
+
+        /* Sorot baris yang baru berubah */
+        @keyframes rowFlash {
+            from { background-color: #ffedd5; }
+            to   { background-color: transparent; }
+        }
+        .row-flash { animation: rowFlash 1.2s ease-out; }
+
+        /* Sembunyikan spinner bawaan input number */
+        .no-spin::-webkit-outer-spin-button,
+        .no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-spin { -moz-appearance: textfield; appearance: textfield; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .toast-enter, .row-flash, .animate-pulse, .fa-spin { animation: none !important; }
+        }
     </style>
 </head>
-<body class="p-4 sm:p-6 overflow-y-auto text-slate-800">
+<body class="p-3 sm:p-6 text-slate-800">
 
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="max-w-6xl mx-auto space-y-5">
 
-    <!-- Notifikasi global (dikendalikan stok.js) -->
-    <div id="statusBox" class="hidden fixed top-6 right-6 z-50 gap-4 rounded-xl px-4 py-3 text-xs shadow-xl border flex items-center justify-between">
+    <!-- Toast (dikendalikan stok.js) -->
+    <div id="statusBox" role="status" aria-live="polite"
+         class="hidden fixed top-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:top-6 z-50 sm:max-w-sm gap-4 rounded-xl px-4 py-3 text-xs shadow-xl border flex items-center justify-between">
         <div id="statusMessage" class="flex items-center gap-2"></div>
-        <button onclick="hideStatus()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" onclick="hideStatus()" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Tutup notifikasi">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
     </div>
 
     <!-- Header -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-warehouse text-orange-500"></i> Monitoring & Update Stok
-            </h2>
-            <p class="text-xs text-slate-500 mt-1">Pantau ketersediaan stok produk secara real-time.</p>
-        </div>
-        <div id="connectionStatus" class="text-[10px] text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-            <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Menghubungkan...
-        </div>
-    </div>
-
-    <!-- Kartu ringkasan (diisi stok.js) -->
-    <div id="stokSummary" class="grid grid-cols-2 lg:grid-cols-4 gap-4"></div>
-
-    <!-- Tabel + kontrol -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-5">
+    <header class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 shrink-0 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
+                <i class="fa-solid fa-warehouse"></i>
+            </div>
             <div>
-                <h4 class="font-bold text-sm text-slate-800">Detail Stok</h4>
+                <h1 class="text-lg sm:text-xl font-bold text-slate-800">Stok Siap Jual</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Pantau dan perbarui stok porsi yang siap dijual.</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+            <span id="lastUpdated" class="text-[10px] text-slate-400"></span>
+            <div id="connectionStatus" class="text-[10px] text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Menghubungkan...
+            </div>
+            <button type="button" id="btnRefresh"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-medium transition disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                    aria-label="Muat ulang data stok">
+                <i class="fa-solid fa-rotate-right"></i> Muat ulang
+            </button>
+        </div>
+    </header>
+
+    <!-- Kartu ringkasan = filter status (diisi stok.js) -->
+    <section id="stokSummary" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Ringkasan stok">
+        <div class="h-[92px] rounded-2xl bg-white border border-slate-100 animate-pulse"></div>
+        <div class="h-[92px] rounded-2xl bg-white border border-slate-100 animate-pulse"></div>
+        <div class="h-[92px] rounded-2xl bg-white border border-slate-100 animate-pulse"></div>
+        <div class="h-[92px] rounded-2xl bg-white border border-slate-100 animate-pulse"></div>
+    </section>
+
+    <!-- Panel daftar stok -->
+    <section id="stokPanel" class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 scroll-mt-4">
+
+        <!-- Toolbar -->
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 mb-3">
+            <div>
+                <h2 class="font-bold text-sm text-slate-800">Detail Stok</h2>
                 <p id="tableInfo" class="text-[10px] text-slate-400 mt-0.5">Memuat data...</p>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                <!-- Dropdown kategori (event dipasang oleh stok.js) -->
-                <div class="relative w-full sm:w-48">
-                    <i class="fa-solid fa-tags absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <select id="kategoriFilter" class="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition cursor-pointer text-slate-600 font-medium">
+            <div class="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 w-full lg:w-auto">
+                <!-- Pencarian -->
+                <div class="relative col-span-2 sm:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                    <input type="search" id="stokSearch" placeholder="Cari nama produk..." autocomplete="off" aria-label="Cari nama produk"
+                           class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-16 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition [&::-webkit-search-cancel-button]:hidden">
+                    <button type="button" id="btnClearSearch" class="hidden absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" aria-label="Hapus pencarian">
+                        <i class="fa-solid fa-circle-xmark text-xs"></i>
+                    </button>
+                    <kbd class="hidden sm:block absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 border border-slate-200 rounded px-1.5 bg-white pointer-events-none">/</kbd>
+                </div>
+
+                <!-- Kategori -->
+                <div class="relative sm:w-44">
+                    <i class="fa-solid fa-tags absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                    <select id="kategoriFilter" aria-label="Filter kategori"
+                            class="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition cursor-pointer text-slate-600 font-medium">
                         <option value="all">Semua Kategori</option>
                     </select>
                     <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
                 </div>
 
-                <!-- Pencarian (event dipasang oleh stok.js) -->
-                <div class="relative w-full sm:w-64">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" id="stokSearch" placeholder="Cari nama produk..." autocomplete="off" class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition">
+                <!-- Urutan -->
+                <div class="relative sm:w-44">
+                    <i class="fa-solid fa-arrow-down-short-wide absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                    <select id="sortSelect" aria-label="Urutkan"
+                            class="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition cursor-pointer text-slate-600 font-medium">
+                        <option value="prioritas">Perlu restok dulu</option>
+                        <option value="nama">Nama A–Z</option>
+                        <option value="stok_asc">Stok terendah</option>
+                        <option value="stok_desc">Stok tertinggi</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
                 </div>
             </div>
         </div>
 
-        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+        <!-- Chip filter aktif (diisi stok.js) -->
+        <div id="activeFilters" class="hidden flex-wrap items-center gap-2 mb-3"></div>
+
+        <!-- Tampilan desktop: tabel -->
+        <div data-view="desktop" class="hidden md:block overflow-x-auto border border-slate-100 rounded-xl">
             <table class="w-full text-left border-collapse text-xs">
                 <thead>
-                    <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
-                        <th class="p-3.5 min-w-[70px]">Foto</th>
-                        <th class="p-3.5 min-w-[180px]">Nama Produk</th>
-                        <th class="p-3.5 min-w-[110px]">Kategori</th>
-                        <th class="p-3.5 min-w-[90px] text-center">Stok Sistem</th>
-                        <th class="p-3.5 min-w-[90px] text-center">Status</th>
-                        <th class="p-3.5 min-w-[130px] text-center">Update Cepat</th>
+                    <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 text-[11px] uppercase tracking-wide">
+                        <th scope="col" class="p-3.5">Produk</th>
+                        <th scope="col" class="p-3.5 w-[150px] text-center">Stok</th>
+                        <th scope="col" class="p-3.5 w-[120px] text-center">Status</th>
+                        <th scope="col" class="p-3.5 w-[190px] text-center">Update Cepat</th>
                     </tr>
                 </thead>
-                <tbody id="stokTableBody" class="divide-y divide-slate-100">
-                    <tr><td colspan="6" class="text-center py-12 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-orange-500 mr-2"></i>Memuat stok...</td></tr>
-                </tbody>
+                <tbody id="stokTableBody" class="divide-y divide-slate-100"></tbody>
             </table>
         </div>
 
+        <!-- Tampilan mobile: kartu -->
+        <div data-view="mobile" id="stokCardList" class="md:hidden border border-slate-100 rounded-xl divide-y divide-slate-100"></div>
+
+        <p class="hidden md:block text-[10px] text-slate-400 mt-2">
+            <i class="fa-regular fa-lightbulb mr-1"></i>Tips: <kbd class="border border-slate-200 rounded px-1">Shift</kbd> + klik −/+ untuk mengubah 10 sekaligus. Ketik angka lalu <kbd class="border border-slate-200 rounded px-1">Enter</kbd> untuk simpan, <kbd class="border border-slate-200 rounded px-1">Esc</kbd> untuk batal.
+        </p>
+
         <!-- Pagination (diisi stok.js) -->
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-5 pt-4 border-t border-slate-100">
-            <div id="paginationInfoText" class="text-[11px] text-slate-500">Menampilkan 0 produk</div>
+        <nav class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 pt-4 border-t border-slate-100" aria-label="Navigasi halaman">
+            <div class="flex items-center gap-3">
+                <div id="paginationInfoText" class="text-[11px] text-slate-500">Menampilkan 0 produk</div>
+                <label class="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span class="hidden sm:inline">Per halaman</span>
+                    <select id="pageSizeSelect" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] outline-none focus:border-orange-500 cursor-pointer" aria-label="Jumlah produk per halaman"></select>
+                </label>
+            </div>
 
             <div class="flex items-center gap-1">
-                <button id="btnPrevPage" onclick="changePage('prev')" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition" disabled>
-                    <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                <button type="button" id="btnPrevPage" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition" disabled aria-label="Halaman sebelumnya">
+                    <i class="fa-solid fa-chevron-left sm:mr-1"></i><span class="hidden sm:inline">Prev</span>
                 </button>
-
                 <div id="pageNumbers" class="hidden sm:flex gap-1"></div>
-                <div id="pageInfoMobile" class="sm:hidden text-xs text-slate-600 font-medium px-2">Page 1</div>
-
-                <button id="btnNextPage" onclick="changePage('next')" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium transition disabled:opacity-50" disabled>
-                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                <div id="pageInfoMobile" class="sm:hidden text-xs text-slate-600 font-medium px-3">1 / 1</div>
+                <button type="button" id="btnNextPage" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition" disabled aria-label="Halaman berikutnya">
+                    <span class="hidden sm:inline">Next</span><i class="fa-solid fa-chevron-right sm:ml-1"></i>
                 </button>
             </div>
-        </div>
-
-    </div>
+        </nav>
+    </section>
 </div>
 
 <!-- Satu-satunya script logika: js/module/stok.js -->
