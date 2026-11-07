@@ -14,32 +14,54 @@
 
         .field { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .75rem; padding: .625rem .875rem; font-size: .75rem; outline: 0; transition: border-color .15s, box-shadow .15s, background .15s; }
         .field:focus { background: #fff; border-color: #f97316; box-shadow: 0 0 0 3px #ffedd5; }
+        .field:disabled { opacity: .6; cursor: wait; }
         .lbl { display: block; font-size: .6875rem; font-weight: 600; color: #475569; margin-bottom: .375rem; }
+        .hint { font-size: .625rem; color: #94a3b8; margin-top: .25rem; line-height: 1.4; }
+
+        /* Input dengan awalan / akhiran (Rp, pcs, %) */
+        .affix-wrap { position: relative; }
+        .affix { position: absolute; top: 50%; transform: translateY(-50%); font-size: .6875rem; font-weight: 600; color: #94a3b8; pointer-events: none; }
+        .affix.l { left: .875rem; }
+        .affix.r { right: .875rem; }
+        .affix-wrap.has-l .field { padding-left: 2.25rem; }
+        .affix-wrap.has-r .field { padding-right: 2.75rem; }
 
         .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; font-weight: 600; font-size: .75rem; padding: .625rem 1rem; border-radius: .75rem; transition: background .15s, opacity .15s; white-space: nowrap; }
+        .btn:disabled { opacity: .6; cursor: not-allowed; }
         .btn-ghost { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
         .btn-ghost:hover:not(:disabled) { background: #f8fafc; }
+        .btn-primary { background: #f97316; color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: #ea580c; }
         .btn-sm { padding: .4rem .6rem; border-radius: .5rem; }
 
         .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; }
+        .step { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 9999px; background: #ffedd5; color: #c2410c; font-size: .625rem; font-weight: 700; }
 
         .tbl { width: 100%; font-size: .75rem; text-align: left; border-collapse: collapse; }
         .tbl th { padding: .75rem 1rem; background: #f8fafc; color: #64748b; font-weight: 600; white-space: nowrap; }
-        .tbl td { padding: .75rem 1rem; border-top: 1px solid #f1f5f9; vertical-align: top; }
+        .tbl td { padding: .75rem 1rem; border-top: 1px solid #f1f5f9; vertical-align: middle; white-space: nowrap; }
+        .tbl td:first-child { white-space: normal; min-width: 9rem; }
         .tbl tbody tr:hover { background: #fffaf5; }
-        .tbl td.empty { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; }
+        .tbl td.empty { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; white-space: normal; }
+        .tbl tfoot td { background: #fff7ed; border-top: 1px solid #fed7aa; font-weight: 700; color: #334155; }
+        .u { color: #94a3b8; font-size: .6875rem; }
+
+        .share { display: inline-flex; align-items: center; gap: .5rem; justify-content: flex-end; }
+        .share-bar { width: 3.5rem; height: .375rem; background: #f1f5f9; border-radius: 9999px; overflow: hidden; }
+        .share-bar span { display: block; height: 100%; background: #fb923c; border-radius: 9999px; }
 
         .badge { display: inline-flex; align-items: center; padding: .125rem .5rem; border-radius: 9999px; font-size: .625rem; font-weight: 600; white-space: nowrap; }
         .b-ok { background: #ecfdf5; color: #047857; }
         .b-warn { background: #fffbeb; color: #b45309; }
         .b-bad { background: #fff1f2; color: #be123c; }
+        .b-muted { background: #f1f5f9; color: #475569; }
+
+        .row { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; font-size: .75rem; }
+        .row dt { color: #64748b; }
+        .row dd { font-weight: 600; color: #334155; font-variant-numeric: tabular-nums; }
 
         .spin { animation: spin .8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .stat-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .875rem; padding: .875rem 1rem; }
-        .stat-label { font-size: .6875rem; font-weight: 600; color: #94a3b8; }
-        .stat-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
 
         .btn:focus-visible, .field:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
@@ -50,131 +72,180 @@
 
     <!-- ================= HEADER ================= -->
     <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-            <div>
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+            <div class="min-w-0">
                 <h1 class="text-lg font-bold flex items-center gap-2">
                     <i class="fa-solid fa-sack-dollar text-orange-500"></i> Kalkulator HPP
                 </h1>
-                <p class="text-[11px] text-slate-500">Hitung Harga Pokok Produksi per menu berdasarkan resep dan bahan baku.</p>
+                <p class="text-[11px] text-slate-500 truncate">Hitung Harga Pokok Produksi per menu dari resep dan harga bahan baku.</p>
             </div>
-            <a href="./produk.html" class="btn btn-ghost btn-sm"><i class="fa-solid fa-book"></i> Master Menu</a>
+            <div class="flex items-center gap-2 shrink-0">
+                <button class="btn btn-ghost btn-sm" data-action="reload" title="Muat ulang data"><i class="fa-solid fa-rotate"></i><span class="hidden sm:inline">Muat ulang</span></button>
+                <a href="./produk.html" class="btn btn-ghost btn-sm"><i class="fa-solid fa-book"></i><span class="hidden sm:inline">Master Menu</span></a>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+    <main class="w-full p-4 sm:p-6 lg:px-8 space-y-4">
 
         <!-- Gagal memuat data -->
-        <div id="loadError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-xs flex items-center justify-between gap-3">
+        <div id="loadError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-xs flex items-center justify-between gap-3" role="alert">
             <span><i class="fa-solid fa-circle-exclamation mr-2"></i><span id="loadErrorMsg"></span></span>
             <button class="btn btn-ghost btn-sm" data-action="reload"><i class="fa-solid fa-rotate"></i> Coba lagi</button>
         </div>
 
-        <!-- ================= PILIH MENU & PRODUKSI ================= -->
-        <div class="card p-4 sm:p-5 space-y-4">
-            <div>
-                <label class="lbl" for="hppProduct">Pilih menu</label>
-                <select id="hppProduct" class="field">
-                    <option value="">-- Memuat menu... --</option>
-                </select>
-            </div>
+        <!-- Mobile: input → hasil → rincian. Desktop: kiri input+rincian, kanan hasil (sticky) -->
+        <div class="grid gap-4 items-start lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr]">
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- ================= INPUT ================= -->
+            <section class="card p-4 sm:p-5 space-y-5 lg:col-start-1 lg:row-start-1">
                 <div>
-                    <label class="lbl" for="hppQty">Isi per menu (jumlah pcs)</label>
-                    <input type="number" id="hppQty" class="field" min="0" step="any" placeholder="Cth: 6" value="1">
-                    <p class="text-[10px] text-slate-400 mt-1">Resep dihitung per 1 pcs. Isi berapa pcs dalam 1 menu yang dijual (mis. dimsum isi 6).</p>
+                    <label class="lbl flex items-center gap-2" for="hppProduct"><span class="step">1</span> Pilih menu</label>
+                    <select id="hppProduct" class="field" disabled>
+                        <option value="">Memuat menu...</option>
+                    </select>
+                    <div id="prodMeta" class="flex flex-wrap gap-1.5 mt-2"></div>
                 </div>
+
                 <div>
-                    <label class="lbl" for="hppExtra">Biaya tambahan per menu (Rp)</label>
-                    <input type="number" id="hppExtra" class="field" min="0" step="any" placeholder="Kemasan, gas, tenaga, dll">
-                </div>
-                <div>
-                    <label class="lbl" for="hppMargin">Margin keuntungan diinginkan (%)</label>
-                    <input type="number" id="hppMargin" class="field" min="0" step="any" placeholder="Cth: 30">
-                </div>
-            </div>
+                    <p class="lbl flex items-center gap-2 mb-3"><span class="step">2</span> Atur perhitungan</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <div>
+                            <label class="lbl" for="hppQty">Isi per menu</label>
+                            <div class="affix-wrap has-r">
+                                <input type="number" id="hppQty" class="field" min="0" step="any" inputmode="decimal" placeholder="Cth: 6" value="1">
+                                <span class="affix r">pcs</span>
+                            </div>
+                            <p class="hint">Resep dihitung per 1 pcs. Isi jumlah pcs dalam 1 porsi yang dijual (mis. dimsum isi 6).</p>
+                        </div>
 
-            <p id="hppExtraHint" class="text-[11px] text-amber-600"></p>
+                        <div>
+                            <label class="lbl" for="hppExtra">Biaya tambahan per menu</label>
+                            <div class="affix-wrap has-l">
+                                <span class="affix l">Rp</span>
+                                <input type="number" id="hppExtra" class="field" min="0" step="any" inputmode="numeric" placeholder="0">
+                            </div>
+                            <p class="hint">Kemasan, saus, gas, tenaga kerja, dll.</p>
+                        </div>
 
-            <div>
-                <label class="lbl" for="hppBatch">Simulasi produksi berapa menu sekaligus (opsional)</label>
-                <input type="number" id="hppBatch" class="field" value="1" min="0.1" step="0.1">
-                <p id="hppBatchInfo" class="text-[11px] text-slate-500 mt-1"></p>
-            </div>
-        </div>
+                        <div>
+                            <label class="lbl" for="hppTarget">Target keuntungan</label>
+                            <div class="flex gap-2">
+                                <div class="affix-wrap has-r flex-1">
+                                    <input type="number" id="hppTarget" class="field" min="0" step="any" inputmode="decimal" placeholder="Cth: 40">
+                                    <span class="affix r">%</span>
+                                </div>
+                                <select id="hppMode" class="field !w-auto" aria-label="Jenis target">
+                                    <option value="markup">Markup</option>
+                                    <option value="margin">Margin</option>
+                                </select>
+                            </div>
+                            <p id="hppTargetHint" class="hint"></p>
+                        </div>
 
-        <!-- ================= HASIL PERHITUNGAN ================= -->
-        <div id="hppResult" class="hidden card p-4 sm:p-5 space-y-4">
-            <h3 class="font-bold text-sm">Hasil perhitungan HPP</h3>
+                        <div>
+                            <label class="lbl" for="hppRound">Bulatkan harga jual ke atas</label>
+                            <select id="hppRound" class="field">
+                                <option value="0">Tanpa pembulatan</option>
+                                <option value="100">Kelipatan Rp 100</option>
+                                <option value="500">Kelipatan Rp 500</option>
+                                <option value="1000">Kelipatan Rp 1.000</option>
+                            </select>
+                        </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div class="stat-box">
-                    <p class="stat-label">Total Biaya Bahan</p>
-                    <p class="stat-value" id="hppTotalBiaya">Rp 0</p>
-                </div>
-                <div class="stat-box">
-                    <p class="stat-label">Isi per Menu</p>
-                    <p class="stat-value" id="hppTotalUnit">0 pcs</p>
-                </div>
-                <div class="stat-box border-orange-200 bg-orange-50">
-                    <p class="stat-label text-orange-500">HPP per Menu</p>
-                    <p class="stat-value text-orange-600" id="hppPerUnit">Rp 0</p>
-                </div>
-                <div class="stat-box border-orange-200 bg-orange-50">
-                    <p class="stat-label text-orange-500">HPP per Pcs</p>
-                    <p class="stat-value text-orange-600" id="hppPerPcs">Rp 0</p>
-                </div>
-                <div class="stat-box border-emerald-200 bg-emerald-50">
-                    <p class="stat-label text-emerald-600">Harga Jual Disarankan</p>
-                    <p class="stat-value text-emerald-700" id="hppHargaSaran">Rp 0</p>
-                </div>
-            </div>
-
-            <div id="hppCurrentPrice" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <h4 class="text-xs font-bold text-slate-700">Perbandingan dengan harga jual saat ini</h4>
-                    <span id="hppMarginBadge" class="badge b-ok">Untung</span>
-                </div>
-                <div class="grid grid-cols-3 gap-3 text-xs">
-                    <div>
-                        <p class="text-slate-400">Harga jual sekarang</p>
-                        <p class="font-bold" id="hppHargaSekarang">Rp 0</p>
-                    </div>
-                    <div>
-                        <p class="text-slate-400">Keuntungan Sekarang</p>
-                        <p id="hppProfit" class="font-bold">Rp 0</p>
-                    </div>
-                    <div>
-                        <p class="text-slate-400">Margin aktual</p>
-                        <p class="font-bold" id="hppMarginAktual">0%</p>
+                        <div class="sm:col-span-2 xl:col-span-4">
+                            <label class="lbl" for="hppBatch">Simulasi produksi (opsional)</label>
+                            <div class="affix-wrap has-r sm:max-w-[50%] xl:max-w-[25%]">
+                                <input type="number" id="hppBatch" class="field" value="1" min="1" step="1" inputmode="numeric">
+                                <span class="affix r">menu</span>
+                            </div>
+                            <p class="hint">Isi lebih dari 1 untuk melihat total belanja bahan dan kebutuhan tiap bahan.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <!-- ================= RINCIAN BIAYA BAHAN ================= -->
-        <div class="card overflow-hidden">
-            <div class="p-4 flex items-center justify-between border-b border-slate-100">
-                <h3 class="font-bold text-sm">Rincian biaya bahan</h3>
-                <span id="hppLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu...</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="tbl">
-                    <div class="border-t border-slate-200 bg-slate-50 p-3 mb-2 flex justify-between items-center">
-                        <span class="font-bold">Total biaya bahan (1 menu)</span>
-                        <span class="font-bold text-orange-600" id="hppTotalBahan">Rp 0</span>
+            <!-- ================= HASIL ================= -->
+            <aside class="card p-4 sm:p-5 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-20" aria-live="polite">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-sm">Hasil perhitungan</h2>
+                    <button class="btn btn-ghost btn-sm" data-action="copy" title="Salin ringkasan"><i class="fa-regular fa-copy"></i> Salin</button>
+                </div>
+
+                <!-- State kosong -->
+                <div id="sumEmpty" class="text-center py-8">
+                    <div class="w-12 h-12 mx-auto rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-calculator"></i>
                     </div>
-                    
-                    <thead>
-                        <tr><th>Bahan baku</th><th>Per 1 pcs</th><th id="hppColTotal">Kebutuhan total</th><th class="text-right">Subtotal</th></tr>
-                    </thead>
-                    
-                    <tbody id="hppBody">
-                        <tr><td colspan="4" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
-                    </tbody>
-                    
-                </table>
-            </div>
+                    <p id="sumEmptyMsg" class="text-xs text-slate-500">Memuat data...</p>
+                    <a id="sumEmptyLink" href="./produk.html" class="hidden btn btn-ghost btn-sm mt-3"><i class="fa-solid fa-book"></i> Buka Master Menu</a>
+                </div>
+
+                <!-- Isi hasil -->
+                <div id="sumBody" class="hidden space-y-4">
+                    <dl class="space-y-2">
+                        <div class="row"><dt>Biaya bahan</dt><dd id="sumBahan">Rp 0</dd></div>
+                        <div class="row"><dt>Biaya tambahan</dt><dd id="sumExtra">Rp 0</dd></div>
+                    </dl>
+
+                    <div class="rounded-xl bg-orange-50 border border-orange-200 p-3">
+                        <p class="text-[11px] font-semibold text-orange-600">HPP per menu</p>
+                        <p id="sumHpp" class="text-2xl font-bold text-orange-600 tabular-nums">Rp 0</p>
+                        <p id="sumHppPcs" class="text-[11px] text-orange-700/80"></p>
+                    </div>
+
+                    <div id="sumWarn" class="hidden flex gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                        <i class="fa-solid fa-triangle-exclamation mt-0.5"></i><span id="sumWarnMsg"></span>
+                    </div>
+
+                    <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                        <p class="text-[11px] font-semibold text-emerald-600">Harga jual disarankan</p>
+                        <p id="sumSaran" class="text-2xl font-bold text-emerald-700 tabular-nums">—</p>
+                        <p id="sumSaranNote" class="text-[11px] text-emerald-800/80 whitespace-pre-line"></p>
+                    </div>
+
+                    <!-- Perbandingan harga sekarang -->
+                    <div id="cmpBox" class="hidden rounded-xl border border-slate-200 p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-700">Harga jual saat ini</h3>
+                            <span id="cmpBadge" class="badge b-ok">Untung</span>
+                        </div>
+                        <dl class="space-y-1.5">
+                            <div class="row"><dt>Harga jual</dt><dd id="cmpHarga">Rp 0</dd></div>
+                            <div class="row"><dt>Laba per menu</dt><dd id="cmpProfit" class="font-bold">Rp 0</dd></div>
+                            <div class="row"><dt>Margin / Markup</dt><dd><span id="cmpMargin">0%</span> · <span id="cmpMarkup">0%</span></dd></div>
+                        </dl>
+                        <p id="cmpNote" class="hidden text-[11px] text-slate-500 pt-1 border-t border-slate-100"></p>
+                    </div>
+                    <p id="cmpMissing" class="hidden text-[11px] text-slate-400">Harga jual menu ini belum diatur, jadi belum bisa dibandingkan.</p>
+
+                    <!-- Simulasi produksi -->
+                    <div id="batchBox" class="hidden rounded-xl bg-slate-50 border border-slate-200 p-3">
+                        <p class="text-[11px] font-semibold text-slate-500">Total biaya produksi</p>
+                        <p id="batchTotal" class="text-lg font-bold text-slate-800 tabular-nums">Rp 0</p>
+                        <p id="batchInfo" class="text-[11px] text-slate-500"></p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ================= RINCIAN BAHAN ================= -->
+            <section class="card overflow-hidden lg:col-start-1 lg:row-start-2">
+                <div class="p-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100">
+                    <h2 class="font-bold text-sm">Rincian biaya bahan</h2>
+                    <span id="hppLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="tbl">
+                        <thead id="hppHead">
+                            <tr><th>Bahan baku</th><th class="text-right">Per 1 pcs</th><th class="text-right">Per menu</th><th class="text-right">Harga / satuan</th><th class="text-right">Subtotal</th><th class="text-right">Porsi</th></tr>
+                        </thead>
+                        <tbody id="hppBody">
+                            <tr><td colspan="6" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat data...</td></tr>
+                        </tbody>
+                        <tfoot id="hppFoot"></tfoot>
+                    </table>
+                </div>
+            </section>
         </div>
     </main>
 
