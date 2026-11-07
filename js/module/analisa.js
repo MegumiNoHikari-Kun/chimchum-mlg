@@ -1242,6 +1242,23 @@ window.exportMenuCSV = function () {
     downloadCSV(rows, 'menu-chimchum');
 };
 
+/* ================= CEK VERSI HTML =================
+   analisa.js ini butuh analisa.html versi terbaru. Kalau HTML lama yang ter-load
+   (belum diganti / masih tercache), tampilkan pesan yang jelas daripada error diam-diam. */
+const REQUIRED_IDS = ['settingsForm', 'settingsDlg', 'targetCard', 'insightList', 'insightToggle', 'periodSelect', 'channelSelect',
+    'heatmap', 'timeInsight', 'winTabs', 'custSortSm', 'secNav', 'trendToggle', 'appHeader'];
+const missingIds = REQUIRED_IDS.filter(id => !$(id));
+if (missingIds.length) {
+    const msg = 'Halaman analisa.html belum versi terbaru (elemen tidak ditemukan: ' + missingIds.join(', ') + '). Ganti analisa.html dengan versi baru lalu muat ulang dengan Ctrl+Shift+R.';
+    const box = document.createElement('div');
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;inset:auto 1rem 1rem 1rem;z-index:9999;background:#e11d48;color:#fff;padding:12px 16px;border-radius:12px;font:500 13px Poppins,sans-serif;box-shadow:0 10px 25px rgba(0,0,0,.2)';
+    box.textContent = msg;
+    document.body.appendChild(box);
+    throw new Error(msg);
+}
+const on = (id, evt, fn) => { const el = $(id); if (el) el.addEventListener(evt, fn); else console.warn('[analisa] elemen #' + id + ' tidak ada'); };
+
 /* ================= PENGATURAN ================= */
 window.openSettings = function () {
     $('setTarget').value = settings.target ? num(settings.target) : '';
@@ -1251,7 +1268,7 @@ window.openSettings = function () {
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
 };
 window.closeSettings = () => { const d = $('settingsDlg'); d.close ? d.close() : d.removeAttribute('open'); };
-$('settingsForm').addEventListener('submit', e => {
+on('settingsForm', 'submit', e => {
     e.preventDefault();
     const clampFee = v => Math.min(100, Math.max(0, Number(String(v).replace(',', '.')) || 0));
     settings = {
@@ -1263,7 +1280,7 @@ $('settingsForm').addEventListener('submit', e => {
     allOrders.length ? analyze() : renderTarget();
     showToast('Pengaturan disimpan');
 });
-$('setTarget').addEventListener('input', e => {
+on('setTarget', 'input', e => {
     const d = e.target.value.replace(/\D/g, '');
     e.target.value = d ? Number(d).toLocaleString('id-ID') : '';
 });
@@ -1309,10 +1326,10 @@ function setChannel(ch) {
     allOrders.length && analyze();
 }
 
-$('periodChips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) setPeriod(b.dataset.period); });
-$('channelChips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) setChannel(b.dataset.channel); });
-$('periodSelect').addEventListener('change', e => setPeriod(e.target.value));
-$('channelSelect').addEventListener('change', e => setChannel(e.target.value));
+on('periodChips', 'click', e => { const b = e.target.closest('.chip'); if (b) setPeriod(b.dataset.period); });
+on('channelChips', 'click', e => { const b = e.target.closest('.chip'); if (b) setChannel(b.dataset.channel); });
+on('periodSelect', 'change', e => setPeriod(e.target.value));
+on('channelSelect', 'change', e => setChannel(e.target.value));
 
 function onDateChange() {
     customStart = $('dateStart').value;
@@ -1326,20 +1343,20 @@ function onDateChange() {
         allOrders.length && analyze();
     }
 }
-$('dateStart').addEventListener('change', onDateChange);
-$('dateEnd').addEventListener('change', onDateChange);
-$('dateStart').max = $('dateEnd').max = todayJK();
+on('dateStart', 'change', onDateChange);
+on('dateEnd', 'change', onDateChange);
+if ($('dateStart') && $('dateEnd')) $('dateStart').max = $('dateEnd').max = todayJK();
 
-$('menuSort').addEventListener('change', () => view && renderMenu());
-$('menuToggle').addEventListener('click', () => { menuAll = !menuAll; view && renderMenu(); });
-$('insightToggle').addEventListener('click', () => { insightAll = !insightAll; view && renderInsights(); });
-$('trendToggle').addEventListener('click', e => {
+on('menuSort', 'change', () => view && renderMenu());
+on('menuToggle', 'click', () => { menuAll = !menuAll; view && renderMenu(); });
+on('insightToggle', 'click', () => { insightAll = !insightAll; view && renderInsights(); });
+on('trendToggle', 'click', e => {
     const b = e.target.closest('button[data-metric]');
     if (!b || !view) return;
     trendMetric = b.dataset.metric;
     renderTrend();
 });
-$('winTabs').addEventListener('click', e => {
+on('winTabs', 'click', e => {
     const b = e.target.closest('button[data-tab]');
     if (!b || !view) return;
     winTab = b.dataset.tab;
@@ -1347,13 +1364,13 @@ $('winTabs').addEventListener('click', e => {
     renderWinback();
 });
 
-$('custSearch').addEventListener('input', e => {
+on('custSearch', 'input', e => {
     custQuery = (e.target.value || '').toLowerCase().trim();
     custLimit = custPage();
     $('custClear').classList.toggle('hidden', !custQuery);
     view && renderCustomers();
 });
-$('custClear').addEventListener('click', () => {
+on('custClear', 'click', () => {
     $('custSearch').value = '';
     custQuery = '';
     custLimit = custPage();
@@ -1361,7 +1378,7 @@ $('custClear').addEventListener('click', () => {
     view && renderCustomers();
 });
 
-$('custHead').addEventListener('click', e => {
+on('custHead', 'click', e => {
     const th = e.target.closest('th[data-sort]');
     if (!th || !view) return;
     const k = th.dataset.sort;
@@ -1370,7 +1387,7 @@ $('custHead').addEventListener('click', e => {
         : { key: k, dir: ['name', 'channel'].includes(k) ? 'asc' : 'desc' };
     renderCustomers();
 });
-$('custSortSm').addEventListener('change', e => {
+on('custSortSm', 'change', e => {
     const [key, dir] = e.target.value.split(':');
     custSort = { key, dir };
     view && renderCustomers();
