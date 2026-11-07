@@ -6,16 +6,18 @@
     <title>Kelola Produk - ChimChum</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #f8fafc; /* Slightly off-white background for depth */
+            background-color: #f8fafc;
         }
 
-        input, textarea, button {
+        input, textarea, button, select {
             font-family: inherit;
         }
 
@@ -27,350 +29,540 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Modal transitions */
-        .modal-enter {
-            opacity: 0;
+        /* Skeleton loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+            background-size: 400% 100%;
+            animation: shimmer 1.4s ease infinite;
         }
-        .modal-enter-active {
-            opacity: 1;
-            transition: opacity 300ms ease-out;
+
+        @keyframes shimmer {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0 50%; }
         }
-        .modal-exit {
-            opacity: 1;
+
+        /* Sembunyikan spinner bawaan input number */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
-        .modal-exit-active {
-            opacity: 0;
-            transition: opacity 200ms ease-in;
+        input[type=number] {
+            -moz-appearance: textfield;
         }
-        .modal-content-scale-enter {
-            transform: scale(0.95) translateY(10px);
+
+        /* Toast */
+        .toast-enter {
+            animation: toastIn 0.25s ease-out;
         }
-        .modal-content-scale-enter-active {
-            transform: scale(1) translateY(0);
-            transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        /* Field error */
+        .field-error {
+            border-color: #f87171 !important;
+            background-color: #fef2f2 !important;
+        }
+
+        /* Drop zone aktif */
+        #dropZone.dragover {
+            border-color: #f97316;
+            background-color: #fff7ed;
+        }
+
+        mark {
+            background-color: #ffedd5;
+            color: #c2410c;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
         }
     </style>
 </head>
 
-<body class="p-4 sm:p-6 overflow-y-auto text-slate-800">
+<body class="p-4 sm:p-6 text-slate-800">
 
 <div class="max-w-6xl mx-auto">
 
     <!-- =====================================================
          HEADER
     ====================================================== -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+    <header class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-5">
         <div>
-            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <h1 class="font-bold text-lg text-slate-800 flex items-center gap-2">
                 <i class="fa-solid fa-box text-orange-500"></i>
                 Kelola Produk
-            </h3>
+            </h1>
             <p class="text-xs text-slate-500 mt-1">
-                Kelola katalog menu makanan & minuman ChimChum.
+                Kelola katalog menu makanan &amp; minuman ChimChum.
             </p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <!-- Tombol untuk Cek HPP -->
-            <a href="./hpp.html" class="w-full sm:w-auto bg-white hover:bg-orange-50 text-orange-600 font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-sm border border-orange-200 flex items-center justify-center gap-2 btn btn-ghost btn-sm"><i class="fa-solid fa-sack-dollar"></i>Hitung HPP</a>
-        
-            <!-- Tombol untuk Membuka Modal Tambah Produk -->
-            <button 
-                id="btnOpenAddModal"
-                class="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2"
+        <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            <a href="./hpp.html" class="bg-white hover:bg-orange-50 text-orange-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-sm border border-orange-200 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
+                <i class="fa-solid fa-sack-dollar"></i>
+                Hitung HPP
+            </a>
+            <button
+                id="btnOpenAddModal" type="button"
+                class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
             >
-                <i class="fa-solid fa-plus-circle"></i>
+                <i class="fa-solid fa-plus"></i>
                 Tambah Produk
             </button>
         </div>
-    </div>
+    </header>
 
     <!-- =====================================================
-         STATUS BOX (Hidden by default)
+         BANNER (mode local storage / error koneksi)
     ====================================================== -->
-    <div id="statusBox" class="hidden mb-5 rounded-xl px-4 py-3 text-xs"></div>
+    <div id="statusBox" class="hidden mb-5" role="status"></div>
 
     <!-- =====================================================
-         TABLE HEADER & CONTROLS
+         RINGKASAN (klik untuk filter cepat)
     ====================================================== -->
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-            
-            <div>
-                <h4 class="font-bold text-sm text-slate-800">Daftar Produk</h4>
-                <p id="productCount" class="text-[10px] text-slate-400 mt-0.5">Memuat...</p>
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5" aria-label="Ringkasan produk">
+        <button type="button" data-stat-filter="all"
+            class="stat-card text-left bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-orange-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
+            <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                <span class="w-7 h-7 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center"><i class="fa-solid fa-utensils text-xs"></i></span>
+                Total Produk
             </div>
-        
-            <div class="flex items-center gap-3 w-full sm:w-auto">
-                <div class="relative w-full sm:w-80">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input
-                        type="text"
-                        id="p-search"
-                        placeholder="Cari nama produk atau kategori..."
-                        autocomplete="off"
-                        class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                    >
-                    <button
-                        type="button"
-                        id="btnClearProductSearch"
-                        class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1"
-                        title="Bersihkan pencarian"
-                    >
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-        
-                <div id="connectionStatus" class="text-[10px] text-slate-400 whitespace-nowrap hidden sm:block">
+            <p id="statTotal" class="text-xl font-bold text-slate-800 mt-2">–</p>
+        </button>
+
+        <button type="button" data-stat-filter="low"
+            class="stat-card text-left bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-amber-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
+            <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                <span class="w-7 h-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation text-xs"></i></span>
+                Stok Menipis
+            </div>
+            <p id="statLow" class="text-xl font-bold text-slate-800 mt-2">–</p>
+        </button>
+
+        <button type="button" data-stat-filter="out"
+            class="stat-card text-left bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-red-200 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300">
+            <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                <span class="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"><i class="fa-solid fa-ban text-xs"></i></span>
+                Stok Habis
+            </div>
+            <p id="statOut" class="text-xl font-bold text-slate-800 mt-2">–</p>
+        </button>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><i class="fa-solid fa-chart-line text-xs"></i></span>
+                Rata-rata Margin
+            </div>
+            <p id="statMargin" class="text-xl font-bold text-slate-800 mt-2">–</p>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         DAFTAR PRODUK
+    ====================================================== -->
+    <section id="listTop" class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 mb-6 scroll-mt-4">
+
+        <!-- Judul + status koneksi -->
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <div>
+                <h2 class="font-bold text-sm text-slate-800">Daftar Produk</h2>
+                <p id="productCount" class="text-[11px] text-slate-400 mt-0.5">Memuat...</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <div id="connectionStatus" class="text-[10px] text-slate-400 whitespace-nowrap">
                     <i class="fa-solid fa-circle-notch loading-spinner mr-1"></i>
                     Menghubungkan...
                 </div>
-
-                <button id="btnRefresh" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-xl text-xs transition" title="Refresh Data">
-                    <i class="fa-solid fa-rotate"></i>
+                <button id="btnRefresh" type="button" title="Muat ulang data" aria-label="Muat ulang data"
+                    class="w-9 h-9 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300">
+                    <i id="refreshIcon" class="fa-solid fa-rotate"></i>
                 </button>
             </div>
         </div>
 
-        <!-- =====================================================
-             TABLE
-        ====================================================== -->
-        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+        <!-- Toolbar: cari, filter, urutkan -->
+        <div class="grid grid-cols-2 md:grid-cols-[1fr_auto_auto_auto] gap-2 mb-3">
+            <div class="relative col-span-2 md:col-span-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                <label for="p-search" class="sr-only">Cari produk</label>
+                <input
+                    type="search" id="p-search"
+                    placeholder="Cari nama, kategori, isi, deskripsi..."
+                    autocomplete="off"
+                    class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-16 py-2.5 text-xs outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition [&::-webkit-search-cancel-button]:hidden"
+                >
+                <kbd id="searchShortcut" class="hidden md:inline-block absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 border border-slate-200 bg-white rounded px-1.5 py-0.5 pointer-events-none">/</kbd>
+                <button
+                    type="button" id="btnClearProductSearch"
+                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 text-xs"
+                    title="Bersihkan pencarian" aria-label="Bersihkan pencarian"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <label class="sr-only" for="filterCategory">Filter kategori</label>
+            <select id="filterCategory"
+                class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition text-slate-600">
+                <option value="">Semua kategori</option>
+            </select>
+
+            <label class="sr-only" for="filterStock">Filter stok</label>
+            <select id="filterStock"
+                class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition text-slate-600">
+                <option value="all">Semua stok</option>
+                <option value="available">Masih tersedia</option>
+                <option value="low">Stok menipis (≤ 5)</option>
+                <option value="out">Stok habis</option>
+            </select>
+
+            <label class="sr-only" for="sortBy">Urutkan</label>
+            <select id="sortBy"
+                class="col-span-2 md:col-span-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition text-slate-600">
+                <option value="nama-asc">Nama A–Z</option>
+                <option value="nama-desc">Nama Z–A</option>
+                <option value="harga-asc">Harga termurah</option>
+                <option value="harga-desc">Harga termahal</option>
+                <option value="stok-asc">Stok paling sedikit</option>
+                <option value="margin-desc">Margin terbesar</option>
+                <option value="terbaru">Terbaru ditambahkan</option>
+            </select>
+        </div>
+
+        <!-- Info filter aktif -->
+        <div id="activeFilters" class="hidden items-center gap-2 mb-3 text-[11px] text-slate-500">
+            <i class="fa-solid fa-filter text-orange-400"></i>
+            <span id="activeFiltersText"></span>
+            <button type="button" id="btnResetFilters" class="text-orange-600 hover:text-orange-700 font-semibold underline-offset-2 hover:underline">
+                Reset filter
+            </button>
+        </div>
+
+        <!-- TABEL (tablet & desktop) -->
+        <div class="hidden md:block overflow-x-auto border border-slate-100 rounded-xl">
             <table class="w-full text-left border-collapse text-xs">
                 <thead>
-                    <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-100">
-                        <th class="p-3.5 min-w-[70px]">Foto</th>
-                        <th class="p-3.5 min-w-[180px]">Nama</th>
-                        <th class="p-3.5 min-w-[110px]">Kategori</th>
-                        <th class="p-3.5 min-w-[100px]">Isi</th>
-                        <th class="p-3.5 min-w-[120px]">Harga Jual</th>
-                        <th class="p-3.5 min-w-[120px]">HPP</th>
-                        <th class="p-3.5 min-w-[80px]">Stok</th>
-                        <th class="p-3.5 min-w-[100px] text-right">Aksi</th>
+                    <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 text-[11px] uppercase tracking-wide">
+                        <th scope="col" class="p-3 w-[72px]">Foto</th>
+                        <th scope="col" class="p-3 min-w-[200px]">Nama</th>
+                        <th scope="col" class="p-3 min-w-[110px]">Kategori</th>
+                        <th scope="col" class="p-3 min-w-[100px]">Isi</th>
+                        <th scope="col" class="p-3 min-w-[110px] text-right">Harga Jual</th>
+                        <th scope="col" class="p-3 min-w-[110px] text-right">HPP</th>
+                        <th scope="col" class="p-3 min-w-[110px]">Stok</th>
+                        <th scope="col" class="p-3 w-[100px] text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody id="prodTable" class="divide-y divide-slate-100">
-                    
-                </tbody>
+                <tbody id="prodTable" class="divide-y divide-slate-100"></tbody>
             </table>
         </div>
 
-        <!-- =====================================================
-             PAGINATION
-        ====================================================== -->
-        <div id="paginationContainer" class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-slate-100">
-            <div id="paginationInfo" class="text-[11px] text-slate-500">
-                Menampilkan <span class="font-medium text-slate-700">1</span> sampai <span class="font-medium text-slate-700">10</span> dari <span class="font-medium text-slate-700">45</span> produk
-            </div>
-            
-            <div class="flex items-center gap-1">
-                <button id="btnPrevPage" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-50 transition" disabled>
-                    <i class="fa-solid fa-chevron-left mr-1"></i> Prev
-                </button>
-                
-                <div id="pageNumbers" class="flex gap-1 hidden sm:flex">
-                    <!-- Angka halaman (Jika di-generate dari JS, bisa disuntikkan kesini) -->
-                    <button class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-medium shadow-sm">1</button>
-                    <button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">2</button>
-                    <button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">3</button>
-                    <span class="w-8 h-8 flex items-center justify-center text-slate-400 text-xs">...</span>
-                    <button class="w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center text-xs font-medium transition">5</button>
-                </div>
-                <div id="pageInfoMobile" class="sm:hidden text-xs text-slate-600 font-medium px-2">Page 1 of 5</div>
+        <!-- KARTU (HP) -->
+        <div id="prodCards" class="md:hidden flex flex-col gap-2"></div>
 
-                <button id="btnNextPage" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium transition">
-                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
-                </button>
+        <!-- PAGINATION -->
+        <div id="paginationContainer" class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4 pt-4 border-t border-slate-100">
+            <div class="flex items-center gap-3 text-[11px] text-slate-500">
+                <span id="paginationInfo"></span>
+                <span class="hidden sm:inline text-slate-300">|</span>
+                <label class="hidden sm:flex items-center gap-1.5">
+                    Tampilkan
+                    <select id="perPage" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] outline-none focus:border-orange-500">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
             </div>
+
+            <nav id="paginationNav" class="flex items-center gap-1" aria-label="Navigasi halaman">
+                <button id="btnPrevPage" type="button" aria-label="Halaman sebelumnya"
+                    class="h-8 px-3 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <i class="fa-solid fa-chevron-left"></i><span class="ml-1 hidden sm:inline">Prev</span>
+                </button>
+
+                <div id="pageNumbers" class="hidden sm:flex gap-1"></div>
+                <div id="pageInfoMobile" class="sm:hidden text-xs text-slate-600 font-medium px-3"></div>
+
+                <button id="btnNextPage" type="button" aria-label="Halaman berikutnya"
+                    class="h-8 px-3 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <span class="mr-1 hidden sm:inline">Next</span><i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </nav>
         </div>
-    </div>
+    </section>
 
 </div>
 
 <!-- =====================================================
-     MODAL TAMBAH/EDIT PRODUK
+     MODAL TAMBAH / EDIT PRODUK
 ====================================================== -->
-<div 
-    id="productModalOverlay" 
-    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4"
+<div
+    id="productModalOverlay"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden opacity-0 transition-opacity duration-200 sm:p-4"
 >
-    <!-- Modal Content -->
-    <div 
-        id="productModalContent" 
-        class="bg-white rounded-2xl w-full max-w-3xl max-h-[95vh] overflow-y-auto shadow-2xl transform scale-95 transition-transform duration-300 relative flex flex-col"
+    <div
+        id="productModalContent"
+        role="dialog" aria-modal="true" aria-labelledby="formTitle"
+        class="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-3xl max-h-[92vh] shadow-2xl transform scale-95 translate-y-4 transition-transform duration-200 flex flex-col"
     >
-        <!-- Modal Header -->
-        <div class="sticky top-0 bg-white z-10 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+        <!-- Header -->
+        <div class="px-5 sm:px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
             <div>
                 <h3 id="formTitle" class="font-bold text-base text-slate-800 flex items-center gap-2">
                     <i class="fa-solid fa-plus-circle text-orange-500"></i>
                     Tambah Produk
                 </h3>
+                <p id="formSubtitle" class="text-[11px] text-slate-400 mt-0.5">Kolom bertanda <span class="text-red-500">*</span> wajib diisi.</p>
             </div>
-            <button 
-                id="btnCloseModal" 
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition"
+            <button
+                id="btnCloseModal" type="button" aria-label="Tutup"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
             >
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <!-- Modal Body (FORM) -->
-        <div class="p-6">
+        <!-- Body -->
+        <form id="productForm" class="p-5 sm:p-6 overflow-y-auto flex-1" novalidate>
             <input type="hidden" id="p-id">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <!-- NAMA -->
-                <div class="md:col-span-2">
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                        Nama Produk <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        id="p-nama" type="text" maxlength="150" placeholder="Contoh: Dimsum Ayam"
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                    >
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-[230px_1fr] gap-5">
 
-                <!-- KATEGORI -->
+                <!-- KOLOM KIRI: FOTO -->
                 <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Kategori</label>
-                    <input
-                        id="p-kategori" type="text" maxlength="80" placeholder="Contoh: Makanan Ringan"
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                    >
-                </div>
-                <!-- ISI -->
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Isi</label>
-                    <input
-                        id="p-isi" type="text" maxlength="100" placeholder="Contoh: 4 pcs / Ayam Udang"
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                    >
-                </div>
+                    <span class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Foto Produk</span>
 
-                <!-- STOK -->
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Stok Porsi</label>
-                    <input
-                        type="number" id="p-stok" min="0" step="1" placeholder="30"
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                    >
-                </div>
+                    <div id="dropZone" class="relative border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 transition overflow-hidden aspect-square">
+                        <!-- Kosong -->
+                        <button type="button" id="btnPickPhoto"
+                            class="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-4 hover:bg-orange-50/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orange-300">
+                            <span class="w-11 h-11 rounded-full bg-white shadow-sm text-orange-500 flex items-center justify-center mb-2">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </span>
+                            <span class="text-xs font-semibold text-slate-700">Klik atau seret foto ke sini</span>
+                            <span class="text-[10px] text-slate-400 mt-1">JPG, PNG, WEBP · otomatis dikompres</span>
+                        </button>
 
-                <!-- HARGA -->
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                        Harga Jual (Rp) <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">Rp</span>
-                        <input
-                            type="number" id="p-harga" min="1" step="1" placeholder="25000"
-                            class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                        >
+                        <!-- Preview -->
+                        <div id="photoPreview" class="hidden absolute inset-0">
+                            <img id="previewImage" alt="Preview foto produk" class="w-full h-full object-cover">
+                            <div class="absolute inset-x-0 bottom-0 p-2 flex gap-1.5 bg-gradient-to-t from-black/60 to-transparent">
+                                <button type="button" id="btnChangePhoto"
+                                    class="flex-1 bg-white/95 hover:bg-white text-slate-700 text-[11px] font-semibold py-1.5 rounded-lg transition">
+                                    <i class="fa-solid fa-arrows-rotate mr-1"></i>Ganti
+                                </button>
+                                <button type="button" id="btnRemovePhoto" aria-label="Hapus foto"
+                                    class="bg-white/95 hover:bg-white text-rose-600 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Progress upload -->
+                        <div id="uploadProgress" class="hidden absolute inset-0 bg-white/85 backdrop-blur-[1px] flex flex-col items-center justify-center">
+                            <i class="fa-solid fa-circle-notch loading-spinner text-orange-500 text-xl"></i>
+                            <span id="uploadLabelText" class="text-xs font-semibold text-slate-600 mt-2">Mengunggah...</span>
+                        </div>
                     </div>
-                </div>
 
-                <!-- HPP -->
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">HPP Modal (Rp)</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">Rp</span>
-                        <input
-                            type="number" id="p-hpp" min="0" step="1" placeholder="10000"
-                            class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
-                        >
-                    </div>
-                </div>
+                    <input type="file" id="p-foto-file" accept="image/png,image/jpeg,image/webp" class="hidden" tabindex="-1">
+                    <p id="uploadMessage" class="hidden text-[11px] mt-1.5" aria-live="polite"></p>
 
-                <!-- FOTO -->
-                <div class="md:col-span-2">
-                    <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Foto Produk</label>
-                
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <!-- Tombol upload -->
-                        <label
-                            for="p-foto-file" id="uploadLabel"
-                            class="cursor-pointer shrink-0 inline-flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 border border-dashed border-orange-300 text-orange-600 font-semibold px-4 py-3 rounded-xl text-xs transition"
-                        >
-                            <i id="uploadIcon" class="fa-solid fa-cloud-arrow-up"></i>
-                            <span id="uploadLabelText">Upload Foto</span>
-                        </label>
-                        <input type="file" id="p-foto-file" accept="image/png,image/jpeg,image/webp" class="hidden">
-                        <p class="text-[10px] text-slate-400 mt-1">JPG, PNG, atau WEBP (maks 2 MB).</p>
-                
-                        <!-- URL hasil upload (bisa juga diisi manual) -->
+                    <!-- URL foto (opsional/manual) -->
+                    <label for="p-foto" class="block text-[10px] font-medium text-slate-500 mt-3 mb-1">Atau tempel URL gambar</label>
+                    <div class="flex gap-1.5">
                         <input
-                            id="p-foto" type="url" maxlength="1000" placeholder="URL otomatis terisi setelah upload, atau tempel URL..."
-                            class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                            id="p-foto" type="url" maxlength="1000" placeholder="https://..."
+                            class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full min-w-0 transition"
                         >
-                
                         <button
-                            id="btnCopyUrl" type="button" title="Salin URL"
-                            class="shrink-0 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3.5 rounded-xl text-xs transition"
+                            id="btnCopyUrl" type="button" title="Salin URL" aria-label="Salin URL foto"
+                            class="shrink-0 w-9 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs transition"
                         >
                             <i class="fa-regular fa-copy"></i>
                         </button>
                     </div>
-                
-                    <p id="uploadMessage" class="hidden text-[11px] mt-1.5"></p>
-                    <p class="text-[10px] text-slate-400 mt-1">JPG, PNG, atau WEBP. Maksimal 2 MB.</p>
+                    <p id="err-p-foto" class="hidden text-[11px] text-red-600 mt-1"></p>
                 </div>
-            </div>
 
-            <!-- PREVIEW FOTO (Hidden by default in new form) -->
-            <div id="photoPreview" class="hidden mb-4 bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <div class="flex items-center gap-3">
-                    <img id="previewImage" src="" alt="Preview produk" class="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm">
+                <!-- KOLOM KANAN: DATA -->
+                <div class="space-y-4">
+                    <!-- NAMA -->
                     <div>
-                        <p class="text-xs font-semibold text-slate-700">Preview Foto</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Gambar yang akan ditampilkan.</p>
+                        <label for="p-nama" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                            Nama Produk <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="p-nama" type="text" maxlength="150" placeholder="Contoh: Dimsum Ayam" autocomplete="off"
+                            class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                        >
+                        <p id="err-p-nama" class="hidden text-[11px] text-red-600 mt-1"></p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- KATEGORI -->
+                        <div>
+                            <label for="p-kategori" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Kategori</label>
+                            <input
+                                id="p-kategori" type="text" maxlength="80" placeholder="Pilih / ketik" list="kategoriList" autocomplete="off"
+                                class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                            >
+                            <datalist id="kategoriList"></datalist>
+                        </div>
+                        <!-- ISI -->
+                        <div>
+                            <label for="p-isi" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Isi</label>
+                            <input
+                                id="p-isi" type="text" maxlength="100" placeholder="Contoh: 4 pcs" autocomplete="off"
+                                class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- HARGA -->
+                        <div>
+                            <label for="p-harga" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                Harga Jual <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">Rp</span>
+                                <input
+                                    type="number" id="p-harga" min="1" step="1" inputmode="numeric" placeholder="25000"
+                                    class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                                >
+                            </div>
+                            <p id="err-p-harga" class="hidden text-[11px] text-red-600 mt-1"></p>
+                        </div>
+
+                        <!-- HPP -->
+                        <div>
+                            <label for="p-hpp" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                HPP Modal
+                                <a href="./hpp.html" target="_blank" rel="noopener" class="normal-case tracking-normal font-medium text-orange-500 hover:underline ml-1" title="Buka kalkulator HPP di tab baru">hitung</a>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">Rp</span>
+                                <input
+                                    type="number" id="p-hpp" min="0" step="1" inputmode="numeric" placeholder="10000"
+                                    class="bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full transition"
+                                >
+                            </div>
+                            <p id="err-p-hpp" class="hidden text-[11px] text-red-600 mt-1"></p>
+                        </div>
+                    </div>
+
+                    <!-- INFO MARGIN (live) -->
+                    <div id="marginInfo" class="rounded-xl px-3 py-2 text-[11px]" aria-live="polite"></div>
+
+                    <!-- STOK -->
+                    <div>
+                        <label for="p-stok" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Stok Porsi</label>
+                        <div class="flex items-stretch gap-1.5 max-w-[200px]">
+                            <button type="button" data-stok-step="-1" aria-label="Kurangi stok"
+                                class="w-10 shrink-0 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition">
+                                <i class="fa-solid fa-minus text-xs"></i>
+                            </button>
+                            <input
+                                type="number" id="p-stok" min="0" step="1" inputmode="numeric" placeholder="0"
+                                class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-center outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 w-full min-w-0 transition"
+                            >
+                            <button type="button" data-stok-step="1" aria-label="Tambah stok"
+                                class="w-10 shrink-0 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                        <p id="err-p-stok" class="hidden text-[11px] text-red-600 mt-1"></p>
+                    </div>
+
+                    <!-- DESKRIPSI -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="p-deskripsi" class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Deskripsi</label>
+                            <span id="descCounter" class="text-[10px] text-slate-400">0/500</span>
+                        </div>
+                        <textarea
+                            id="p-deskripsi" maxlength="500" placeholder="Jelaskan detail produk ini..." rows="3"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition resize-y min-h-[80px]"
+                        ></textarea>
                     </div>
                 </div>
             </div>
+        </form>
 
-            <!-- DESKRIPSI -->
-            <div class="mb-4 md:mb-0">
-                <label class="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Deskripsi</label>
-                <textarea
-                    id="p-deskripsi" maxlength="500" placeholder="Jelaskan detail produk ini..." rows="3"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition resize-none"
-                ></textarea>
+        <!-- Footer -->
+        <div class="bg-slate-50 border-t border-slate-200 px-5 sm:px-6 py-3.5 flex items-center justify-between gap-3 rounded-b-none sm:rounded-b-2xl shrink-0">
+            <p class="hidden sm:block text-[10px] text-slate-400">
+                <kbd class="border border-slate-200 bg-white rounded px-1">Ctrl</kbd> + <kbd class="border border-slate-200 bg-white rounded px-1">Enter</kbd> simpan ·
+                <kbd class="border border-slate-200 bg-white rounded px-1">Esc</kbd> tutup
+            </p>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button
+                    id="btnCancelModal" type="button"
+                    class="flex-1 sm:flex-none bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold px-5 py-2.5 rounded-xl text-xs transition"
+                >
+                    Batal
+                </button>
+                <button
+                    id="btnSave" type="button"
+                    class="flex-[2] sm:flex-none bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2"
+                >
+                    <i id="btnSaveIcon" class="fa-solid fa-floppy-disk"></i>
+                    <span id="btnSaveText">Simpan Produk</span>
+                </button>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal Footer -->
-        <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-end gap-3 rounded-b-2xl mt-auto">
-            <!-- Tombol Batal Modal Utama -->
-            <button 
-                id="btnCancelModal" 
-                type="button"
-                class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold px-5 py-2.5 rounded-xl text-xs transition"
-            >
+<!-- =====================================================
+     DIALOG KONFIRMASI (pengganti confirm() bawaan browser)
+====================================================== -->
+<div
+    id="confirmOverlay"
+    class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200"
+>
+    <div
+        id="confirmContent"
+        role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage"
+        class="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform scale-95 translate-y-4 transition-transform duration-200"
+    >
+        <div id="confirmIconWrap" class="w-12 h-12 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mb-4">
+            <i id="confirmIcon" class="fa-solid fa-trash"></i>
+        </div>
+        <h3 id="confirmTitle" class="font-bold text-base text-slate-800"></h3>
+        <p id="confirmMessage" class="text-xs text-slate-500 mt-1.5 leading-relaxed whitespace-pre-line"></p>
+        <div class="flex gap-2 mt-6">
+            <button id="confirmCancel" type="button"
+                class="flex-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
                 Batal
             </button>
-            
-            <!-- Tombol Cancel Edit (Dibutuhkan oleh produk.js Anda) -->
-            <button
-                id="btnCancelEdit"
-                type="button"
-                class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs transition"
-            >
-                <i class="fa-solid fa-xmark mr-1"></i> Batal Edit
-            </button>
-
-            <button
-                id="btnSave"
-                type="button"
-                class="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2"
-            >
-                <i class="fa-solid fa-save"></i>
-                <span id="btnSaveText">Simpan Produk</span>
+            <button id="confirmOk" type="button"
+                class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300">
+                Hapus
             </button>
         </div>
     </div>
 </div>
 
+<!-- =====================================================
+     TOAST
+====================================================== -->
+<div id="toastContainer" class="fixed z-[70] top-4 inset-x-4 sm:inset-x-auto sm:right-4 flex flex-col items-stretch sm:items-end gap-2 pointer-events-none" aria-live="polite"></div>
 
+<!-- =====================================================
+     SCRIPT
+====================================================== -->
 <script type="module">
     import { requireAuth } from './js/module/auth-guard.js';
 
@@ -379,95 +571,6 @@
     if (auth) {
         await import('./js/module/produk.js');
     }
-</script>
-<!-- =====================================================
-     SCRIPTS
-====================================================== -->
-<script>
-    /* 
-       MOCK INTERFACE JAVASCRIPT
-       Script ini berfungsi agar UI modal dan interaksi dasar dapat berjalan
-       di preview ini. Anda tetap bisa menggunakan file module Anda di environment asli.
-    */
-    document.addEventListener('DOMContentLoaded', () => {
-        
-        // Elemen Modal
-        const modalOverlay = document.getElementById('productModalOverlay');
-        const modalContent = document.getElementById('productModalContent');
-        const btnOpenAddModal = document.getElementById('btnOpenAddModal');
-        const btnCloseModal = document.getElementById('btnCloseModal');
-        const btnCancelModal = document.getElementById('btnCancelModal');
-        
-        // Elemen Form Text
-        const formTitle = document.getElementById('formTitle');
-        const btnSaveText = document.getElementById('btnSaveText');
-        const photoPreview = document.getElementById('photoPreview');
-
-        // Fungsi Buka Modal
-        const openModal = (mode = 'add') => {
-            modalOverlay.classList.remove('hidden');
-            // Sedikit delay untuk memicu animasi CSS
-            setTimeout(() => {
-                modalOverlay.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95', 'translate-y-10');
-            }, 10);
-
-            if (mode === 'edit') {
-                formTitle.innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-500"></i> Edit Produk';
-                btnSaveText.innerText = 'Simpan Perubahan';
-                photoPreview.classList.remove('hidden'); // Contoh jika sedang edit, tunjukkan gambar
-            } else {
-                formTitle.innerHTML = '<i class="fa-solid fa-plus-circle text-orange-500"></i> Tambah Produk';
-                btnSaveText.innerText = 'Simpan Produk';
-                photoPreview.classList.add('hidden');
-                // Disini idealnya form dikosongkan jika mode 'add'
-            }
-        };
-
-        // Fungsi Tutup Modal
-        const closeModal = () => {
-            modalOverlay.classList.add('opacity-0');
-            modalContent.classList.add('scale-95', 'translate-y-10');
-            
-            // Tunggu animasi selesai sebelum menambahkan class hidden
-            setTimeout(() => {
-                modalOverlay.classList.add('hidden');
-            }, 300);
-        };
-
-        // Event Listeners
-        btnOpenAddModal.addEventListener('click', () => openModal('add'));
-        btnCloseModal.addEventListener('click', closeModal);
-        btnCancelModal.addEventListener('click', closeModal);
-        
-        // Menutup modal jika klik di luar kotak modal (overlay)
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) {
-                closeModal();
-            }
-        });
-
-        /* 
-           EVENT DELEGATION UNTUK TOMBOL EDIT DINAMIS
-           Karena produk.js memuat baris tabel secara dinamis, 
-           kita pasang event listener di tag <tbody> utama.
-        */
-        const prodTable = document.getElementById('prodTable');
-        if (prodTable) {
-            prodTable.addEventListener('click', (e) => {
-                // Mengecek apakah elemen yang diklik adalah tombol dengan data-action="edit" atau icon di dalamnya
-                const editBtn = e.target.closest('[data-action="edit"]');
-                
-                if (editBtn) {
-                    // Memicu modal untuk terbuka
-                    openModal('edit');
-                    
-                    // NOTE: Anda tidak perlu menarik data disini jika produk.js Anda sudah
-                    // menangani fungsi penarikan data ke dalam form berdasarkan data-id
-                }
-            });
-        }
-    });
 </script>
 </body>
 </html>
