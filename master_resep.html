@@ -52,6 +52,17 @@
         .b-warn { background: #fffbeb; color: #b45309; }
         .b-bad { background: #fff1f2; color: #be123c; }
 
+        .dot { display: inline-block; width: .4rem; height: .4rem; border-radius: 9999px; flex: none; vertical-align: middle; margin-right: .25rem; }
+        .empty-card { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; font-size: .75rem; }
+        .recipe-card { transition: border-color .15s, box-shadow .15s; }
+        .recipe-card:hover { border-color: #fed7aa; box-shadow: 0 4px 14px rgb(249 115 22 / .08); }
+        .recipe-card .acts { opacity: .55; transition: opacity .15s; }
+        .recipe-card:hover .acts, .recipe-card:focus-within .acts { opacity: 1; }
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] .more-label { display: none; }
+        details:not([open]) .less-label { display: none; }
+
         .spin { animation: spin .8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .modal:not(.hidden) > * { animation: pop .18s ease-out; }
@@ -125,22 +136,15 @@
                     </div>
                     <button class="btn btn-primary" data-action="new-recipe"><i class="fa-solid fa-plus"></i> Buat resep baru</button>
                 </div>
-                <div class="overflow-x-auto border border-slate-100 rounded-xl">
-                    <table class="tbl">
-                        <thead>
-                            <tr>
-                                <th>Resep</th>
-                                <th class="min-w-[220px]">Komposisi (per 1 batch)</th>
-                                <th>Biaya / batch</th>
-                                <th class="min-w-[180px]">Dipakai oleh menu</th>
-                                <th class="text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recipeBody">
-                            <tr><td colspan="5" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat resep...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400">
+                    <span><span class="dot bg-emerald-500"></span> stok cukup untuk 1 batch</span>
+                    <span><span class="dot bg-rose-500"></span> stok kurang</span>
+                    <span><span class="inline-block w-4 h-1 rounded bg-orange-300 align-middle mr-1"></span> porsi biaya bahan</span>
                 </div>
+            </div>
+
+            <div id="recipeBody" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 items-start">
+                <div class="card empty-card sm:col-span-2 xl:col-span-3"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat resep...</div>
             </div>
         </section>
 
