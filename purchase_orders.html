@@ -96,7 +96,13 @@
         </div>
         <div class="flex items-center justify-between gap-3">
             <div id="status-tabs" class="no-scrollbar flex min-w-0 overflow-x-auto rounded-xl bg-slate-100 p-1" role="tablist"></div>
-            <span id="po-count" class="shrink-0 text-[11px] font-medium text-slate-400"></span>
+            <div class="flex shrink-0 items-center gap-2">
+                <button id="period-chip" type="button" title="Hapus filter periode"
+                        class="hidden items-center gap-1.5 rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-semibold text-orange-700 transition hover:bg-orange-200 [&:not(.hidden)]:inline-flex">
+                    <i class="fa-regular fa-calendar"></i><span></span><i class="fa-solid fa-xmark text-[10px]"></i>
+                </button>
+                <span id="po-count" class="text-[11px] font-medium text-slate-400"></span>
+            </div>
         </div>
     </section>
 
