@@ -30,9 +30,26 @@ const BACK_TITLE = {  // tombol "mundur" per status saat ini
 
 const TABS = [['all', 'Semua'], ...FLOW.map(k => [k, STATUS[k].label])];
 
+// "2026-11" untuk tanggal dalam WIB
+const monthKey = d => {
+    const k = new Date(d).toLocaleDateString('en-CA', { timeZone: TZ }).slice(0, 7);
+    return /^\d{4}-\d{2}$/.test(k) ? k : '';
+};
+const addMonth = (key, n) => {
+    const [y, m] = key.split('-').map(Number);
+    const d = new Date(y, m - 1 + n, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+const monthName = (key, opts = { month: 'long', year: 'numeric' }) => {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('id-ID', opts);
+};
+
 const state = {
     pos: [], suppliers: [], ingredients: [],
-    page: 1, size: 10, status: 'all', query: ''
+    page: 1, size: 10, status: 'all', query: '',
+    month: monthKey(new Date()),   // periode kartu "Belanja"
+    monthOnly: false               // true = daftar PO hanya bulan tersebut
 };
 let db;
 
@@ -368,9 +385,14 @@ function buildSearchText(po) {
     ].join(' ').toLowerCase();
 }
 
+// PO dalam periode terpilih (kalau filter periode aktif)
+const inPeriod = () => state.monthOnly
+    ? state.pos.filter(po => monthKey(po.order_date) === state.month)
+    : state.pos;
+
 function filtered() {
     const tokens = state.query.split(/\s+/).filter(Boolean);
-    return state.pos.filter(po =>
+    return inPeriod().filter(po =>
         (state.status === 'all' || po.status === state.status) &&
         tokens.every(t => po._search.includes(t)));
 }
@@ -508,14 +530,38 @@ function cardHtml(po) {
     </article>`;
 }
 
-function renderStats() {
-    const monthKey = d => new Date(d).toLocaleDateString('en-CA', { timeZone: TZ }).slice(0, 7);
-    const nowKey = monthKey(new Date());
-    const sum = arr => arr.reduce((s, p) => s + Number(p.total_amount || 0), 0);
+// Semua bulan dari PO tertua s/d bulan ini (atau PO terbaru kalau tanggalnya di depan), terbaru dulu
+function monthChoices() {
+    const keys = [monthKey(new Date()), state.month, ...state.pos.map(p => monthKey(p.order_date))].filter(Boolean).sort();
+    const out = [];
+    for (let k = keys.at(-1); k >= keys[0]; k = addMonth(k, -1)) out.push(k);
+    return out;
+}
 
-    const done = state.pos.filter(p => p.status === 'completed' && monthKey(p.order_date) === nowKey);
+function renderStats() {
+    const sum = arr => arr.reduce((s, p) => s + Number(p.total_amount || 0), 0);
+    const ofMonth = key => state.pos.filter(p => monthKey(p.order_date) === key);
+
+    const monthPOs = ofMonth(state.month);
+    const done = monthPOs.filter(p => p.status === 'completed');
+    const monthOpen = monthPOs.filter(p => p.status !== 'completed');
+    const prevDone = sum(ofMonth(addMonth(state.month, -1)).filter(p => p.status === 'completed'));
+
+    const choices = monthChoices();
+    const atNewest = state.month >= choices[0];
+    const atOldest = state.month <= choices.at(-1);
+
+    // Perbandingan dengan bulan sebelumnya
+    let trend = '';
+    if (prevDone > 0) {
+        const diff = (sum(done) / prevDone - 1) * 100;
+        trend = Math.abs(diff) < 0.5
+            ? `<span class="chip bg-slate-100 text-slate-600">sama dgn bulan lalu</span>`
+            : `<span class="chip ${diff > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}">
+                   ${diff > 0 ? '▲' : '▼'} ${num(Math.abs(diff), 0)}% vs ${monthName(addMonth(state.month, -1), { month: 'short' })}</span>`;
+    }
+
     const open = state.pos.filter(p => p.status !== 'completed');
-    const month = new Date().toLocaleDateString('id-ID', { timeZone: TZ, month: 'long' });
     const supplierCount = new Set(state.pos.map(p => String(p.supplier_id))).size;
 
     const tile = (label, value, sub, icon, extra = '') => `
@@ -527,14 +573,60 @@ function renderStats() {
             <p class="text-[11px] text-slate-400">${sub}</p>
         </div>`;
 
+    const spend = `
+        <div class="stat col-span-2 sm:col-span-1">
+            <div class="flex items-center justify-between gap-2">
+                <span class="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                    <i class="fa-solid fa-wallet text-orange-400"></i>Belanja
+                </span>
+                <div class="flex items-center rounded-lg bg-slate-100 p-0.5">
+                    <button data-month-step="-1" ${atOldest ? 'disabled' : ''} aria-label="Bulan sebelumnya"
+                        class="grid h-8 w-8 place-items-center rounded-md text-xs text-slate-500 transition hover:bg-white disabled:opacity-30 lg:h-7 lg:w-7">
+                        <i class="fa-solid fa-chevron-left"></i></button>
+                    <select data-month aria-label="Pilih bulan"
+                        class="max-w-[9.5rem] cursor-pointer appearance-none bg-transparent px-1.5 text-center text-base font-semibold text-slate-700 outline-none sm:text-[11px]">
+                        ${choices.map(k => `<option value="${k}" ${k === state.month ? 'selected' : ''}>${monthName(k)}</option>`).join('')}
+                    </select>
+                    <button data-month-step="1" ${atNewest ? 'disabled' : ''} aria-label="Bulan berikutnya"
+                        class="grid h-8 w-8 place-items-center rounded-md text-xs text-slate-500 transition hover:bg-white disabled:opacity-30 lg:h-7 lg:w-7">
+                        <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p class="truncate text-base font-bold text-slate-900 sm:text-lg">${rp(sum(done))}</p>
+                <span class="text-[11px]">${trend}</span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+                ${done.length} PO selesai${monthOpen.length ? ` · ${monthOpen.length} belum diterima (${rp(sum(monthOpen))})` : ''}
+            </p>
+            <button data-month-filter class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-orange-600 hover:text-orange-700">
+                ${state.monthOnly
+                    ? '<i class="fa-solid fa-xmark"></i> Tampilkan semua periode'
+                    : `<i class="fa-solid fa-list"></i> Lihat ${monthPOs.length} PO bulan ini`}
+            </button>
+        </div>`;
+
     $('po-stats').innerHTML =
-        tile(`Belanja ${month}`, rp(sum(done)), `${done.length} PO selesai`, 'fa-wallet', 'col-span-2 sm:col-span-1') +
-        tile('Belum diterima', rp(sum(open)), `${open.length} PO pending/proses`, 'fa-truck-ramp-box') +
+        spend +
+        tile('Belum diterima', rp(sum(open)), `${open.length} PO pending/proses (semua periode)`, 'fa-truck-ramp-box') +
         tile('Total PO', num(state.pos.length), `${supplierCount} supplier`, 'fa-file-invoice');
+
+    // Penanda filter periode di toolbar
+    const chip = $('period-chip');
+    chip.classList.toggle('hidden', !state.monthOnly);
+    chip.querySelector('span').textContent = monthName(state.month, { month: 'short', year: 'numeric' });
+}
+
+function setMonth(key, { listOnly } = {}) {
+    if (key) state.month = key;
+    if (listOnly !== undefined) state.monthOnly = listOnly;
+    state.page = 1;
+    render();
 }
 
 function renderTabs() {
-    const count = s => s === 'all' ? state.pos.length : state.pos.filter(p => p.status === s).length;
+    const base = inPeriod();
+    const count = s => s === 'all' ? base.length : base.filter(p => p.status === s).length;
     $('status-tabs').innerHTML = TABS.map(([key, label]) => `
         <button data-status="${key}" role="tab" aria-selected="${state.status === key}"
             class="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition sm:py-1.5 ${state.status === key
@@ -580,7 +672,7 @@ function render() {
 
     renderStats();
     renderTabs();
-    $('po-count').textContent = `${list.length} dari ${state.pos.length} PO`;
+    $('po-count').textContent = `${list.length} dari ${inPeriod().length} PO`;
 
     if (list.length) {
         const page = list.slice(start, start + state.size);
@@ -1211,6 +1303,20 @@ $('po-pager').addEventListener('click', e => {
     render();
     $('po-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
+
+// Kartu Belanja: ganti periode & filter daftar per bulan
+$('po-stats').addEventListener('click', e => {
+    const step = e.target.closest('[data-month-step]');
+    if (step && !step.disabled) return setMonth(addMonth(state.month, Number(step.dataset.monthStep)));
+    if (e.target.closest('[data-month-filter]')) {
+        setMonth(null, { listOnly: !state.monthOnly });
+        if (state.monthOnly) $('po-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+});
+$('po-stats').addEventListener('change', e => {
+    if (e.target.matches('[data-month]')) setMonth(e.target.value);
+});
+$('period-chip').addEventListener('click', () => setMonth(null, { listOnly: false }));
 
 $('po-size').addEventListener('change', e => {
     state.size = Number(e.target.value) || 10;
