@@ -14,6 +14,7 @@
                         brand: {
                             50: '#fff5f0',
                             100: '#ffedd5',
+                            200: '#fed7aa',
                             500: '#ff6b35',
                             600: '#ea580c',
                             700: '#c2410c'
@@ -29,205 +30,304 @@
 
     <style>
         body { font-family: 'Poppins', sans-serif; }
-        .modal-backdrop { background: rgba(15, 23, 42, .58); backdrop-filter: blur(3px); }
+
+        .modal-backdrop { background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px); }
+
+        /* Modal & drawer animation */
+        .modal-root { opacity: 0; transition: opacity .18s ease; }
+        .modal-root.is-open { opacity: 1; }
+        .drawer-panel { transform: translateX(100%); transition: transform .24s cubic-bezier(.2, .8, .2, 1); }
+        .modal-root.is-open .drawer-panel { transform: none; }
+        .pop-panel { transform: scale(.96) translateY(8px); transition: transform .18s ease; }
+        .modal-root.is-open .pop-panel { transform: none; }
+
+        /* Scrollbar */
         .table-scroll::-webkit-scrollbar { height: 8px; }
         .table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .no-scrollbar { scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+            background-size: 400% 100%;
+            animation: shimmer 1.4s ease infinite;
+            border-radius: .5rem;
+        }
+        @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+        /* Toast */
+        .toast { transition: opacity .2s ease, transform .2s ease; }
+        .toast.toast-enter { opacity: 0; transform: translateY(8px); }
+
+        @media (prefers-reduced-motion: reduce) {
+            .modal-root, .drawer-panel, .pop-panel, .toast { transition: none !important; }
+            .skeleton { animation: none; }
+        }
     </style>
 </head>
 
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
-    <nav class="bg-white sticky top-0 z-30 border-b border-slate-200 shadow-sm">
-        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center">
-            
+    <!-- =====================================================
+         NAVBAR
+    ====================================================== -->
+    <nav class="bg-white/90 backdrop-blur sticky top-0 z-30 border-b border-slate-200">
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
+
             <!-- BRAND -->
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center overflow-hidden shrink-0">
-                    <img
-                        src="./assets/logo-transparan.png"
-                        alt="Logo"
-                        class="max-w-full max-h-full"
-                        onerror="this.style.display='none'"
-                    >
+                    <img src="./assets/logo-transparan.png" alt="Logo" class="max-w-full max-h-full"
+                         onerror="this.style.display='none'">
                 </div>
-    
                 <div class="min-w-0">
-                    <h1 class="font-bold text-slate-900 truncate">
+                    <h1 class="font-bold text-slate-900 truncate leading-tight">
                         ChimChum <span class="text-brand-500">Malang</span>
                     </h1>
-    
-                    <p class="text-[10px] text-slate-400 font-medium">
-                        Manage Pesanan
-                    </p>
+                    <p class="text-[10px] text-slate-400 font-medium">Admin · Manage Pesanan</p>
                 </div>
             </div>
-    
+
             <!-- RIGHT ACTIONS -->
             <div class="ml-auto flex items-center gap-2 shrink-0">
-    
+
+                <span id="lastUpdated" class="hidden md:inline text-[11px] text-slate-400 mr-1"></span>
+
+                <!-- AUTO REFRESH -->
+                <label class="inline-flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-100 cursor-pointer select-none"
+                       title="Muat ulang pesanan otomatis setiap 60 detik">
+                    <input id="autoRefreshToggle" type="checkbox" class="peer sr-only">
+                    <span class="relative w-9 h-5 rounded-full bg-slate-200 transition peer-checked:bg-brand-500
+                                 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-2
+                                 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4
+                                 after:bg-white after:rounded-full after:shadow after:transition peer-checked:after:translate-x-4"></span>
+                    <span class="hidden sm:inline text-xs font-semibold text-slate-600">Auto</span>
+                </label>
+
                 <!-- REFRESH -->
-                <button
-                    type="button"
-                    onclick="loadOrders()"
-                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl
-                           bg-slate-100 hover:bg-slate-200
-                           border border-slate-200
-                           text-slate-700 text-sm font-semibold
-                           transition active:scale-[0.98]"
-                    title="Refresh pesanan"
-                >
-                    <i class="fa-solid fa-rotate text-xs"></i>
-    
-                    <span class="hidden sm:inline">
-                        Refresh
-                    </span>
+                <button type="button" id="refreshBtn" data-action="refresh"
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200
+                               text-slate-700 text-sm font-semibold transition active:scale-[0.98]
+                               focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                        title="Refresh pesanan">
+                    <i id="refreshIcon" class="fa-solid fa-rotate text-xs"></i>
+                    <span class="hidden sm:inline">Refresh</span>
                 </button>
-    
-                <!-- DELETE -->
-                <button
-                    id="deleteOldProofsBtn"
-                    type="button"
-                    onclick="deleteOldPaymentProofs()"
-                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl
-                           bg-red-50 hover:bg-red-100
-                           border border-red-200
-                           text-red-600 hover:text-red-700
-                           text-sm font-semibold
-                           transition active:scale-[0.98]"
-                    title="Hapus bukti transfer yang lebih dari 30 hari"
-                >
-                    <i class="fa-solid fa-trash-can text-xs"></i>
-    
-                    <span class="hidden sm:inline">
-                        Hapus Bukti &gt;30 Hari
-                    </span>
-                </button>
-    
+
+                <!-- MORE MENU -->
+                <div class="relative">
+                    <button type="button" data-action="toggle-menu" aria-haspopup="true"
+                            class="w-10 h-10 inline-flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200
+                                   text-slate-600 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                            title="Menu lainnya">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+
+                    <div id="moreMenu"
+                         class="hidden absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-1.5 z-40">
+                        <button type="button" data-action="export-csv"
+                                class="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-file-csv text-sm"></i>
+                            </span>
+                            <span>
+                                <span class="block text-sm font-semibold text-slate-800">Export CSV</span>
+                                <span class="block text-[11px] text-slate-400">Unduh pesanan sesuai filter aktif</span>
+                            </span>
+                        </button>
+
+                        <div class="my-1 border-t border-slate-100"></div>
+
+                        <button type="button" id="deleteOldProofsBtn" data-action="delete-old-proofs"
+                                class="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-left disabled:opacity-60">
+                            <span class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </span>
+                            <span>
+                                <span data-label class="block text-sm font-semibold text-red-600">Hapus Bukti &gt;30 Hari</span>
+                                <span class="block text-[11px] text-slate-400">Hanya pesanan berstatus Selesai</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </nav>
 
     <main class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6">
 
-        <!-- SUMMARY -->
-        <section id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-5">
+        <!-- PAGE HEADER -->
+        <div class="mb-5">
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Pesanan</h2>
+            <p class="text-sm text-slate-500">Pantau pesanan masuk, proses, dan verifikasi pembayaran pelanggan.</p>
+        </div>
+
+        <!-- DATA SOURCE WARNING -->
+        <div id="dataSourceBanner" class="hidden mb-4"></div>
+
+        <!-- KPI -->
+        <section id="summaryCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <!-- rendered by JS -->
         </section>
 
-        <!-- TOOLBAR -->
-        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4">
-            <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+        <!-- ORDERS CARD -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+
+            <!-- STATUS TABS -->
+            <div id="statusTabs" class="flex gap-1 overflow-x-auto no-scrollbar border-b border-slate-200 px-2 sm:px-3"
+                 role="tablist" aria-label="Filter status pesanan">
+                <!-- rendered by JS -->
+            </div>
+
+            <!-- TOOLBAR -->
+            <div class="p-4 flex flex-col xl:flex-row gap-3">
                 <div class="flex-1 relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input id="searchInput"
-                           type="search"
-                           placeholder="Cari ID pesanan, nama, WhatsApp, alamat..."
-                           class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <input id="searchInput" type="search" autocomplete="off"
+                           placeholder="Cari ID pesanan, nama, WhatsApp, alamat, produk..."
+                           class="w-full pl-10 pr-12 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                                  focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                    <kbd class="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 items-center justify-center
+                                w-6 h-6 rounded-md border border-slate-200 bg-white text-[11px] text-slate-400 font-sans">/</kbd>
                 </div>
 
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <select id="statusFilter"
-                            class="px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
-                        <option value="all">Semua Status</option>
-                        <option value="new">New</option>
-                        <option value="disiapkan">Diproses</option>
-                        <option value="dikirim">Dikirim</option>
-                        <option value="selesai">Selesai</option>
-                        <option value="cancel">Batal</option>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <select id="paymentFilter" aria-label="Filter status pembayaran"
+                            class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="all">Semua Pembayaran</option>
+                        <option value="unpaid">Belum Bayar</option>
+                        <option value="pending">Menunggu Verifikasi</option>
+                        <option value="paid">Lunas</option>
+                        <option value="failed">Gagal</option>
+                        <option value="refunded">Refund</option>
                     </select>
 
-                    <select id="pageSize"
-                            class="px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
-                        <option value="10">10 / halaman</option>
-                        <option value="20" selected>20 / halaman</option>
-                        <option value="50">50 / halaman</option>
-                        <option value="100">100 / halaman</option>
+                    <select id="dateFilter" aria-label="Filter tanggal"
+                            class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="all">Semua Waktu</option>
+                        <option value="today">Hari Ini</option>
+                        <option value="yesterday">Kemarin</option>
+                        <option value="7d">7 Hari Terakhir</option>
+                        <option value="30d">30 Hari Terakhir</option>
+                    </select>
+
+                    <select id="sortSelect" aria-label="Urutkan"
+                            class="col-span-2 sm:col-span-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="newest">Terbaru</option>
+                        <option value="oldest">Terlama</option>
+                        <option value="total_desc">Total Terbesar</option>
+                        <option value="total_asc">Total Terkecil</option>
                     </select>
                 </div>
             </div>
 
-            <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+            <!-- ACTIVE FILTERS -->
+            <div id="activeFilters" class="hidden px-4 pb-3 flex flex-wrap items-center gap-2"></div>
+
+            <!-- RESULT INFO -->
+            <div class="px-4 pb-3 flex items-center justify-between gap-3 text-xs text-slate-500">
                 <span id="resultInfo">Memuat pesanan...</span>
-                <button id="clearFilterBtn" type="button"
+                <button id="clearFilterBtn" type="button" data-action="reset-filters"
                         class="hidden text-brand-600 hover:text-brand-700 font-semibold">
-                    Reset filter
+                    <i class="fa-solid fa-rotate-left mr-1"></i>Reset filter
                 </button>
             </div>
-        </section>
 
-        <!-- TABLE -->
-        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="table-scroll overflow-x-auto">
-                <table class="w-full min-w-[1050px] text-sm">
+            <!-- DESKTOP TABLE -->
+            <div class="hidden md:block table-scroll overflow-x-auto border-t border-slate-200">
+                <table class="w-full min-w-[980px] text-sm">
                     <thead class="bg-slate-50 border-b border-slate-200">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500">
                             <th class="px-4 py-3 font-semibold">Pesanan</th>
                             <th class="px-4 py-3 font-semibold">Pemesan</th>
                             <th class="px-4 py-3 font-semibold">Pembayaran</th>
-                            <th class="px-4 py-3 font-semibold">Total</th>
+                            <th class="px-4 py-3 font-semibold text-right">Total</th>
                             <th class="px-4 py-3 font-semibold">Status</th>
                             <th class="px-4 py-3 font-semibold">Waktu</th>
                             <th class="px-4 py-3 font-semibold text-right">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="orderTableBody" class="divide-y divide-slate-100">
-                    </tbody>
+                    <tbody id="orderTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
 
-            <div id="emptyState" class="hidden py-16 text-center">
-                <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-inbox text-xl"></i>
-                </div>
-                <p class="font-semibold text-slate-700">Pesanan tidak ditemukan</p>
-                <p class="text-xs text-slate-400 mt-1">Coba ubah pencarian atau filter.</p>
-            </div>
+            <!-- MOBILE LIST -->
+            <div id="orderCardList" class="md:hidden border-t border-slate-200 divide-y divide-slate-100"></div>
+
+            <!-- EMPTY -->
+            <div id="emptyState" class="hidden py-16 px-4 text-center border-t border-slate-200"></div>
 
             <!-- PAGINATION -->
             <div class="border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div id="paginationInfo" class="text-xs text-slate-500"></div>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                    <select id="pageSize" aria-label="Jumlah per halaman"
+                            class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="10">10 / halaman</option>
+                        <option value="20" selected>20 / halaman</option>
+                        <option value="50">50 / halaman</option>
+                        <option value="100">100 / halaman</option>
+                    </select>
+                    <span id="paginationInfo"></span>
+                </div>
                 <div id="pagination" class="flex items-center gap-1"></div>
             </div>
         </section>
     </main>
 
-    <!-- DETAIL MODAL -->
-    <div id="detailModal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl">
-            <div class="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-                <div>
-                    <h2 class="font-bold text-slate-900">Detail Pesanan</h2>
-                    <p id="detailOrderId" class="text-xs text-slate-400 mt-0.5"></p>
+    <!-- =====================================================
+         DETAIL DRAWER
+    ====================================================== -->
+    <div id="detailModal" data-modal
+         class="modal-root hidden fixed inset-0 z-50 modal-backdrop justify-end"
+         role="dialog" aria-modal="true" aria-labelledby="detailOrderId">
+        <aside class="drawer-panel bg-white w-full sm:max-w-xl h-full flex flex-col shadow-2xl">
+            <header class="shrink-0 border-b border-slate-100 px-5 py-4 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-[11px] uppercase tracking-wide font-semibold text-slate-400">Detail Pesanan</p>
+                    <h2 id="detailOrderId" class="font-bold text-lg text-slate-900 truncate"></h2>
                 </div>
-                <button onclick="closeModal('detailModal')" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600">
+                <button type="button" data-action="close-modal" data-target="detailModal"
+                        class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 shrink-0" title="Tutup (Esc)">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            <div id="detailContent" class="flex-1 overflow-y-auto"></div>
+            <footer id="detailFooter" class="shrink-0 border-t border-slate-100 bg-white px-5 py-3"></footer>
+        </aside>
+    </div>
+
+    <!-- =====================================================
+         PROOF MODAL
+    ====================================================== -->
+    <div id="proofModal" data-modal
+         class="modal-root hidden fixed inset-0 z-[60] modal-backdrop items-center justify-center p-4"
+         role="dialog" aria-modal="true" aria-labelledby="proofTitle">
+        <div class="pop-panel bg-white w-full max-w-3xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div>
+                    <h2 id="proofTitle" class="font-bold text-slate-900">Bukti Pembayaran</h2>
+                    <p id="proofOrderId" class="text-xs text-slate-400 mt-0.5"></p>
+                </div>
+                <button type="button" data-action="close-modal" data-target="proofModal"
+                        class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600" title="Tutup (Esc)">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="detailContent" class="p-5"></div>
+            <div id="proofContent" class="p-5 overflow-y-auto"></div>
         </div>
     </div>
 
-    <!-- PROOF MODAL -->
-    <div id="proofModal" class="hidden fixed inset-0 z-[60] modal-backdrop items-center justify-center p-4">
-        <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden">
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                    <h2 class="font-bold text-slate-900">Bukti Pembayaran</h2>
-                    <p id="proofOrderId" class="text-xs text-slate-400 mt-0.5"></p>
-                </div>
-                <button onclick="closeModal('proofModal')" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div id="proofContent" class="p-5 flex items-center justify-center min-h-[300px]"></div>
-        </div>
-    </div>
+    <!-- TOAST -->
+    <div id="toastStack" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 z-[100] flex flex-col items-stretch sm:items-end gap-2 pointer-events-none"
+         aria-live="polite" role="status"></div>
 
     <script type="module">
         import { requireAuth } from './js/module/auth-guard.js';
-    
+
         const auth = await requireAuth(['admin']);
-    
+
         if (auth) {
             await import('./js/module/manage-order.js');
         }
