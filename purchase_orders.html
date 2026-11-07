@@ -2,22 +2,36 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f97316">
     <title>Purchase Order - ChimChum</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style type="text/tailwindcss">
         @layer base {
-            body { font-family: 'Poppins', sans-serif; }
+            html { -webkit-text-size-adjust: 100%; }
+            body { font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+            /* Halaman di belakang tidak ikut ter-scroll saat dialog terbuka */
+            body:has(dialog[open]) { overflow: hidden; }
         }
         @layer components {
-            .field       { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-500; }
-            .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60; }
-            .btn-ghost   { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-200; }
-            .icon-btn    { @apply grid h-8 w-8 place-items-center rounded-lg text-xs text-slate-400 transition hover:bg-slate-100; }
+            /* text-base di HP supaya iOS tidak auto-zoom saat input difokus */
+            .field       { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-500/30 disabled:bg-slate-50 disabled:text-slate-500 sm:py-2 sm:text-xs; }
+            .label       { @apply mb-1 block text-xs font-semibold text-slate-600; }
+            .mini-label  { @apply mb-1 block text-[11px] font-medium text-slate-500; }
+            .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 sm:py-2.5 sm:text-xs; }
+            .btn-ghost   { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-200 active:scale-[.98] sm:py-2.5 sm:text-xs; }
+            .icon-btn    { @apply grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm text-slate-400 transition hover:bg-slate-100 active:scale-95 lg:h-8 lg:w-8 lg:rounded-lg lg:text-xs; }
+            .chip        { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium; }
+            .stat        { @apply min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4; }
             .dialog-box  { @apply m-auto w-[calc(100%-2rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm; }
+            /* Form PO: modal di tablet/desktop, bottom-sheet penuh di HP */
+            .sheet       { @apply m-auto w-[calc(100%-2rem)] max-w-2xl rounded-3xl p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm max-sm:mb-0 max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-full max-sm:rounded-b-none; }
         }
+
+        .no-scrollbar { scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
 
         .spinner-dark, .spinner-sm { border-radius: 50%; animation: spin .8s linear infinite; }
         .spinner-dark { width: 24px; height: 24px; border: 3px solid #e2e8f0; border-top-color: #f97316; }
@@ -27,52 +41,69 @@
         .row-busy { opacity: .45; pointer-events: none; }
         .dup-warning { border-color: #f43f5e !important; background: #fff1f2 !important; }
 
-        .toast {
-            position: fixed; right: 20px; bottom: 20px; z-index: 200; max-width: 340px;
-            padding: 12px 18px; border-radius: 14px; background: #166534; color: #fff;
-            font-size: 12px; font-weight: 500; box-shadow: 0 10px 25px -5px rgba(0,0,0,.3);
-            opacity: 0; transform: translateY(20px); pointer-events: none; transition: all .25s ease;
+        @media (max-width: 639px) {
+            dialog.sheet[open] { animation: sheet-up .25s cubic-bezier(.2,.8,.2,1); }
         }
-        .toast.show { opacity: 1; transform: translateY(0); }
+        @keyframes sheet-up { from { transform: translateY(100%); } }
+
+        .toast {
+            position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 200;
+            width: max-content; max-width: min(360px, calc(100vw - 32px));
+            padding: 12px 18px; border-radius: 14px; background: #166534; color: #fff;
+            font-size: 13px; font-weight: 500; box-shadow: 0 10px 25px -5px rgba(0,0,0,.3);
+            opacity: 0; transform: translate(-50%, 20px); pointer-events: none; transition: all .25s ease;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); }
         .toast.error { background: #991b1b; }
-        @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+        @media (min-width: 640px) {
+            .toast { left: auto; right: 20px; bottom: 20px; font-size: 12px; transform: translateY(20px); }
+            .toast.show { transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .toast { transition: none; }
+            dialog.sheet[open] { animation: none; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 p-4 text-slate-800 sm:p-6">
+<body class="bg-slate-50 px-3 pb-28 pt-3 text-slate-800 sm:p-6">
 
-<main class="mx-auto max-w-7xl space-y-4">
+<main class="mx-auto max-w-7xl space-y-3 sm:space-y-4">
 
     <!-- Header -->
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div>
-            <h1 class="text-xl font-bold">
+    <header class="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div class="min-w-0">
+            <h1 class="text-lg font-bold sm:text-xl">
                 <i class="fa-solid fa-file-invoice-dollar mr-2 text-orange-500"></i>Purchase Order
             </h1>
             <p class="mt-0.5 max-w-2xl text-xs text-slate-500">
-                Kelola pesanan bahan baku ke supplier. PO berstatus <b>Selesai</b> otomatis menambah stok bahan.
+                Kelola pesanan bahan baku. PO <b>Selesai</b> otomatis menambah stok, dan harga per gram/ml dihitung dari nota.
             </p>
         </div>
-        <button id="btn-create" class="btn-primary"><i class="fa-solid fa-plus"></i> Buat PO baru</button>
+        <button id="btn-create" class="btn-primary hidden shrink-0 sm:inline-flex"><i class="fa-solid fa-plus"></i> Buat PO baru</button>
     </header>
 
-    <!-- Cari & filter -->
-    <section class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div class="relative w-full max-w-md flex-1">
-            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
-            <input id="po-search" type="search" autocomplete="off"
-                   placeholder="Cari tanggal, supplier, total, bahan, atau catatan…"
-                   class="field bg-slate-50 pl-9">
+    <!-- Ringkasan -->
+    <section id="po-stats" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></section>
+
+    <!-- Cari & filter (menempel di atas saat scroll di HP) -->
+    <section class="sticky top-0 z-20 -mx-3 space-y-2.5 border-b border-slate-200/70 bg-slate-50/90 px-3 py-2.5 backdrop-blur
+                    sm:static sm:mx-0 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:space-y-0 sm:rounded-2xl sm:border sm:bg-white sm:p-3 sm:shadow-sm">
+        <div class="relative w-full sm:max-w-md sm:flex-1">
+            <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
+            <input id="po-search" type="search" autocomplete="off" enterkeyhint="search"
+                   placeholder="Cari tanggal, supplier, total, bahan…"
+                   class="field bg-white pl-9 sm:bg-slate-50">
         </div>
-        <div class="flex items-center gap-3">
-            <span id="po-count" class="text-[11px] font-medium text-slate-400"></span>
-            <div id="status-tabs" class="inline-flex rounded-xl bg-slate-100 p-1" role="tablist"></div>
+        <div class="flex items-center justify-between gap-3">
+            <div id="status-tabs" class="no-scrollbar flex min-w-0 overflow-x-auto rounded-xl bg-slate-100 p-1" role="tablist"></div>
+            <span id="po-count" class="shrink-0 text-[11px] font-medium text-slate-400"></span>
         </div>
     </section>
 
-    <!-- Tabel -->
-    <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[820px] border-collapse text-left text-xs">
+    <!-- Daftar PO: tabel di layar lebar, kartu di HP/tablet -->
+    <section id="po-list" class="scroll-mt-24 space-y-3">
+        <div class="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block">
+            <table class="w-full border-collapse text-left text-xs">
                 <thead>
                     <tr class="border-b border-slate-100 bg-slate-50 font-semibold text-slate-500">
                         <th class="p-4">Tanggal order</th>
@@ -83,44 +114,51 @@
                         <th class="p-4 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody id="po-body" class="divide-y divide-slate-100">
-                    <tr><td colspan="6" class="p-12 text-center text-slate-400">
-                        <div class="spinner-dark mx-auto mb-3"></div>Memuat Purchase Order…
-                    </td></tr>
-                </tbody>
+                <tbody id="po-body" class="divide-y divide-slate-100"></tbody>
             </table>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+        <div id="po-cards" class="grid gap-3 sm:grid-cols-2 lg:hidden"></div>
+
+        <div class="flex flex-col-reverse items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:justify-between">
             <div class="flex items-center gap-3 text-[11px] text-slate-500">
                 <span id="po-info"></span>
                 <select id="po-size" aria-label="Jumlah per halaman"
-                        class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] outline-none focus:ring-2 focus:ring-orange-500">
+                        class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-orange-500">
                     <option value="10" selected>10 / halaman</option>
                     <option value="25">25 / halaman</option>
                     <option value="50">50 / halaman</option>
                 </select>
             </div>
-            <nav id="po-pager" class="flex items-center gap-1" aria-label="Halaman"></nav>
+            <nav id="po-pager" class="flex flex-wrap items-center justify-center gap-1" aria-label="Halaman"></nav>
         </div>
     </section>
 </main>
 
+<!-- Tombol buat PO (HP) -->
+<button id="fab-create" aria-label="Buat PO baru"
+        class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-30 grid h-14 w-14 place-items-center rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/30 transition active:scale-95 sm:hidden">
+    <i class="fa-solid fa-plus text-lg"></i>
+</button>
+
 <!-- Form buat / edit PO -->
-<dialog id="po-dialog" class="dialog-box max-w-2xl">
-    <form id="po-form" class="flex max-h-[90vh] flex-col">
+<dialog id="po-dialog" class="sheet" aria-labelledby="po-title">
+    <form id="po-form" class="flex max-h-[92dvh] flex-col sm:max-h-[90vh]" novalidate>
         <input type="hidden" id="po-edit-id">
 
-        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-            <h2 id="po-title" class="text-base font-bold">Buat Purchase Order</h2>
-            <button type="button" id="po-close" class="p-1 text-sm font-bold text-slate-400 hover:text-slate-600" aria-label="Tutup">✕</button>
+        <div class="border-b border-slate-100 px-5 pb-3 pt-2 sm:px-6 sm:py-4">
+            <div class="mx-auto mb-2 h-1 w-10 rounded-full bg-slate-200 sm:hidden"></div>
+            <div class="flex items-center justify-between">
+                <h2 id="po-title" class="text-base font-bold">Buat Purchase Order</h2>
+                <button type="button" id="po-close" class="icon-btn -mr-2" aria-label="Tutup"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
         </div>
 
-        <div class="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+        <div class="flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6 sm:py-5">
             <div>
-                <label for="po-supplier-search" class="mb-1 block text-xs font-semibold text-slate-600">Supplier</label>
+                <label for="po-supplier-search" class="label">Supplier</label>
                 <div>
-                    <input type="text" id="po-supplier-search" data-combo="supplier" required autocomplete="off"
+                    <input type="text" id="po-supplier-search" data-combo="supplier" autocomplete="off"
                            placeholder="Cari supplier…" role="combobox" aria-expanded="false" aria-controls="combo-menu"
                            class="field font-medium">
                     <input type="hidden" id="po-supplier">
@@ -132,52 +170,64 @@
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                    <label for="po-date" class="mb-1 block text-xs font-semibold text-slate-600">Tanggal order (WIB)</label>
-                    <input type="datetime-local" id="po-date" required class="field bg-slate-50 font-medium">
+                    <label for="po-date" class="label">Tanggal order (WIB)</label>
+                    <input type="datetime-local" id="po-date" class="field bg-slate-50 font-medium">
                 </div>
                 <div>
-                    <label for="po-status" class="mb-1 block text-xs font-semibold text-slate-600">Status</label>
-                    <select id="po-status" class="field font-medium">
-                        <option value="pending">Pending</option>
-                        <option value="completed">Selesai</option>
-                    </select>
+                    <label for="po-status" class="label">Status</label>
+                    <select id="po-status" class="field font-medium"></select>
                 </div>
             </div>
-            <p id="stock-hint" class="-mt-2 text-[11px] text-slate-500"></p>
+
+            <div class="space-y-2 rounded-xl bg-slate-50 p-3 text-[11px] text-slate-600">
+                <p><i class="fa-solid fa-boxes-stacked mr-1.5 text-slate-400"></i><span id="stock-hint"></span></p>
+                <label class="flex cursor-pointer items-start gap-2">
+                    <input type="checkbox" id="po-update-price" class="mt-0.5 h-4 w-4 shrink-0 accent-orange-500">
+                    <span>Setiap PO <b>Selesai</b>, perbarui <b>harga master</b> bahan dengan harga beli per satuan dari PO tersebut.</span>
+                </label>
+            </div>
 
             <div class="border-t border-slate-100 pt-4">
-                <div class="mb-2 flex items-center justify-between">
+                <div class="mb-1 flex items-center justify-between">
                     <span class="text-xs font-semibold text-slate-600">Bahan yang dipesan</span>
-                    <button type="button" id="po-add-row" class="text-xs font-semibold text-orange-600 hover:text-orange-700">+ Tambah bahan</button>
                 </div>
-                <div id="po-items" class="max-h-56 space-y-2 overflow-y-auto pr-1"></div>
+                <p class="mb-2.5 text-[11px] text-slate-400">
+                    Isi jumlah & total harga sesuai nota (boleh ketik <i>150rb</i> atau <i>1,5jt</i>). Harga per gram / ml dihitung otomatis.
+                </p>
+                <div id="po-items" class="space-y-2.5"></div>
+                <button type="button" id="po-add-row"
+                        class="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-200 py-3 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50">
+                    <i class="fa-solid fa-plus"></i> Tambah bahan
+                </button>
                 <p id="dup-warning" class="mt-2 hidden text-[11px] text-rose-600">
                     <i class="fa-solid fa-triangle-exclamation mr-1"></i>Ada bahan yang dipilih lebih dari sekali. Gabungkan jumlahnya di satu baris.
                 </p>
             </div>
 
             <div>
-                <label for="po-notes" class="mb-1 block text-xs font-semibold text-slate-600">Catatan</label>
+                <label for="po-notes" class="label">Catatan</label>
                 <textarea id="po-notes" rows="2" placeholder="Mis. kirim sebelum jam 8 pagi" class="field bg-slate-50"></textarea>
-            </div>
-
-            <div class="flex items-center justify-between rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
-                <span class="text-xs font-semibold text-orange-800">Estimasi total</span>
-                <span id="po-total" class="text-sm font-bold text-orange-700">Rp 0</span>
             </div>
         </div>
 
-        <div class="flex gap-2 border-t border-slate-100 px-6 py-4">
-            <button type="submit" id="po-submit" class="btn-primary flex-1">
-                <span id="po-submit-label">Simpan Purchase Order</span>
-            </button>
-            <button type="button" id="po-cancel" class="btn-ghost">Batal</button>
+        <!-- Footer: total selalu terlihat -->
+        <div class="border-t border-slate-100 bg-white px-5 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 sm:rounded-b-3xl sm:px-6 sm:pb-4">
+            <div class="mb-2.5 flex items-baseline justify-between">
+                <span class="text-xs font-semibold text-slate-500">Total <span id="po-item-count" class="font-normal text-slate-400"></span></span>
+                <span id="po-total" class="text-lg font-bold text-orange-600">Rp 0</span>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" id="po-cancel" class="btn-ghost">Batal</button>
+                <button type="submit" id="po-submit" class="btn-primary flex-1">
+                    <span id="po-submit-label">Simpan Purchase Order</span>
+                </button>
+            </div>
         </div>
     </form>
 
     <!-- Daftar pilihan combobox supplier & bahan (dipakai bersama); harus di dalam <dialog> agar tampil di atasnya -->
     <ul id="combo-menu" role="listbox"
-        class="fixed z-[300] hidden overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-xl"></ul>
+        class="fixed z-[300] hidden overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 text-sm shadow-xl sm:text-xs"></ul>
 </dialog>
 
 <!-- Pesan -->
@@ -185,7 +235,7 @@
     <form method="dialog" class="space-y-3 p-6 text-center">
         <div id="msg-icon" class="text-3xl">⚠️</div>
         <h2 id="msg-title" class="text-base font-bold text-slate-900"></h2>
-        <p id="msg-text" class="whitespace-pre-line break-words text-xs text-slate-600"></p>
+        <p id="msg-text" class="whitespace-pre-line break-words text-sm text-slate-600 sm:text-xs"></p>
         <button class="btn-primary w-full">Mengerti</button>
     </form>
 </dialog>
@@ -193,12 +243,12 @@
 <!-- Konfirmasi -->
 <dialog id="confirm-dialog" class="dialog-box max-w-sm">
     <form method="dialog" class="space-y-3 p-6 text-center">
-        <div class="text-3xl">🗑️</div>
+        <div id="confirm-icon" class="text-3xl">🗑️</div>
         <h2 id="confirm-title" class="text-base font-bold text-slate-900"></h2>
-        <p id="confirm-text" class="text-xs text-slate-600"></p>
+        <p id="confirm-text" class="text-sm text-slate-600 sm:text-xs"></p>
         <div class="flex gap-2 pt-1">
             <button value="cancel" class="btn-ghost flex-1">Batal</button>
-            <button id="confirm-ok" value="ok" class="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-rose-700">Ya, hapus</button>
+            <button id="confirm-ok" value="ok" class="btn-primary flex-1 !bg-rose-600 hover:!bg-rose-700">Ya, hapus</button>
         </div>
     </form>
 </dialog>
