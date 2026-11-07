@@ -248,13 +248,13 @@ kbd {
 .menu-grid {
   flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  grid-auto-rows: max-content;
+  grid-auto-rows: max-content; /* tiap kartu tingginya sama karena isi kartu dibuat fixed */
   gap: 12px; align-content: start; padding: 2px 2px 16px;
   -webkit-overflow-scrolling: touch;
 }
 
 .menu-card {
-  position: relative; display: flex; flex-direction: column;
+  position: relative; display: flex; flex-direction: column; width: 100%; min-width: 0;
   text-align: left; padding: 0;
   border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
   overflow: hidden; user-select: none; -webkit-user-select: none;
@@ -267,8 +267,8 @@ kbd {
 .menu-card.is-out { opacity: .5; cursor: not-allowed; filter: grayscale(.7); }
 .menu-card.bump { animation: bump .28s ease; }
 
-.menu-card__img { position: relative; display: block; aspect-ratio: 4 / 3; background: var(--primary-50); }
-.menu-card__img img { width: 100%; height: 100%; object-fit: cover; }
+.menu-card__img { position: relative; display: block; width: 100%; aspect-ratio: 1 / 1; flex-shrink: 0; overflow: hidden; background: var(--primary-50); }
+.menu-card__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .menu-card__qty {
   position: absolute; top: 8px; right: 8px;
   min-width: 30px; height: 30px; padding: 0 9px; border-radius: 999px;
@@ -284,19 +284,21 @@ kbd {
 }
 .menu-card__flag--low { background: var(--warning); }
 
-.menu-card__body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; flex: 1; }
+.menu-card__body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; flex: 1; min-width: 0; }
 .menu-card__name {
   font-weight: 600; font-size: 13.5px; line-height: 1.3; color: var(--dark);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  min-height: 2.6em;
+  height: 2.6em; /* selalu 2 baris → tinggi kartu seragam */
 }
-.menu-card__meta { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-top: auto; flex-wrap: wrap; }
+.menu-card__meta { display: flex; flex-direction: column; gap: 2px; margin-top: auto; min-width: 0; }
+.menu-card__price,
+.menu-card__stock { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
 .menu-card__price { font-weight: 700; color: var(--primary); font-size: 14px; }
 .menu-card__stock { font-size: 11px; color: var(--muted); }
 .menu-card__stock.is-low { color: var(--warning); font-weight: 600; }
 
 .menu-skeleton {
-  aspect-ratio: 3 / 3.4; border-radius: var(--radius);
+  aspect-ratio: 1 / 1.45; border-radius: var(--radius);
   background: linear-gradient(90deg, #eceef1 25%, #f7f8fa 50%, #eceef1 75%);
   background-size: 200% 100%; animation: shimmer 1.2s infinite;
 }
@@ -673,7 +675,7 @@ kbd {
 /* Layar pendek (laptop 1366×768, tablet landscape) */
 @media (max-height: 760px) and (min-width: 860px) {
   :root { --header-h: 54px; }
-  .menu-card__img { aspect-ratio: 16 / 10; }
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
   .pos-menu { padding-top: 12px; }
   .category-bar { padding: 10px 0; }
   .cart-head { padding: 10px 16px; }
