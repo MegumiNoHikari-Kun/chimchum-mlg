@@ -6,129 +6,186 @@
     <title>ChimChum Dimsum - Master Supplier</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style type="text/tailwindcss">
+        .icon-btn    { @apply w-8 h-8 inline-flex items-center justify-center rounded-lg text-[13px] transition-colors; }
+        .icon-btn-lg { @apply w-10 h-10 inline-flex items-center justify-center rounded-lg text-sm transition-colors; }
+        .field       { @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-base sm:text-sm bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition; }
+        .label       { @apply block text-[11px] font-semibold text-slate-500 mb-1; }
+        .btn-primary { @apply inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed; }
+        .btn-ghost   { @apply inline-flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3.5 py-2 rounded-lg text-xs font-semibold transition; }
+        kbd          { @apply px-1.5 py-px rounded border border-slate-200 bg-white text-[10px] font-mono text-slate-400 font-normal; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans text-xs">
 
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-    
-            <!-- Header Title -->
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center text-lg shadow-md">
+    <!-- ===== HEADER + TOOLBAR (satu baris di desktop) ===== -->
+    <header class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
+
+            <div class="order-1 flex items-center gap-2.5 mr-auto min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-sm shrink-0">
                     <i class="fa-solid fa-truck-field"></i>
                 </div>
-    
-                <div>
-                    <h1 class="text-base font-bold text-slate-800">
-                        ChimChum Dimsum Master
+                <div class="min-w-0 leading-tight">
+                    <h1 class="text-sm font-bold text-slate-800 truncate flex items-center gap-1.5">
+                        Master Supplier
+                        <span id="demo-badge" class="hidden text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-px rounded">DEMO</span>
                     </h1>
-                    <p class="text-xs text-slate-500">
-                        Modul Manajemen Master Supplier
+                    <p class="text-[11px] text-slate-500">
+                        <span id="statTotalSuppliers" class="font-semibold text-orange-600">0</span> supplier
                     </p>
                 </div>
             </div>
-    
-            <!-- Add Supplier -->
-            <button
-                onclick="openSupplierModal()"
-                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2"
-            >
-                <i class="fa-solid fa-truck-medical"></i>
-                Tambah Supplier Baru
+
+            <div class="order-3 sm:order-2 w-full sm:w-auto flex gap-2">
+                <div class="relative flex-1 sm:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] pointer-events-none"></i>
+                    <input type="text" id="supplierSearch" autocomplete="off" enterkeyhint="search"
+                           placeholder="Cari nama, PIC, nomor, alamat…"
+                           class="field !py-1.5 !pl-8 !pr-8 bg-slate-50 focus:bg-white">
+                    <kbd id="search-kbd" class="hidden lg:inline absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">/</kbd>
+                    <button id="search-clear" type="button" title="Hapus pencarian"
+                            class="hidden absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <select id="sortSelect" title="Urutkan" class="field !w-auto !py-1.5 !pr-7 bg-slate-50 text-slate-600">
+                    <option value="newest">Terbaru</option>
+                    <option value="name">Nama A–Z</option>
+                </select>
+            </div>
+
+            <button id="btn-add" type="button" class="order-2 sm:order-3 btn-primary" title="Tambah supplier (N)">
+                <i class="fa-solid fa-plus"></i>
+                <span class="hidden sm:inline">Tambah</span>
+                <kbd class="hidden lg:inline !bg-orange-500 !border-orange-400 !text-orange-50">N</kbd>
             </button>
-    
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6 space-y-6">
-        
-        <!-- Search & Stats Bar -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="relative w-full sm:w-80">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <i class="fa-solid fa-search"></i>
-                </span>
-                <input type="text" id="supplierSearch" placeholder="Cari nama supplier atau kontak..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500" oninput="renderSuppliersTable()">
-            </div>
-            <div class="text-xs text-slate-500 font-medium">
-                Total Supplier Terdaftar: <span id="statTotalSuppliers" class="font-bold text-orange-600">0</span>
-            </div>
-        </div>
+    <!-- ===== DAFTAR ===== -->
+    <main class="max-w-7xl mx-auto p-3 sm:p-6">
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
-        <!-- Suppliers Table -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
-                            <th class="p-4">Nama Supplier</th>
-                            <th class="p-4">Kontak Person</th>
-                            <th class="p-4">No. Telepon / WhatsApp</th>
-                            <th class="p-4">Alamat</th>
-                            <th class="p-4">Catatan</th>
-                            <th class="p-4 text-right">Aksi</th>
+            <!-- Desktop: tabel ringkas 4 kolom, header lengket -->
+            <div class="hidden md:block max-h-[calc(100vh-9rem)] overflow-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                        <tr class="border-b border-slate-200">
+                            <th class="px-4 py-2 font-semibold">Supplier</th>
+                            <th class="px-4 py-2 font-semibold">Kontak</th>
+                            <th class="px-4 py-2 font-semibold">Alamat</th>
+                            <th class="px-4 py-2 font-semibold text-right w-px">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="suppliers-table-tbody" class="divide-y divide-slate-100">
-                        <tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data supplier...</td></tr>
+                        <tr><td colspan="4" class="p-8 text-center text-slate-400">Memuat data supplier…</td></tr>
                     </tbody>
                 </table>
             </div>
-        </div>
+
+            <!-- Mobile: daftar kartu -->
+            <div id="suppliers-cards" class="md:hidden divide-y divide-slate-100">
+                <div class="p-8 text-center text-slate-400">Memuat data supplier…</div>
+            </div>
+
+            <div class="hidden md:flex items-center gap-3 px-4 py-2 border-t border-slate-100 bg-slate-50/60 text-[11px] text-slate-400">
+                <span><i class="fa-regular fa-hand-pointer mr-1"></i>Klik baris untuk edit</span>
+                <span class="ml-auto hidden lg:inline"><kbd>/</kbd> cari &nbsp; <kbd>N</kbd> tambah &nbsp; <kbd>Esc</kbd> tutup</span>
+            </div>
+        </section>
     </main>
 
-    <div id="supplierModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 id="supplierModalTitle" class="text-sm font-bold text-slate-800">Tambah Supplier Baru</h3>
-                <button onclick="closeSupplierModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+    <!-- ===== MODAL FORM (bottom-sheet di HP) ===== -->
+    <div id="supplierModal" data-modal class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-end sm:items-center justify-center sm:p-4">
+        <div class="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+                <h3 id="supplierModalTitle" class="text-sm font-bold text-slate-800">Tambah Supplier</h3>
+                <button type="button" data-close class="icon-btn text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Tutup (Esc)">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
-            <form id="supplierForm" onsubmit="handleSupplierSubmit(event)" class="space-y-3">
+
+            <form id="supplierForm" class="flex flex-col min-h-0">
                 <input type="hidden" id="supplier-edit-id">
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nama Supplier / Toko *</label>
-                    <input type="text" id="sup-name" required placeholder="Contoh: Toko Bahan Makmur Jaya" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div class="px-5 py-4 space-y-3 overflow-y-auto">
                     <div>
-                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Kontak Person (PIC)</label>
-                        <input type="text" id="sup-contact" placeholder="Contoh: Bpk. Budi" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <label for="sup-name" class="label">Nama Supplier / Toko <span class="text-rose-500">*</span></label>
+                        <input type="text" id="sup-name" required autocomplete="off" placeholder="Contoh: Toko Bahan Makmur Jaya" class="field">
+                        <p id="sup-name-dup" class="hidden mt-1 text-[11px] text-amber-600">
+                            <i class="fa-solid fa-circle-exclamation"></i> Nama ini sudah terdaftar. Pastikan bukan data ganda.
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label for="sup-contact" class="label">Kontak Person (PIC)</label>
+                            <input type="text" id="sup-contact" autocomplete="off" placeholder="Contoh: Bpk. Budi" class="field">
+                        </div>
+                        <div>
+                            <label for="sup-phone" class="label">No. Telepon / WA</label>
+                            <input type="tel" id="sup-phone" inputmode="tel" autocomplete="off" placeholder="08123456789" class="field font-mono">
+                            <p id="sup-phone-hint" class="mt-1 text-[11px] text-slate-400 truncate">Contoh: 0812-3456-789</p>
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">No. Telepon / WA</label>
-                        <input type="text" id="sup-phone" placeholder="Contoh: 08123456789" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <label for="sup-address" class="label">Alamat</label>
+                        <textarea id="sup-address" rows="2" placeholder="Alamat lengkap supplier…" class="field resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label for="sup-notes" class="label">Catatan</label>
+                        <input type="text" id="sup-notes" autocomplete="off" placeholder="Misal: Buka Senin–Sabtu 08.00, supplier tapioka" class="field">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Alamat Supplier</label>
-                    <textarea id="sup-address" rows="2" placeholder="Alamat lengkap supplier..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Catatan Tambahan</label>
-                    <input type="text" id="sup-notes" placeholder="Misal: Buka Senin-Sabtu jam 08.00" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeSupplierModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Batal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-orange-600 text-white hover:bg-orange-700 shadow-sm transition">Simpan Supplier</button>
+
+                <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 sm:rounded-b-2xl flex items-center gap-2">
+                    <span class="hidden sm:inline text-[11px] text-slate-400"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> simpan</span>
+                    <div class="flex gap-2 ml-auto w-full sm:w-auto">
+                        <button type="button" data-close class="btn-ghost flex-1 sm:flex-none">Batal</button>
+                        <button type="submit" id="btn-save" class="btn-primary flex-1 sm:flex-none">
+                            <i id="btn-save-spinner" class="hidden fa-solid fa-circle-notch fa-spin"></i>
+                            <span id="btn-save-label">Simpan</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="notification-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-3 shadow-xl">
-            <div id="modal-icon" class="text-3xl">💡</div>
-            <h4 id="modal-title" class="font-bold text-sm text-slate-800">Notifikasi</h4>
-            <p id="modal-message" class="text-xs text-slate-600 leading-relaxed"></p>
-            <button onclick="closeModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-xl text-xs font-semibold transition">Mengerti</button>
+    <!-- ===== MODAL KONFIRMASI HAPUS ===== -->
+    <div id="confirmModal" data-modal class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-end sm:items-center justify-center sm:p-4">
+        <div class="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4">
+            <div class="flex gap-3">
+                <div class="w-10 h-10 shrink-0 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-trash-can"></i></div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-800">Hapus supplier?</h4>
+                    <p class="text-xs text-slate-500 mt-0.5"><b id="confirm-name" class="text-slate-700"></b> akan dihapus permanen.</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" data-close class="btn-ghost flex-1">Batal</button>
+                <button type="button" id="btn-confirm-delete" class="btn-primary flex-1 !bg-rose-600 hover:!bg-rose-700">Ya, hapus</button>
+            </div>
         </div>
     </div>
 
+    <!-- ===== MODAL NOTIFIKASI (untuk error) ===== -->
+    <div id="notification-modal" data-modal class="hidden fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center space-y-3 shadow-xl">
+            <div id="modal-icon" class="text-3xl">💡</div>
+            <h4 id="modal-title" class="font-bold text-sm text-slate-800">Notifikasi</h4>
+            <p id="modal-message" class="text-xs text-slate-600 leading-relaxed break-words"></p>
+            <button type="button" data-close class="btn-primary w-full">Mengerti</button>
+        </div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast-wrap" class="fixed z-[60] bottom-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-4 sm:translate-x-0 flex flex-col gap-2 items-center sm:items-end pointer-events-none"></div>
+
     <script type="module">
         import { requireAuth } from './js/module/auth-guard.js';
-    
+
         const auth = await requireAuth(['admin']);
-    
+
         if (auth) {
             await import('./js/module/master_supplier.js');
         }
