@@ -10,86 +10,335 @@
   <link rel="stylesheet" href="./css/kasir.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* ===== LAYOUT: satu layar penuh, hanya daftar voucher yang scroll ===== */
+    :root {
+      --brand:#f97316; --brand-600:#ea580c; --brand-50:#fff7ed; --brand-100:#ffedd5; --brand-200:#fed7aa;
+      --ink:#0f172a; --text:#1e293b; --muted:#64748b; --subtle:#94a3b8;
+      --line:#e2e8f0; --line-soft:#f1f5f9; --bg:#f8fafc; --card:#fff;
+      --ok:#047857; --ok-bg:#d1fae5; --info:#1d4ed8; --info-bg:#dbeafe;
+      --warn:#b45309; --warn-bg:#fef3c7; --bad:#b91c1c; --bad-bg:#fee2e2; --idle:#475569; --idle-bg:#e2e8f0;
+      --ring:0 0 0 3px rgba(249,115,22,.18);
+    }
+
+    /* ===== LAYOUT: satu layar penuh, hanya daftar yang scroll ===== */
     html, body { height:100% !important; margin:0; overflow:hidden !important; }
-    body { background:#f8fafc; font-family:'Poppins',sans-serif; color:#1e293b; }
-    main.container { height:100% !important; max-height:none !important; max-width:1200px; margin:0 auto; padding:12px 14px; box-sizing:border-box; overflow:hidden !important; display:flex; flex-direction:column; }
-    .v-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 1px 3px rgba(15,23,42,.06); overflow:hidden; }
-    tr[hidden] { display:none !important; }
+    body { background:var(--bg); font-family:'Poppins',system-ui,sans-serif; color:var(--text); -webkit-font-smoothing:antialiased; }
+    main.container { height:100% !important; max-height:none !important; max-width:1240px; margin:0 auto; padding:14px 16px; box-sizing:border-box; overflow:hidden !important; display:flex; flex-direction:column; gap:12px; }
+    button { font-family:inherit; }
+    .v-muted { color:var(--muted); }
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    kbd { font-family:inherit; font-size:10px; font-weight:600; padding:1px 6px; border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; background:#fff; color:var(--muted); }
 
-    /* ===== HEADER / TOOLBAR ===== */
-    .v-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 14px; border-bottom:1px solid #f1f5f9; }
-    .v-title { font-size:15px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px; }
-    .v-title i { color:#f97316; }
-    .v-count { font-size:11px; font-weight:500; background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:999px; }
-    .v-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .v-search { position:relative; }
-    .v-search i { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:12px; pointer-events:none; }
-    .v-search input { padding:8px 12px 8px 30px; width:240px; max-width:100%; border:1px solid #e2e8f0; border-radius:10px; font:inherit; font-size:12px; background:#f8fafc; box-sizing:border-box; }
-    .v-search input:focus { outline:none; border-color:#f97316; background:#fff; box-shadow:0 0 0 3px rgba(249,115,22,.15); }
-    .v-iconbtn { width:34px; height:34px; border:1px solid #e2e8f0; background:#fff; border-radius:10px; cursor:pointer; color:#475569; }
-    .v-iconbtn:hover { background:#f1f5f9; }
-    .v-addbtn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border:0; border-radius:10px; background:#f97316; color:#fff; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
-    .v-addbtn:hover { background:#ea580c; }
+    /* ===== TOP BAR ===== */
+    .v-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .v-top h1 { margin:0; font-size:18px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:10px; }
+    .v-top h1 .v-logo { width:34px; height:34px; border-radius:10px; background:var(--brand-100); color:var(--brand-600); display:grid; place-items:center; font-size:15px; }
+    .v-top p { margin:2px 0 0 44px; font-size:12px; color:var(--muted); }
+    .v-top__actions { display:flex; gap:8px; }
 
-    /* ===== TABEL (area scroll) ===== */
+    .v-btn-primary, .v-btn-ghost, .v-btn-danger { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:9px 16px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid transparent; transition:background .15s, box-shadow .15s, transform .05s; white-space:nowrap; margin:0; width:auto; }
+    .v-btn-primary { background:var(--brand); color:#fff; box-shadow:0 1px 2px rgba(234,88,12,.35); }
+    .v-btn-primary:hover { background:var(--brand-600); }
+    .v-btn-primary:active, .v-btn-ghost:active, .v-btn-danger:active { transform:translateY(1px); }
+    .v-btn-primary:disabled { opacity:.65; cursor:wait; }
+    .v-btn-ghost { background:#fff; color:var(--text); border-color:var(--line); }
+    .v-btn-ghost:hover { background:var(--line-soft); }
+    .v-btn-danger { background:#dc2626; color:#fff; }
+    .v-btn-danger:hover { background:#b91c1c; }
+    .v-btn-primary:focus-visible, .v-btn-ghost:focus-visible, .v-btn-danger:focus-visible, .v-ibtn:focus-visible, .v-chip:focus-visible, .v-stat:focus-visible { outline:none; box-shadow:var(--ring); }
+    .fa-spin-fast { animation:fa-spin .7s linear infinite; }
+
+    /* ===== STAT CARDS ===== */
+    .v-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .v-stat { all:unset; box-sizing:border-box; cursor:pointer; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 14px; display:flex; align-items:center; gap:12px; transition:border-color .15s, box-shadow .15s; }
+    .v-stat:hover { border-color:var(--brand-200); box-shadow:0 2px 8px rgba(15,23,42,.05); }
+    .v-stat.is-on { border-color:var(--brand); box-shadow:var(--ring); }
+    .v-stat__icon { width:36px; height:36px; flex:none; border-radius:10px; display:grid; place-items:center; font-size:14px; }
+    .v-stat__num { font-size:19px; font-weight:600; color:var(--ink); line-height:1.15; }
+    .v-stat__lbl { font-size:11px; color:var(--muted); }
+
+    /* ===== PANEL ===== */
+    .v-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:0 1px 3px rgba(15,23,42,.05); overflow:hidden; }
+    .v-toolbar { display:flex; flex-direction:column; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line-soft); }
+    .v-toolbar__row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .v-search { position:relative; flex:1; min-width:220px; max-width:420px; }
+    .v-search > i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--subtle); font-size:12px; pointer-events:none; }
+    .v-search input { width:100%; margin:0; padding:9px 64px 9px 32px; border:1px solid var(--line); border-radius:10px; font:inherit; font-size:12.5px; background:var(--bg); box-sizing:border-box; }
+    .v-search input:focus { outline:none; border-color:var(--brand); background:#fff; box-shadow:var(--ring); }
+    .v-search .v-search-kbd { position:absolute; right:10px; top:50%; transform:translateY(-50%); }
+    .v-search .v-search-clear { position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:var(--subtle); cursor:pointer; padding:5px 7px; display:none; width:auto; margin:0; }
+    .v-search.has-q .v-search-clear { display:block; }
+    .v-search.has-q .v-search-kbd { display:none; }
+    .v-sort { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); margin-left:auto; }
+    .v-sort select, .v-pager select { margin:0; width:auto; border:1px solid var(--line); border-radius:9px; padding:7px 8px; font:inherit; font-size:11.5px; background:#fff; color:var(--text); cursor:pointer; }
+    .v-count { font-size:11px; font-weight:600; background:var(--brand-50); color:var(--brand-600); padding:2px 8px; border-radius:999px; }
+
+    .v-chips { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:1px; }
+    .v-chips::-webkit-scrollbar { display:none; }
+    .v-chip { flex:none; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:999px; font-size:11.5px; font-weight:500; cursor:pointer; white-space:nowrap; width:auto; margin:0; transition:all .12s; }
+    .v-chip:hover { border-color:var(--brand-200); color:var(--text); }
+    .v-chip b { font-weight:600; font-size:10.5px; background:var(--line-soft); color:var(--muted); padding:0 6px; border-radius:999px; }
+    .v-chip.is-on { background:var(--ink); border-color:var(--ink); color:#fff; }
+    .v-chip.is-on b { background:rgba(255,255,255,.18); color:#fff; }
+
+    /* ===== TABEL ===== */
     .v-scroll { flex:1; min-height:0; overflow:auto; }
-    .v-panel table { width:100%; border-collapse:collapse; font-size:12px; }
-    .v-panel thead th { position:sticky; top:0; z-index:1; background:#fff7ed; color:#334155; font-size:11px; font-weight:600; text-align:left; padding:9px 12px; white-space:nowrap; box-shadow:0 1px 0 #fed7aa; }
-    .v-panel tbody td { padding:8px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
-    .v-panel tbody tr:hover { background:#f8fafc; }
-    .table-empty { text-align:center; color:#94a3b8; padding:32px 12px !important; }
-    #vNoResult { display:none; text-align:center; color:#94a3b8; font-size:13px; padding:28px 0; }
-    .v-badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; }
-    .v-btn { padding:4px 9px; font-size:11px; border:1px solid #e2e8f0; background:#f1f5f9; border-radius:8px; cursor:pointer; }
-    .v-btn:hover { background:#e2e8f0; }
-    .v-btn--danger { color:#dc2626; }
-    .v-btn--danger:hover { background:#fee2e2; }
+    .v-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    .v-table thead th { position:sticky; top:0; z-index:1; background:#fbfcfd; color:var(--muted); font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; text-align:left; padding:9px 14px; white-space:nowrap; box-shadow:0 1px 0 var(--line); }
+    .v-table tbody td { padding:10px 14px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+    .v-table tbody tr { transition:background .1s; }
+    .v-table tbody tr.v-row:hover { background:#fffaf5; }
+    .v-table tbody tr.is-off td:not(.v-td-act) { opacity:.6; }
+    .v-table small { display:block; font-size:11px; color:var(--muted); margin-top:1px; }
+
+    .v-code { display:inline-flex; align-items:center; gap:6px; }
+    .v-code strong { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; letter-spacing:.03em; background:var(--brand-50); color:var(--brand-600); border:1px dashed var(--brand-200); padding:2px 8px; border-radius:7px; }
+    .v-copy { border:0; background:transparent; color:var(--subtle); cursor:pointer; padding:3px 5px; border-radius:6px; font-size:11px; width:auto; margin:0; }
+    .v-copy:hover { color:var(--brand-600); background:var(--brand-50); }
+    .v-desc { max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .v-disc strong { font-size:13px; color:var(--ink); }
+
+    .v-usage { min-width:110px; }
+    .v-usage__txt { font-size:12px; }
+    .v-usage__txt b { color:var(--ink); font-weight:600; }
+    .v-bar { height:5px; background:var(--line-soft); border-radius:999px; margin-top:5px; overflow:hidden; }
+    .v-bar i { display:block; height:100%; border-radius:inherit; background:#10b981; }
+    .v-bar i.warn { background:#f59e0b; } .v-bar i.bad { background:#ef4444; }
+
+    .v-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .v-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .v-badge--ok { background:var(--ok-bg); color:var(--ok); }
+    .v-badge--info { background:var(--info-bg); color:var(--info); }
+    .v-badge--warn { background:var(--warn-bg); color:var(--warn); }
+    .v-badge--bad { background:var(--bad-bg); color:var(--bad); }
+    .v-badge--idle { background:var(--idle-bg); color:var(--idle); }
+    .v-hint-warn { color:var(--warn) !important; font-weight:500; }
+
+    .v-td-act { white-space:nowrap; text-align:right; }
+    .v-acts { display:inline-flex; align-items:center; gap:4px; }
+    .v-ibtn { width:30px; height:30px; display:inline-grid; place-items:center; border:1px solid transparent; background:transparent; color:var(--muted); border-radius:8px; cursor:pointer; font-size:12px; margin:0; padding:0; transition:all .12s; }
+    .v-ibtn:hover { background:var(--line-soft); color:var(--ink); border-color:var(--line); }
+    .v-ibtn--danger:hover { background:var(--bad-bg); color:#dc2626; border-color:#fecaca; }
+
+    /* switch */
+    .v-switch { position:relative; display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+    .v-switch input { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
+    .v-switch span { width:34px; height:20px; border-radius:999px; background:#cbd5e1; position:relative; transition:background .15s; flex:none; }
+    .v-switch span::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:transform .15s; }
+    .v-switch input:checked + span { background:#10b981; }
+    .v-switch input:checked + span::after { transform:translateX(14px); }
+    .v-switch input:focus-visible + span { box-shadow:var(--ring); }
+    .v-switch input:disabled + span { opacity:.5; cursor:wait; }
+
+    /* skeleton & empty */
+    .v-skel { height:12px; border-radius:6px; background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%); background-size:200% 100%; animation:vShimmer 1.2s infinite; }
+    @keyframes vShimmer { to { background-position:-200% 0; } }
+    .v-empty { text-align:center; padding:54px 16px !important; color:var(--muted); }
+    .v-empty__icon { width:56px; height:56px; margin:0 auto 12px; border-radius:16px; background:var(--brand-50); color:var(--brand); display:grid; place-items:center; font-size:22px; }
+    .v-empty h4 { margin:0 0 4px; font-size:14px; font-weight:600; color:var(--ink); }
+    .v-empty p { margin:0 0 14px; font-size:12px; }
+    .v-empty--err .v-empty__icon { background:var(--bad-bg); color:#dc2626; }
 
     /* ===== PAGINATION ===== */
-    .v-pager { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:8px 14px; border-top:1px solid #f1f5f9; background:#fff; font-size:11px; color:#64748b; }
-    .v-pager select { border:1px solid #e2e8f0; border-radius:8px; padding:3px 6px; font:inherit; font-size:11px; background:#fff; margin-left:8px; }
-    .v-pager button { padding:5px 11px; border:1px solid #e2e8f0; background:#fff; border-radius:8px; font:inherit; font-size:11px; font-weight:500; cursor:pointer; }
-    .v-pager button:hover:not(:disabled) { background:#f1f5f9; }
-    .v-pager button:disabled { opacity:.4; cursor:not-allowed; }
+    .v-pager { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:9px 14px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--muted); }
+    .v-pager__nav { display:flex; align-items:center; gap:4px; }
+    .v-pager__nav button { min-width:30px; height:30px; padding:0 8px; border:1px solid var(--line); background:#fff; border-radius:8px; font-size:11.5px; font-weight:500; color:var(--text); cursor:pointer; margin:0; width:auto; }
+    .v-pager__nav button:hover:not(:disabled) { background:var(--line-soft); }
+    .v-pager__nav button.is-on { background:var(--ink); border-color:var(--ink); color:#fff; }
+    .v-pager__nav button:disabled { opacity:.4; cursor:not-allowed; }
+    .v-pager__gap { padding:0 4px; color:var(--subtle); }
 
-    /* ===== MODAL FORM TAMBAH / EDIT ===== */
-    .v-modal { position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; padding:14px; z-index:50; }
-    .v-modal.open { display:flex; }
-    .v-modal__box { background:#fff; border-radius:16px; width:min(720px,100%); max-height:92vh; overflow:auto; padding:16px 18px 18px; box-shadow:0 20px 50px rgba(15,23,42,.25); }
-    .v-modal__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-    .v-modal__head h3 { font-size:15px; font-weight:600; margin:0; }
-    .v-modal__head h3 i { color:#f97316; margin-right:6px; }
-    .v-close { border:0; background:transparent; font-size:18px; color:#94a3b8; cursor:pointer; padding:4px 8px; }
-    .v-close:hover { color:#475569; }
-    .v-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px 12px; }
-    .v-grid label { display:block; }
-    .v-grid .field-label { display:block; font-size:11px; font-weight:500; color:#475569; margin-bottom:3px; }
-    .v-grid input, .v-grid select { width:100%; margin:0; box-sizing:border-box; padding:8px 10px; border:1px solid #e2e8f0; border-radius:10px; font:inherit; font-size:12px; background:#fff; }
-    .v-grid input:focus, .v-grid select:focus { outline:none; border-color:#f97316; box-shadow:0 0 0 3px rgba(249,115,22,.15); }
-    .v-hint { font-size:10px; color:#94a3b8; margin-top:2px; display:block; }
-    .v-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+    /* ===== MODAL ===== */
+    .v-modal, .v-confirm { position:fixed; inset:0; background:rgba(15,23,42,.5); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
+    .v-modal.open, .v-confirm.open { display:flex; animation:vFade .15s ease-out; }
+    .v-confirm { z-index:60; }
+    @keyframes vFade { from { opacity:0; } }
+    @keyframes vPop { from { opacity:0; transform:translateY(8px) scale(.98); } }
+    .v-modal__box { background:#fff; border-radius:18px; width:min(940px,100%); max-height:94vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(15,23,42,.3); animation:vPop .18s ease-out; overflow:hidden; }
+    .v-modal__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line-soft); }
+    .v-modal__head h3 { font-size:15px; font-weight:600; margin:0; color:var(--ink); display:flex; align-items:center; gap:8px; }
+    .v-modal__head h3 i { color:var(--brand); }
+    .v-close { border:0; background:transparent; font-size:16px; color:var(--subtle); cursor:pointer; width:32px; height:32px; border-radius:8px; margin:0; padding:0; }
+    .v-close:hover { background:var(--line-soft); color:var(--ink); }
+    .v-modal__body { flex:1; min-height:0; overflow:auto; display:grid; grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr); margin:0; }
+    .v-modal__foot { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 20px; border-top:1px solid var(--line-soft); background:#fcfdfe; }
+    .v-modal__foot > div { display:flex; gap:8px; margin-left:auto; }
+    .v-kbd-hint { font-size:11px; color:var(--subtle); }
+
+    .v-form { padding:16px 20px 20px; display:flex; flex-direction:column; gap:16px; }
+    .v-sec { border:0; padding:0; margin:0; min-width:0; }
+    .v-sec legend { padding:0; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--subtle); margin-bottom:8px; }
+    .v-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+    .v-field { display:flex; flex-direction:column; min-width:0; }
+    .v-field > label { font-size:12px; font-weight:500; color:#334155; margin-bottom:4px; }
+    .v-field > label b { color:#dc2626; font-weight:600; }
+    .v-field input[type=text], .v-field input[type=number], .v-field input[type=datetime-local] { width:100%; margin:0; box-sizing:border-box; padding:9px 11px; border:1px solid var(--line); border-radius:10px; font:inherit; font-size:12.5px; background:#fff; color:var(--text); transition:border-color .12s, box-shadow .12s; min-height:38px; }
+    .v-field input:focus { outline:none; border-color:var(--brand); box-shadow:var(--ring); }
+    .v-field input:disabled { background:var(--line-soft); color:var(--muted); cursor:not-allowed; }
+    #vCode { text-transform:uppercase; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.04em; font-weight:600; }
+    .v-ig { display:flex; align-items:stretch; border:1px solid var(--line); border-radius:10px; background:#fff; transition:border-color .12s, box-shadow .12s; overflow:hidden; }
+    .v-ig:focus-within { border-color:var(--brand); box-shadow:var(--ring); }
+    .v-ig input[type] { border:0 !important; box-shadow:none !important; border-radius:0; flex:1; min-width:0; }
+    .v-ig__add { display:flex; align-items:center; padding:0 10px; background:var(--bg); color:var(--muted); font-size:12px; font-weight:500; }
+    .v-ig__add[hidden] { display:none; }
+    .v-ig__btn { border:0; border-left:1px solid var(--line); background:var(--bg); color:var(--brand-600); padding:0 12px; cursor:pointer; font-size:12px; margin:0; width:auto; }
+    .v-ig__btn:hover { background:var(--brand-50); }
+    .v-ig__btn:disabled { color:var(--subtle); cursor:not-allowed; background:var(--bg); }
+    .v-hint { font-size:11px; color:var(--subtle); margin-top:4px; }
+    .v-err { font-size:11px; color:#dc2626; margin-top:4px; display:none; }
+    .v-field.is-invalid .v-err { display:block; }
+    .v-field.is-invalid .v-hint { display:none; }
+    .v-field.is-invalid input, .v-field.is-invalid .v-ig { border-color:#f87171 !important; }
+    .v-field.is-invalid .v-ig:focus-within, .v-field.is-invalid input:focus { box-shadow:0 0 0 3px rgba(239,68,68,.15) !important; }
+    .v-field[hidden] { display:none; }
+
+    .v-seg { display:inline-flex; padding:3px; background:var(--line-soft); border-radius:11px; margin-bottom:12px; }
+    .v-seg label { cursor:pointer; }
+    .v-seg input { position:absolute; opacity:0; width:1px; height:1px; margin:0; }
+    .v-seg span { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:12px; font-weight:500; color:var(--muted); border-radius:9px; transition:all .12s; }
+    .v-seg input:checked + span { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(15,23,42,.12); }
+    .v-seg input:focus-visible + span { box-shadow:var(--ring); }
+
+    .v-presets { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; align-items:center; }
+    .v-presets > span { font-size:11px; color:var(--muted); margin-right:2px; }
+    .v-preset { border:1px dashed var(--line); background:#fff; color:var(--text); font-size:11px; padding:4px 10px; border-radius:999px; cursor:pointer; margin:0; width:auto; }
+    .v-preset:hover { border-color:var(--brand); color:var(--brand-600); background:var(--brand-50); }
+
+    .v-active-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 14px; border:1px solid var(--line); border-radius:12px; background:var(--bg); }
+    .v-active-row strong { display:block; font-size:12.5px; font-weight:600; color:var(--ink); }
+    .v-active-row small { font-size:11px; color:var(--muted); }
+
+    /* Preview */
+    .v-preview { background:linear-gradient(180deg,#fff7ed 0%,#fff 60%); border-left:1px solid var(--line-soft); padding:16px 18px 20px; display:flex; flex-direction:column; gap:14px; }
+    .v-preview h4 { margin:0; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--subtle); }
+    .v-ticket { position:relative; background:linear-gradient(135deg,#f97316,#fb923c); color:#fff; border-radius:14px; padding:14px 16px; box-shadow:0 8px 20px rgba(249,115,22,.3); overflow:hidden; }
+    .v-ticket::before, .v-ticket::after { content:''; position:absolute; top:50%; width:18px; height:18px; border-radius:50%; background:#fff7ed; transform:translateY(-50%); }
+    .v-ticket::before { left:-9px; } .v-ticket::after { right:-9px; }
+    .v-ticket__title { font-size:20px; font-weight:700; line-height:1.2; }
+    .v-ticket__sub { font-size:11px; opacity:.9; margin-top:2px; min-height:15px; }
+    .v-ticket__code { margin-top:12px; padding-top:10px; border-top:1px dashed rgba(255,255,255,.55); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .v-ticket__code span { font-size:10px; opacity:.85; text-transform:uppercase; letter-spacing:.06em; }
+    .v-ticket__code strong { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14px; letter-spacing:.08em; background:rgba(255,255,255,.2); padding:2px 9px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; max-width:70%; }
+    .v-pv-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; font-size:12px; }
+    .v-pv-list li { display:flex; gap:8px; align-items:flex-start; }
+    .v-pv-list i { color:var(--brand); width:14px; text-align:center; margin-top:3px; font-size:11px; }
+    .v-pv-status { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted); }
+    .v-warn { display:flex; gap:8px; font-size:11.5px; background:var(--warn-bg); color:#92400e; padding:8px 10px; border-radius:10px; line-height:1.45; }
+    .v-warn i { margin-top:2px; }
+    .v-sim { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; }
+    .v-sim input { width:100%; margin:0; box-sizing:border-box; padding:8px 10px; border:0; font:inherit; font-size:12.5px; min-height:36px; background:#fff; outline:none; }
+    .v-sim label { font-size:12px; font-weight:500; color:#334155; display:block; margin-bottom:6px; }
+    .v-sim__res { margin-top:10px; font-size:12px; display:grid; grid-template-columns:1fr auto; gap:4px 10px; }
+    .v-sim__res .tot { font-weight:600; color:var(--ink); border-top:1px solid var(--line-soft); padding-top:6px; }
+    .v-sim__res .save { color:var(--ok); font-weight:600; }
+    .v-sim__note { font-size:11.5px; color:var(--muted); margin-top:8px; }
+
+    /* Confirm dialog */
+    .v-confirm__box { background:#fff; border-radius:16px; width:min(400px,100%); padding:20px; box-shadow:0 24px 60px rgba(15,23,42,.3); animation:vPop .16s ease-out; }
+    .v-confirm__icon { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; font-size:17px; background:var(--bad-bg); color:#dc2626; margin-bottom:12px; }
+    .v-confirm__box h4 { margin:0 0 6px; font-size:15px; font-weight:600; color:var(--ink); }
+    .v-confirm__box p { margin:0; font-size:12.5px; color:var(--muted); line-height:1.55; white-space:pre-line; }
+    .v-confirm__acts { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+
+    /* Toast */
+    .v-toasts { position:fixed; right:16px; bottom:16px; z-index:70; display:flex; flex-direction:column; gap:8px; align-items:flex-end; pointer-events:none; }
+    .v-toast { pointer-events:auto; display:flex; align-items:center; gap:10px; min-width:240px; max-width:380px; background:var(--ink); color:#fff; padding:10px 12px 10px 14px; border-radius:12px; font-size:12.5px; box-shadow:0 10px 30px rgba(15,23,42,.3); animation:vToastIn .2s ease-out; }
+    .v-toast.is-out { animation:vToastOut .2s ease-in forwards; }
+    .v-toast > i { font-size:14px; }
+    .v-toast--success > i { color:#34d399; } .v-toast--error > i { color:#f87171; } .v-toast--info > i { color:#93c5fd; }
+    .v-toast span { flex:1; line-height:1.4; }
+    .v-toast button { border:0; background:rgba(255,255,255,.12); color:#fff; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:8px; cursor:pointer; margin:0; width:auto; }
+    .v-toast button:hover { background:rgba(255,255,255,.22); }
+    @keyframes vToastIn { from { opacity:0; transform:translateY(10px); } }
+    @keyframes vToastOut { to { opacity:0; transform:translateY(10px); } }
+
+    @keyframes vShake { 20%,60% { transform:translateX(-4px); } 40%,80% { transform:translateX(4px); } }
+    .v-shake { animation:vShake .3s; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1000px) {
+      .v-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 760px) {
+      html, body { overflow:auto !important; height:auto !important; }
+      main.container { height:auto !important; overflow:visible !important; padding:12px; }
+      .v-panel { overflow:visible; }
+      .v-scroll { overflow:visible; }
+      .v-top p { display:none; }
+      .v-top__actions .v-btn-primary span { display:none; }
+      .v-sort { margin-left:0; }
+      .v-search { max-width:none; }
+      .v-search-kbd { display:none; }
+      .v-table thead { display:none; }
+      .v-table, .v-table tbody { display:block; }
+      .v-table tbody tr.v-row { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; padding:12px 14px; border-bottom:1px solid var(--line-soft); }
+      .v-table tbody tr.v-row td { display:block; padding:0; border:0; }
+      .v-table tbody tr.v-row td[data-label]::before { content:attr(data-label); display:block; font-size:10px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--subtle); margin-bottom:2px; }
+      .v-table td.v-td-code { grid-column:1 / -1; }
+      .v-table td.v-td-act { grid-column:1 / -1; text-align:left; border-top:1px dashed var(--line) !important; padding-top:8px !important; }
+      .v-acts { width:100%; justify-content:space-between; }
+      .v-desc { max-width:none; white-space:normal; }
+      .v-table tbody tr:not(.v-row) { display:block; } .v-table tbody tr:not(.v-row) td { display:block; }
+      .v-modal { padding:0; align-items:flex-end; }
+      .v-modal__box { border-radius:18px 18px 0 0; max-height:96vh; }
+      .v-modal__body { grid-template-columns:1fr; }
+      .v-preview { border-left:0; border-top:1px solid var(--line-soft); }
+      .v-kbd-hint { display:none; }
+      .v-modal__foot > div { width:100%; } .v-modal__foot > div > button { flex:1; }
+      .v-toasts { left:12px; right:12px; align-items:stretch; }
+      .v-toast { max-width:none; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
   </style>
 </head>
 <body>
 
   <main class="container">
-    <!-- DAFTAR VOUCHER (memenuhi layar; hanya area tabel yang scroll) -->
+    <!-- HEADER -->
+    <header class="v-top">
+      <div>
+        <h1><span class="v-logo"><i class="fa-solid fa-ticket"></i></span> Kelola Voucher</h1>
+        <p>Buat, atur, dan pantau voucher diskon untuk pelanggan.</p>
+      </div>
+      <div class="v-top__actions">
+        <button type="button" class="v-btn-ghost" id="vRefresh" title="Muat ulang data">
+          <i class="fa-solid fa-rotate-right"></i><span class="sr-only">Muat ulang</span>
+        </button>
+        <button type="button" class="v-btn-primary" id="vOpenAdd" title="Tambah voucher (N)">
+          <i class="fa-solid fa-plus"></i><span>Tambah Voucher</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- RINGKASAN (klik untuk memfilter) -->
+    <section class="v-stats" id="vStats" aria-label="Ringkasan voucher"></section>
+
+    <!-- DAFTAR VOUCHER -->
     <section class="v-panel">
-      <div class="v-head">
-        <h3 class="v-title"><i class="fa-solid fa-ticket"></i> Voucher <span class="v-count" id="vCount">0</span></h3>
-        <div class="v-tools">
-          <div class="v-search">
-            <i class="fa-solid fa-search"></i>
-            <input type="text" id="vSearch" placeholder="Cari kode, diskon, status...">
+      <div class="v-toolbar">
+        <div class="v-toolbar__row">
+          <div class="v-search" id="vSearchWrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="vSearch" placeholder="Cari kode atau deskripsi..." aria-label="Cari voucher" autocomplete="off">
+            <kbd class="v-search-kbd">/</kbd>
+            <button type="button" class="v-search-clear" id="vSearchClear" aria-label="Hapus pencarian"><i class="fa-solid fa-xmark"></i></button>
           </div>
-          <button type="button" class="v-iconbtn" title="Refresh" onclick="window.loadVouchers()"><i class="fa-solid fa-rotate-right"></i></button>
-          <button type="button" class="v-addbtn" id="vOpenAdd"><i class="fa-solid fa-plus"></i> Tambah Voucher</button>
+          <span class="v-count" id="vCount">0 voucher</span>
+          <label class="v-sort">
+            <i class="fa-solid fa-arrow-down-wide-short"></i>
+            <select id="vSort" aria-label="Urutkan">
+              <option value="newest">Terbaru dibuat</option>
+              <option value="oldest">Terlama dibuat</option>
+              <option value="code">Kode A–Z</option>
+              <option value="usage">Paling banyak dipakai</option>
+              <option value="ending">Segera berakhir</option>
+            </select>
+          </label>
         </div>
+        <div class="v-chips" id="vFilters" role="toolbar" aria-label="Filter status"></div>
       </div>
 
-      <div class="v-scroll">
-        <table>
+      <div class="v-scroll" id="vScroll">
+        <table class="v-table">
           <thead>
             <tr>
               <th>Kode</th>
@@ -98,195 +347,189 @@
               <th>Pemakaian</th>
               <th>Periode</th>
               <th>Status</th>
-              <th>Aksi</th>
+              <th style="text-align:right;">Aksi</th>
             </tr>
           </thead>
-          <tbody id="voucherTableBody">
-            <tr><td colspan="7" class="table-empty">Memuat voucher...</td></tr>
-          </tbody>
+          <tbody id="voucherTableBody"></tbody>
         </table>
-        <div id="vNoResult">Tidak ada voucher yang cocok dengan pencarian.</div>
       </div>
 
       <div class="v-pager">
         <div>
           <span id="vPagerInfo">-</span>
-          <select id="vPerPage">
+          <select id="vPerPage" aria-label="Jumlah per halaman" style="margin-left:8px;">
             <option value="10">10 / halaman</option>
-            <option value="25" selected>25 / halaman</option>
+            <option value="25">25 / halaman</option>
             <option value="50">50 / halaman</option>
             <option value="100">100 / halaman</option>
           </select>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <button type="button" id="vPrev">Prev</button>
-          <span id="vPageLabel" style="padding:0 6px;font-weight:500;color:#334155;">Halaman 1 dari 1</span>
-          <button type="button" id="vNext">Next</button>
-        </div>
+        <nav class="v-pager__nav" id="vPagerNav" aria-label="Navigasi halaman"></nav>
       </div>
     </section>
   </main>
 
-  <!-- MODAL FORM (ID semua field tetap sama agar voucher.js tetap jalan) -->
-  <div class="v-modal" id="vModal">
-    <div class="v-modal__box">
+  <!-- MODAL FORM TAMBAH / EDIT -->
+  <div class="v-modal" id="vModal" aria-hidden="true">
+    <div class="v-modal__box" role="dialog" aria-modal="true" aria-labelledby="voucherFormTitle">
       <div class="v-modal__head">
         <h3 id="voucherFormTitle"><i class="fa-solid fa-ticket"></i> Tambah Voucher</h3>
-        <button type="button" class="v-close" id="vClose" title="Tutup">&times;</button>
+        <button type="button" class="v-close" id="vClose" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <input type="hidden" id="vId">
+      <form id="vForm" class="v-modal__body" novalidate autocomplete="off">
+        <div class="v-form">
+          <fieldset class="v-sec">
+            <legend>Informasi voucher</legend>
+            <div class="v-grid">
+              <div class="v-field">
+                <label for="vCode">Kode voucher <b>*</b></label>
+                <div class="v-ig">
+                  <input type="text" id="vCode" placeholder="DISKON10" maxlength="40" spellcheck="false">
+                  <button type="button" class="v-ig__btn" id="vGen" title="Buat kode otomatis"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                </div>
+                <small class="v-hint" id="vCodeHint">Huruf, angka, "-" dan "_". Spasi otomatis jadi "-".</small>
+                <small class="v-err" data-err-for="vCode"></small>
+              </div>
+              <div class="v-field">
+                <label for="vDesc">Deskripsi <span class="v-muted" style="font-weight:400;">(opsional)</span></label>
+                <input type="text" id="vDesc" placeholder="Promo akhir pekan" maxlength="120">
+                <small class="v-hint">Catatan internal agar mudah dikenali.</small>
+              </div>
+            </div>
+          </fieldset>
 
-      <div class="v-grid">
-        <label>
-          <span class="field-label">Kode *</span>
-          <input type="text" id="vCode" placeholder="DISKON10" style="text-transform:uppercase;">
-        </label>
-        <label>
-          <span class="field-label">Deskripsi</span>
-          <input type="text" id="vDesc" placeholder="Diskon 10% maks 20rb">
-        </label>
-        <label>
-          <span class="field-label">Jenis Diskon *</span>
-          <select id="vType" onchange="window.onVoucherTypeChange()">
-            <option value="percent">Persen (%)</option>
-            <option value="nominal">Nominal (Rp)</option>
-          </select>
-        </label>
-        <label>
-          <span class="field-label" id="vValueLabel">Nilai Diskon (%) *</span>
-          <input type="number" id="vValue" min="1" placeholder="10">
-        </label>
-        <label id="vMaxWrap">
-          <span class="field-label">Maks. Diskon (Rp)</span>
-          <input type="number" id="vMax" min="0" placeholder="20000">
-          <small class="v-hint">Kosongkan jika tanpa batas</small>
-        </label>
-        <label>
-          <span class="field-label">Minimal Belanja (Rp)</span>
-          <input type="number" id="vMin" min="0" value="0">
-        </label>
-        <label>
-          <span class="field-label">Kuota</span>
-          <input type="number" id="vQuota" min="1" placeholder="Tanpa batas">
-          <small class="v-hint">Kosongkan jika tanpa batas</small>
-        </label>
-        <label>
-          <span class="field-label">Mulai Berlaku</span>
-          <input type="datetime-local" id="vStart">
-        </label>
-        <label>
-          <span class="field-label">Berakhir</span>
-          <input type="datetime-local" id="vEnd">
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:20px;">
-          <input type="checkbox" id="vActive" checked style="width:auto;margin:0;">
-          <span style="font-size:12px;">Voucher aktif</span>
-        </label>
-      </div>
+          <fieldset class="v-sec">
+            <legend>Besar diskon</legend>
+            <div class="v-seg" role="radiogroup" aria-label="Jenis diskon">
+              <label><input type="radio" name="vType" value="percent" checked><span><i class="fa-solid fa-percent"></i> Persen</span></label>
+              <label><input type="radio" name="vType" value="nominal"><span><i class="fa-solid fa-money-bill-wave"></i> Nominal (Rp)</span></label>
+            </div>
+            <div class="v-grid">
+              <div class="v-field">
+                <label for="vValue" id="vValueLabel">Nilai diskon <b>*</b></label>
+                <div class="v-ig">
+                  <span class="v-ig__add" id="vValuePre" hidden>Rp</span>
+                  <input type="text" id="vValue" inputmode="decimal" placeholder="10">
+                  <span class="v-ig__add" id="vValueSuf">%</span>
+                </div>
+                <small class="v-err" data-err-for="vValue"></small>
+              </div>
+              <div class="v-field" id="vMaxWrap">
+                <label for="vMax">Maks. potongan</label>
+                <div class="v-ig">
+                  <span class="v-ig__add">Rp</span>
+                  <input type="text" id="vMax" inputmode="numeric" placeholder="Tanpa batas" data-money>
+                </div>
+                <small class="v-hint">Kosongkan jika tanpa batas.</small>
+                <small class="v-err" data-err-for="vMax"></small>
+              </div>
+              <div class="v-field">
+                <label for="vMin">Minimal belanja</label>
+                <div class="v-ig">
+                  <span class="v-ig__add">Rp</span>
+                  <input type="text" id="vMin" inputmode="numeric" placeholder="0" data-money>
+                </div>
+                <small class="v-hint">Kosongkan / 0 = tanpa minimal.</small>
+              </div>
+            </div>
+          </fieldset>
 
-      <div class="v-actions">
-        <button type="button" class="btn-submit" id="btnSaveVoucher" style="width:auto;padding:9px 20px;" onclick="window.saveVoucher()">
-          <i class="fa-solid fa-floppy-disk"></i> Simpan
-        </button>
-        <button type="button" class="btn-secondary" id="btnCancelEdit" style="display:none;" onclick="window.resetVoucherForm()">
-          Batal Edit
-        </button>
+          <fieldset class="v-sec">
+            <legend>Kuota &amp; periode</legend>
+            <div class="v-grid">
+              <div class="v-field">
+                <label for="vQuota">Kuota pemakaian</label>
+                <div class="v-ig">
+                  <input type="number" id="vQuota" min="1" step="1" inputmode="numeric" placeholder="Tanpa batas">
+                  <span class="v-ig__add">kali</span>
+                </div>
+                <small class="v-hint" id="vQuotaHint">Kosongkan jika tanpa batas.</small>
+                <small class="v-err" data-err-for="vQuota"></small>
+              </div>
+              <div class="v-field">
+                <label for="vStart">Mulai berlaku</label>
+                <input type="datetime-local" id="vStart">
+                <small class="v-hint">Kosongkan = langsung berlaku.</small>
+              </div>
+              <div class="v-field">
+                <label for="vEnd">Berakhir</label>
+                <input type="datetime-local" id="vEnd">
+                <small class="v-hint">Kosongkan = tanpa batas waktu.</small>
+                <small class="v-err" data-err-for="vEnd"></small>
+              </div>
+            </div>
+            <div class="v-presets">
+              <span>Cepat:</span>
+              <button type="button" class="v-preset" data-preset="now">Mulai sekarang</button>
+              <button type="button" class="v-preset" data-preset="7">7 hari</button>
+              <button type="button" class="v-preset" data-preset="30">30 hari</button>
+              <button type="button" class="v-preset" data-preset="eom">Sampai akhir bulan</button>
+              <button type="button" class="v-preset" data-preset="none">Tanpa batas</button>
+            </div>
+          </fieldset>
+
+          <div class="v-active-row">
+            <div>
+              <strong>Voucher aktif</strong>
+              <small>Matikan untuk menyimpan sebagai draf / menghentikan sementara.</small>
+            </div>
+            <label class="v-switch">
+              <input type="checkbox" id="vActive" checked>
+              <span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- PRATINJAU -->
+        <aside class="v-preview" aria-label="Pratinjau voucher">
+          <h4>Pratinjau</h4>
+          <div class="v-ticket">
+            <div class="v-ticket__title" id="pvTitle">Diskon —</div>
+            <div class="v-ticket__sub" id="pvSub"></div>
+            <div class="v-ticket__code"><span>Kode</span><strong id="pvCode">KODE</strong></div>
+          </div>
+          <ul class="v-pv-list" id="pvLines"></ul>
+          <div class="v-pv-status">Status setelah disimpan <span id="pvStatus"></span></div>
+          <div id="pvWarn"></div>
+          <div class="v-sim">
+            <label for="vSim"><i class="fa-solid fa-calculator" style="color:var(--brand);margin-right:4px;"></i> Simulasi belanja</label>
+            <div class="v-ig">
+              <span class="v-ig__add">Rp</span>
+              <input type="text" id="vSim" inputmode="numeric" value="100.000" data-money>
+            </div>
+            <div id="pvSim"></div>
+          </div>
+        </aside>
+      </form>
+
+      <div class="v-modal__foot">
+        <span class="v-kbd-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> simpan · <kbd>Esc</kbd> tutup</span>
+        <div>
+          <button type="button" class="v-btn-ghost" id="vCancel">Batal</button>
+          <button type="submit" form="vForm" class="v-btn-primary" id="btnSaveVoucher">
+            <i class="fa-solid fa-floppy-disk"></i><span>Simpan Voucher</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- PENCARIAN + PAGINATION + MODAL (bekerja di atas voucher.js, tanpa mengubah voucher.js) -->
-  <script>
-    (function () {
-      const $ = id => document.getElementById(id);
-      const tbody = $('voucherTableBody');
-      const modal = $('vModal');
+  <!-- DIALOG KONFIRMASI -->
+  <div class="v-confirm" id="vConfirm" aria-hidden="true">
+    <div class="v-confirm__box" role="alertdialog" aria-modal="true" aria-labelledby="vConfirmTitle" aria-describedby="vConfirmMsg">
+      <div class="v-confirm__icon" id="vConfirmIcon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h4 id="vConfirmTitle">Yakin?</h4>
+      <p id="vConfirmMsg"></p>
+      <div class="v-confirm__acts">
+        <button type="button" class="v-btn-ghost" id="vConfirmCancel">Batal</button>
+        <button type="button" class="v-btn-danger" id="vConfirmOk">Ya</button>
+      </div>
+    </div>
+  </div>
 
-      /* ---------- Search + Pagination ---------- */
-      let page = 1, perPage = 25, q = '', timer;
-      const isDataRow = tr => !tr.querySelector('td.table-empty') && !(tr.children.length === 1 && tr.children[0].colSpan > 1);
-
-      function apply() {
-        const rows = [...tbody.querySelectorAll(':scope > tr')];
-        const data = rows.filter(isDataRow);
-        const match = data.filter(tr => tr.textContent.toLowerCase().includes(q));
-        const pages = Math.max(1, Math.ceil(match.length / perPage));
-        if (page > pages) page = pages;
-        if (page < 1) page = 1;
-        const start = (page - 1) * perPage, end = start + perPage;
-
-        rows.forEach(tr => {
-          if (!isDataRow(tr)) { tr.hidden = false; return; }
-          const i = match.indexOf(tr);
-          tr.hidden = i < start || i >= end;
-        });
-
-        $('vCount').textContent = data.length;
-        $('vNoResult').style.display = data.length > 0 && match.length === 0 ? 'block' : 'none';
-        $('vPagerInfo').textContent = match.length
-          ? `${start + 1}-${Math.min(end, match.length)} dari ${match.length} voucher`
-          : (data.length ? 'Tidak ada hasil' : 'Belum ada voucher');
-        $('vPageLabel').textContent = `Halaman ${page} dari ${pages}`;
-        $('vPrev').disabled = page <= 1;
-        $('vNext').disabled = page >= pages;
-      }
-
-      $('vSearch').addEventListener('input', e => {
-        clearTimeout(timer);
-        timer = setTimeout(() => { q = (e.target.value || '').toLowerCase().trim(); page = 1; apply(); }, 150);
-      });
-      $('vPerPage').addEventListener('change', e => { perPage = parseInt(e.target.value, 10) || 25; page = 1; apply(); });
-      $('vPrev').addEventListener('click', () => { page--; apply(); $('vNoResult').parentElement.scrollTop = 0; });
-      $('vNext').addEventListener('click', () => { page++; apply(); $('vNoResult').parentElement.scrollTop = 0; });
-
-      /* ---------- Modal Tambah / Edit ---------- */
-      const isOpen = () => modal.classList.contains('open');
-      const editing = () => getComputedStyle($('btnCancelEdit')).display !== 'none' || !!$('vId').value;
-      let wasEditing = false, savePending = 0;
-
-      function openModal() {
-        modal.classList.add('open');
-        setTimeout(() => $('vCode').focus(), 50);
-      }
-      function closeModal(reset) {
-        modal.classList.remove('open');
-        wasEditing = false;
-        if (reset && typeof window.resetVoucherForm === 'function' && (editing() || $('vCode').value)) {
-          window.resetVoucherForm();
-        }
-      }
-
-      $('vOpenAdd').addEventListener('click', () => {
-        if (editing() && typeof window.resetVoucherForm === 'function') window.resetVoucherForm(); // mulai dari form kosong
-        openModal();
-      });
-      $('vClose').addEventListener('click', () => closeModal(true));
-      modal.addEventListener('mousedown', e => { if (e.target === modal) closeModal(true); });
-      document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) closeModal(true); });
-
-      // Klik "Simpan": setelah daftar berhasil dimuat ulang, tutup modal
-      $('btnSaveVoucher').addEventListener('click', () => { savePending = Date.now(); });
-
-      // Saat tombol Edit di tabel diklik, voucher.js mengisi form -> modal otomatis terbuka
-      function syncEdit() {
-        const e = editing();
-        if (e && !isOpen()) openModal();
-        wasEditing = e;
-      }
-      const mo = new MutationObserver(syncEdit);
-      mo.observe($('btnCancelEdit'), { attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
-      mo.observe($('voucherFormTitle'), { childList: true, characterData: true, subtree: true });
-
-      // Tabel digambar ulang oleh voucher.js (load / simpan / hapus / refresh)
-      new MutationObserver(() => {
-        apply();
-        if (savePending && Date.now() - savePending < 8000 && isOpen()) { savePending = 0; closeModal(true); }
-      }).observe(tbody, { childList: true });
-
-      apply();
-    })();
-  </script>
+  <!-- TOAST -->
+  <div class="v-toasts" id="vToasts" aria-live="polite" aria-atomic="false"></div>
 
   <script type="module">
     import { requireAuth } from './js/module/auth-guard.js';
