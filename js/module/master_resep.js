@@ -38,6 +38,11 @@ const recById = id => S.recipes.find(r => same(r.id, id));
 const isMapped = p => !!p.resep_id && !!recById(p.resep_id);
 const sortBy = (arr, fn) => arr.sort((a, b) => String(fn(a)).localeCompare(String(fn(b)), 'id'));
 
+// Biaya bahan per 1 batch & jumlah resep yang memakai suatu bahan
+const recipeCost = items => (items ?? []).reduce((s, it) =>
+    s + (Number(it.amount) || 0) * (Number(ingById(it.ingredientId)?.price) || 0), 0);
+const usageCount = id => S.recipes.filter(r => (r.items ?? []).some(it => same(it.ingredientId, id))).length;
+
 const stockBadge = st =>
     st <= 0 ? '<span class="badge b-bad">Habis (0)</span>'
     : st <= LOW_STOCK ? `<span class="badge b-warn">Menipis (${st})</span>`
@@ -65,7 +70,7 @@ function toast(message, type = 'success') {
 }
 
 const openModal = id => $(id).classList.remove('hidden');
-const closeModal = id => $(id).classList.add('hidden');
+const closeModal = id => { spClose(); $(id).classList.add('hidden'); };
 
 function confirmBox({ title, message, okText = 'Ya, lanjutkan', danger = false }) {
     return new Promise(resolve => {
@@ -99,25 +104,18 @@ async function busy(btn, fn) {
     }
 }
 
-async function copyText(text) {
-    try { await navigator.clipboard.writeText(text); }
-    catch {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-    }
-}
-
 // =========================================================
 // TAB
 // =========================================================
 function showTab(name) {
     if (!TABS.includes(name)) name = 'recipes';
+    spClose();
     TABS.forEach(t => $('panel-' + t).classList.toggle('hidden', t !== name));
-    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab').forEach(b => {
+        const on = b.dataset.tab === name;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on);
+    });
     history.replaceState(null, '', '#' + name);
 }
 
@@ -176,7 +174,8 @@ function renderLowStock() {
     $('lowStock').classList.toggle('hidden', !low.length);
     $('lowStockList').innerHTML =
         low.slice(0, 10).map(p =>
-            `<span class="badge bg-white border ${pStock(p) <= 0 ? 'border-rose-300 text-rose-700' : 'border-amber-300 text-amber-700'}">${esc(pName(p))}: ${pStock(p)}</span>`
+            `<button type="button" class="badge bg-white border hover:shadow-sm transition ${pStock(p) <= 0 ? 'border-rose-300 text-rose-700' : 'border-amber-300 text-amber-700'}"
+                data-action="calc-product" data-id="${esc(p.id)}" title="Hitung produksi ${esc(pName(p))}">${esc(pName(p))}: ${pStock(p)}</button>`
         ).join('') +
         (low.length > 10 ? `<span class="badge bg-white border border-slate-200 text-slate-500">+${low.length - 10} lainnya</span>` : '');
 }
@@ -202,30 +201,53 @@ function renderRecipes() {
         }).join('');
 
         const menus = S.products.filter(p => same(p.resep_id, r.id)).map(p =>
-            `<div class="flex items-center gap-1.5 flex-wrap mb-1"><span class="font-semibold text-slate-800">${esc(pName(p))}</span>${stockBadge(pStock(p))}</div>`
+            `<div class="flex items-center gap-1.5 flex-wrap mb-1">
+                <button type="button" class="font-semibold text-slate-800 hover:text-orange-600 hover:underline text-left" data-action="calc-product" data-id="${esc(p.id)}" title="Hitung produksi">${esc(pName(p))}</button>
+                ${stockBadge(pStock(p))}
+            </div>`
         ).join('');
 
         return `<tr>
             <td class="font-semibold text-orange-600">${esc(recName(r))}</td>
             <td><ul class="space-y-0.5 text-slate-600 max-w-xs">${comp || '<li class="text-slate-400">Tidak ada bahan</li>'}</ul></td>
+            <td class="whitespace-nowrap font-semibold">${rp(recipeCost(r.items))}</td>
             <td>${menus || '<span class="text-slate-400 italic">Belum dipakai menu mana pun</span>'}</td>
             <td class="text-right whitespace-nowrap">
-                <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-recipe" data-id="${esc(r.id)}" title="Edit resep"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn btn-sm bg-rose-50 text-rose-600 hover:bg-rose-100" data-action="delete-recipe" data-id="${esc(r.id)}" title="Hapus resep"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-recipe" data-id="${esc(r.id)}" title="Edit resep" aria-label="Edit resep"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-sm bg-rose-50 text-rose-600 hover:bg-rose-100" data-action="delete-recipe" data-id="${esc(r.id)}" title="Hapus resep" aria-label="Hapus resep"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
-    }).join('') : emptyRow(4, S.recipes.length ? 'Tidak ada resep yang cocok dengan pencarian.' : 'Belum ada resep. Klik "Buat resep baru" untuk memulai.');
+    }).join('') : emptyRow(5, S.recipes.length ? 'Tidak ada resep yang cocok dengan pencarian.' : 'Belum ada resep. Klik "Buat resep baru" untuk memulai.');
 }
 
 function recipeRow(ingId = '', amount = '') {
     const opts = S.ingredients.map(i =>
         `<option value="${esc(i.id)}"${same(i.id, ingId) ? ' selected' : ''}>${esc(i.name)}</option>`).join('');
     return `<div class="recipe-row flex items-center gap-2">
-        <select class="field flex-1 min-w-0"><option value="">-- Pilih bahan --</option>${opts}</select>
-        <input type="number" min="0" step="any" placeholder="Jumlah" value="${esc(amount)}" class="field amt" aria-label="Jumlah">
+        <select class="field flex-1 min-w-0" aria-label="Bahan"><option value="">-- Pilih bahan --</option>${opts}</select>
+        <input type="number" min="0" step="any" inputmode="decimal" placeholder="Jumlah" value="${esc(amount)}" class="field amt" aria-label="Jumlah">
         <span class="unit w-10 text-[11px] text-slate-400 shrink-0">${esc(ingById(ingId)?.unit)}</span>
-        <button type="button" class="text-rose-500 hover:text-rose-700 p-1.5" data-action="del-row" title="Hapus baris"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="text-rose-500 hover:text-rose-700 p-1.5" data-action="del-row" title="Hapus baris" aria-label="Hapus baris"><i class="fa-solid fa-xmark"></i></button>
     </div>`;
+}
+
+function addRecipeRow(ingId, amount) {
+    $('recipeRows').insertAdjacentHTML('beforeend', recipeRow(ingId, amount));
+    const row = $('recipeRows').lastElementChild;
+    spEnhance(row.querySelector('select'), { placeholder: 'Cari bahan...', empty: 'Bahan tidak ditemukan' });
+    return row;
+}
+
+function readRecipeRows() {
+    return [...$('recipeRows').querySelectorAll('.recipe-row')].map(row => ({
+        ingredientId: row.querySelector('select').value,
+        amount: parseFloat(row.querySelector('input').value)
+    }));
+}
+
+function updateRecipeCost() {
+    const items = readRecipeRows().filter(it => it.ingredientId && it.amount > 0);
+    $('recipeCost').textContent = rp(recipeCost(items));
 }
 
 function openRecipe(id) {
@@ -237,7 +259,9 @@ function openRecipe(id) {
     $('recipeId').value = r?.id ?? '';
     $('recipeName').value = r ? recName(r) : '';
     $('recipeTitle').textContent = r ? 'Edit master resep' : 'Buat master resep';
-    $('recipeRows').innerHTML = (r?.items?.length ? r.items : [{}]).map(it => recipeRow(it.ingredientId, it.amount)).join('');
+    $('recipeRows').innerHTML = '';
+    (r?.items?.length ? r.items : [{}]).forEach(it => addRecipeRow(it.ingredientId, it.amount));
+    updateRecipeCost();
     openModal('recipeModal');
     $('recipeName').focus();
 }
@@ -245,17 +269,8 @@ function openRecipe(id) {
 async function saveRecipe(e) {
     e.preventDefault();
     const name = $('recipeName').value.trim();
-    const items = [], seen = new Set();
-    let duplicate = false;
-
-    $('recipeRows').querySelectorAll('.recipe-row').forEach(row => {
-        const ingredientId = row.querySelector('select').value;
-        const amount = parseFloat(row.querySelector('input').value);
-        if (!ingredientId || !(amount > 0)) return; // baris kosong diabaikan
-        if (seen.has(ingredientId)) duplicate = true;
-        seen.add(ingredientId);
-        items.push({ ingredientId, amount });
-    });
+    const items = readRecipeRows().filter(it => it.ingredientId && it.amount > 0); // baris kosong diabaikan
+    const duplicate = new Set(items.map(it => it.ingredientId)).size !== items.length;
 
     if (!name) return toast('Nama resep wajib diisi.', 'warn');
     if (!items.length) return toast('Resep minimal punya 1 bahan dengan jumlah lebih dari 0.', 'warn');
@@ -309,7 +324,7 @@ function renderMapping() {
                 ${p.isi ? `<div class="text-[11px] text-slate-400">Isi: ${esc(p.isi)}</div>` : ''}
             </td>
             <td>${stockBadge(pStock(p))}</td>
-            <td><select class="field" data-map="${esc(p.id)}" aria-label="Resep untuk ${esc(pName(p))}"><option value="">-- Belum dipilih --</option>${opts}</select></td>
+            <td><select class="field ${isMapped(p) ? '' : 'border-rose-200'}" data-map="${esc(p.id)}" aria-label="Resep untuk ${esc(pName(p))}"><option value="">-- Belum dipilih --</option>${opts}</select></td>
         </tr>`;
     }).join('') : emptyRow(4, S.products.length ? 'Tidak ada menu yang cocok.' : 'Belum ada menu di tabel products.');
 }
@@ -332,9 +347,10 @@ async function onMappingChange(e) {
     }
 
     p.resep_id = next;
+    sel.classList.toggle('border-rose-200', !next);
     renderStats();
     renderRecipes();
-    renderCalc();
+    renderCalcOptions(); // label "belum ada resep" di dropdown kalkulator ikut diperbarui
     toast(next ? `${pName(p)} memakai resep "${recName(recById(next))}".` : `Resep dilepas dari ${pName(p)}.`);
 }
 
@@ -350,19 +366,26 @@ function calcContext() {
     const merged = new Map();
     (recipe?.items ?? []).forEach(it => merged.set(String(it.ingredientId), (merged.get(String(it.ingredientId)) || 0) + (Number(it.amount) || 0)));
 
-    const lines = [...merged].map(([id, amount]) => {
+    const lines = [...merged].map(([id, per]) => {
         const ing = ingById(id);
-        const need = round2(amount * batch);
+        const need = round2(per * batch);
         const stock = Number(ing?.stock) || 0;
         return {
-            ing, need, stock,
+            ing, per, need, stock,
             name: ing?.name ?? 'Bahan terhapus',
             unit: ing?.unit ?? '',
             price: Number(ing?.price) || 0,
             short: ing ? round2(Math.max(0, need - stock)) : 0
         };
     });
-    return { prod, batch, recipe, lines };
+
+    // Batch maksimal yang bisa dibuat dari stok sekarang (dibulatkan ke bawah 0,1)
+    const usable = lines.filter(l => l.per > 0);
+    const maxBatch = usable.length && usable.every(l => l.ing)
+        ? Math.floor(Math.min(...usable.map(l => l.stock / l.per)) * 10) / 10
+        : 0;
+
+    return { prod, batch, recipe, lines, maxBatch };
 }
 
 function renderCalcOptions() {
@@ -370,19 +393,25 @@ function renderCalcOptions() {
     sel.innerHTML = '<option value="">-- Pilih menu --</option>' + S.products.map(p =>
         `<option value="${esc(p.id)}" data-s="${esc(pName(p))}">${esc(pName(p))} (stok ${pStock(p)})${isMapped(p) ? '' : ' - belum ada resep'}</option>`).join('');
     sel.value = current;
-    spEnhance(sel, { placeholder: 'Cari menu...', empty: 'Menu tidak ditemukan' });
-    spSync(sel);   // wajib: innerHTML di atas mengganti opsi, label tombol harus diperbarui
+    spEnhance(sel, { placeholder: 'Cari menu...', empty: 'Menu tidak ditemukan' }); // sekaligus spSync
     renderCalc();
 }
 
+function selectCalcProduct(id) {
+    const sel = $('calcProduct');
+    sel.value = id;
+    spSync(sel);
+    renderCalc();
+    showTab('calculator');
+}
+
 function renderCalc() {
-    const { prod, batch, recipe, lines } = calcContext();
+    const { prod, batch, recipe, lines, maxBatch } = calcContext();
     const body = $('calcBody'), label = $('calcLabel');
     const ready = !!(prod && recipe && batch > 0 && lines.length);
 
-    //['btnCopy', 'btnProduce', 'btnOrder'].forEach(id => { $(id).disabled = !ready; });
-    ['btnProduce', 'btnOrder'].forEach(id => { $(id).disabled = !ready; });
-    // ['btnOrder'].forEach(id => { $(id).disabled = !ready; });
+    $('btnProduce').disabled = !ready;
+    $('btnOrder').disabled = !ready;
     $('calcSummary').innerHTML = '';
 
     if (!prod) {
@@ -405,12 +434,20 @@ function renderCalc() {
     label.textContent = `Target: ${num(batch)} batch${output}`;
 
     const lacking = lines.filter(l => l.short > 0);
-    const cost = lacking.reduce((s, l) => s + l.short * l.price, 0);
-    $('calcSummary').innerHTML = lacking.length
-        ? `<span class="badge b-bad">${lacking.length} bahan kurang</span><span class="badge b-warn">Estimasi belanja ${rp(cost)}</span>`
-        : '<span class="badge b-ok">Semua stok aman</span>';
+    const shopCost = lacking.reduce((s, l) => s + l.short * l.price, 0);
+    const prodCost = lines.reduce((s, l) => s + l.need * l.price, 0);
 
-    body.innerHTML = lines.map(l => `<tr>
+    $('calcSummary').innerHTML = [
+        lacking.length
+            ? `<span class="badge b-bad">${lacking.length} bahan kurang</span><span class="badge b-warn">Estimasi belanja ${rp(shopCost)}</span>`
+            : '<span class="badge b-ok">Semua stok aman</span>',
+        maxBatch >= 0.1
+            ? `<button type="button" class="badge bg-white border border-slate-200 text-slate-600 hover:border-orange-300" data-action="set-max" title="Pakai jumlah ini">Stok cukup untuk maks ${num(maxBatch)} batch</button>`
+            : '<span class="badge bg-white border border-slate-200 text-slate-500">Stok belum cukup untuk 0,1 batch</span>',
+        prodCost ? `<span class="badge bg-white border border-slate-200 text-slate-600">Biaya bahan ${rp(prodCost)}</span>` : ''
+    ].join('');
+
+    body.innerHTML = lines.map(l => `<tr class="${l.short > 0 || !l.ing ? 'bg-rose-50/40' : ''}">
         <td class="font-medium text-slate-800">${esc(l.name)}</td>
         <td class="font-bold text-orange-600">${num(l.need)} <span class="font-normal text-slate-400">${esc(l.unit)}</span></td>
         <td>${num(l.stock)} <span class="text-slate-400">${esc(l.unit)}</span></td>
@@ -420,22 +457,9 @@ function renderCalc() {
     </tr>`).join('');
 }
 
-async function copyList(btn) {
-    const { prod, batch, lines } = calcContext();
-    const lacking = lines.filter(l => l.short > 0);
-    if (!lacking.length) return toast('Semua stok aman, tidak ada yang perlu dibeli.', 'info');
-
-    const cost = lacking.reduce((s, l) => s + l.short * l.price, 0);
-    const text = [
-        `*DAFTAR BELANJA: ${pName(prod)}*`,
-        `Produksi ${num(batch)} batch`,
-        '',
-        ...lacking.map(l => `- ${l.name}: ${num(l.short)} ${l.unit}`),
-        ...(cost ? ['', `Estimasi: ${rp(cost)}`] : [])
-    ].join('\n');
-
-    await busy(btn, () => copyText(text));
-    toast('Daftar belanja disalin. Tinggal tempel di WhatsApp.');
+function setBatch(v) {
+    $('calcBatch').value = round2(v);
+    renderCalc();
 }
 
 async function produce(btn) {
@@ -462,7 +486,10 @@ async function produce(btn) {
     });
 }
 
-/* ===== Searchable supplier picker (enhancement di atas <select>) ===== */
+// =========================================================
+// SEARCHABLE PICKER (enhancement di atas <select> biasa)
+// Dipakai untuk: pilih menu, pilih bahan di resep, pilih supplier.
+// =========================================================
 const SP = { panel: null, input: null, list: null, sel: null, items: [], idx: -1 };
 
 function spInit() {
@@ -471,7 +498,7 @@ function spInit() {
     p.className = 'hidden fixed bg-white border border-slate-200 rounded-xl shadow-xl p-2';
     p.style.zIndex = 9999;
     p.innerHTML = `
-        <input type="text" class="field w-full mb-2" placeholder="Cari supplier..." autocomplete="off" aria-label="Cari supplier">
+        <input type="text" class="field w-full mb-2" placeholder="Cari..." autocomplete="off">
         <div class="max-h-52 overflow-y-auto" role="listbox"></div>`;
     document.body.appendChild(p);
     SP.panel = p; SP.input = p.firstElementChild; SP.list = p.lastElementChild;
@@ -488,6 +515,8 @@ function spInit() {
             if (SP.items[SP.idx]) spPick(SP.items[SP.idx].value);
         } else if (e.key === 'Escape') {
             e.preventDefault(); e.stopPropagation(); spClose(true);
+        } else if (e.key === 'Tab') {
+            spClose();
         }
     });
     SP.list.addEventListener('click', e => {
@@ -538,7 +567,7 @@ function spEnhance(sel, opts = {}) {
 
 // panggil setiap kali select diubah lewat kode (sel.value = ..., sel.disabled = ...)
 function spSync(sel) {
-    if (!sel._sp) return;
+    if (!sel?._sp) return;
     const { btn, label } = sel._sp;
     const o = sel.options[sel.selectedIndex];
     label.textContent = o ? o.textContent : '';
@@ -561,7 +590,6 @@ function spOpen(sel) {
     sel._sp.btn.setAttribute('aria-expanded', 'true');
     SP.input.focus();
 }
-
 
 function spClose(refocus) {
     if (!SP.sel) return;
@@ -626,37 +654,37 @@ function spPosition() {
     }
 }
 
+// =========================================================
+// ORDER (PO) KE SUPPLIER
+// =========================================================
+const orderSel = i => $('orderRows').querySelector(`select[data-sup="${i}"]`);
+const orderCb = i => $('orderRows').querySelector(`input[type=checkbox][data-i="${i}"]`);
 
-// ---------- Order ke supplier ----------
 function openOrder() {
     orderDraft = calcContext().lines.filter(l => l.ing && l.short > 0);
     if (!orderDraft.length) return toast('Semua stok aman, tidak ada bahan yang perlu di-order.', 'info');
 
+    const hasSup = S.suppliers.length > 0;
     const supOpts = S.suppliers.map(s => `<option value="${esc(s.id)}">${esc(supName(s))}</option>`).join('');
+    $('orderBulkWrap').classList.toggle('hidden', !hasSup);
+    $('orderNoSup').classList.toggle('hidden', hasSup);
     $('orderBulk').innerHTML = '<option value="">Atur supplier untuk semua bahan...</option>' + supOpts;
     $('orderNotes').value = '';
     $('orderRows').innerHTML = orderDraft.map((l, i) => `
-        <div class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white">
+        <div class="order-row flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white transition">
             <input type="checkbox" data-i="${i}" checked class="w-4 h-4 accent-orange-500 shrink-0" aria-label="Order ${esc(l.name)}">
             <div class="flex-1 min-w-0">
                 <div class="text-xs font-semibold text-slate-800 truncate">${esc(l.name)}</div>
-                <div class="text-[11px] text-slate-500">Kurang ${num(l.short)} ${esc(l.unit)}${l.price ? `, ${rp(l.short * l.price)}` : ''}</div>
+                <div class="order-info text-[11px] text-slate-500">Kurang ${num(l.short)} ${esc(l.unit)}${l.price ? `, ${rp(l.short * l.price)}` : ''}</div>
             </div>
-            <select data-sup="${i}" class="field sup" aria-label="Supplier untuk ${esc(l.name)}"><option value="">Belum ditentukan</option>${supOpts}</select>
+            ${hasSup ? `<select data-sup="${i}" class="field sup" aria-label="Supplier untuk ${esc(l.name)}"><option value="">Belum ditentukan</option>${supOpts}</select>` : ''}
         </div>`).join('');
 
-    // aktifkan pencarian
-    spEnhance($('orderBulk'));
-    document.querySelectorAll('#orderRows select[data-sup]').forEach(spEnhance);
-
-    // bulk: terapkan ke semua baris, lalu kembalikan ke placeholder
-    $('orderBulk').onchange = e => {
-        const v = e.target.value;
-        if (!v) return;
-        document.querySelectorAll('#orderRows select[data-sup]').forEach(s => { s.value = v; spSync(s); });
-        e.target.value = '';
-        spSync(e.target);
-    };
+    if (hasSup) {
+        spEnhance($('orderBulk'), { placeholder: 'Cari supplier...', empty: 'Supplier tidak ditemukan' });
+        $('orderRows').querySelectorAll('select[data-sup]').forEach(s =>
+            spEnhance(s, { placeholder: 'Cari supplier...', empty: 'Supplier tidak ditemukan' }));
+    }
 
     updateOrderTotal();
     openModal('orderModal');
@@ -664,8 +692,9 @@ function openOrder() {
 
 function pickedOrder() {
     return [...$('orderRows').querySelectorAll('input[type=checkbox]:checked')].map(cb => ({
+        i: cb.dataset.i,
         line: orderDraft[cb.dataset.i],
-        supplierId: $('orderRows').querySelector(`select[data-sup="${cb.dataset.i}"]`).value || null
+        supplierId: orderSel(cb.dataset.i)?.value || null
     }));
 }
 
@@ -677,15 +706,31 @@ function updateOrderTotal() {
 
 function onOrderRowChange(e) {
     if (e.target.type === 'checkbox') {
-        $('orderRows').querySelector(`select[data-sup="${e.target.dataset.i}"]`).disabled = !e.target.checked;
+        const sel = orderSel(e.target.dataset.i);
+        if (sel) { sel.disabled = !e.target.checked; spSync(sel); }
+        e.target.closest('.order-row').classList.toggle('opacity-50', !e.target.checked);
     }
     updateOrderTotal();
 }
 
+// Bulk: terapkan ke semua baris yang aktif, lalu kembalikan ke placeholder
 function onBulkSupplier(e) {
-    if (!e.target.value) return;
-    $('orderRows').querySelectorAll('select[data-sup]:not(:disabled)').forEach(s => { s.value = e.target.value; });
+    const v = e.target.value;
+    if (!v) return;
+    $('orderRows').querySelectorAll('select[data-sup]:not(:disabled)').forEach(s => { s.value = v; spSync(s); });
     e.target.value = '';
+    spSync(e.target);
+}
+
+// Tandai baris yang PO-nya sudah tersimpan agar tidak terkirim dua kali saat dicoba ulang
+function markOrderDone(i) {
+    const cb = orderCb(i), sel = orderSel(i);
+    cb.checked = false;
+    cb.disabled = true;
+    if (sel) { sel.disabled = true; spSync(sel); }
+    const row = cb.closest('.order-row');
+    row.classList.add('opacity-50');
+    row.querySelector('.order-info').insertAdjacentHTML('beforeend', ' <span class="text-emerald-600 font-semibold">- PO dibuat</span>');
 }
 
 async function createPO(supplierId, lines, notes) {
@@ -718,23 +763,25 @@ async function submitOrder(e) {
     const picked = pickedOrder();
     if (!picked.length) return toast('Pilih minimal satu bahan.', 'warn');
 
-    const groups = new Map(); // supplierId ('' = belum ditentukan) -> lines
-    picked.forEach(({ line, supplierId }) => {
-        const key = supplierId ?? '';
-        groups.set(key, [...(groups.get(key) ?? []), line]);
+    const groups = new Map(); // supplierId ('' = belum ditentukan) -> [{ i, line }]
+    picked.forEach(x => {
+        const key = x.supplierId ?? '';
+        groups.set(key, [...(groups.get(key) ?? []), x]);
     });
     const notes = $('orderNotes').value.trim();
 
     await busy(e.submitter, async () => {
         const summary = [];
-        for (const [key, lines] of groups) {
+        for (const [key, rows] of groups) {
             try {
-                const total = await createPO(key || null, lines, notes);
+                const total = await createPO(key || null, rows.map(r => r.line), notes);
+                rows.forEach(r => markOrderDone(r.i));
                 const who = key ? supName(S.suppliers.find(s => same(s.id, key)) ?? {}) : 'Belum ditentukan';
-                summary.push(`${who}: ${lines.length} bahan, ${rp(total)}`);
+                summary.push(`${who}: ${rows.length} bahan, ${rp(total)}`);
             } catch (err) {
                 console.error('Gagal membuat PO:', err);
-                return toast(`Gagal membuat PO. ${msg(err)}` + (summary.length ? `\n${summary.length} PO sebelumnya sudah tersimpan.` : ''), 'error');
+                updateOrderTotal();
+                return toast(`Gagal membuat PO. ${msg(err)}` + (summary.length ? `\n${summary.length} PO sebelumnya sudah tersimpan (ditandai di daftar).` : ''), 'error');
             }
         }
         closeModal('orderModal');
@@ -750,25 +797,34 @@ function renderIngredients() {
     const list = S.ingredients.filter(i => String(i.name ?? '').toLowerCase().includes(q));
     $('ingCount').textContent = `${list.length} bahan`;
 
-    $('ingBody').innerHTML = list.length ? list.map(i => `<tr>
-        <td class="font-medium text-slate-800">${esc(i.name)}</td>
-        <td class="font-semibold">${num(i.stock)}</td>
-        <td class="text-slate-500">${esc(i.unit)}</td>
-        <td>${rp(i.price)}</td>
-        <td class="text-right whitespace-nowrap">
-            <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-ing" data-id="${esc(i.id)}" title="Edit bahan"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn btn-sm bg-rose-50 text-rose-600 hover:bg-rose-100" data-action="delete-ing" data-id="${esc(i.id)}" title="Hapus bahan"><i class="fa-solid fa-trash"></i></button>
-        </td>
-    </tr>`).join('') : emptyRow(5, S.ingredients.length ? 'Tidak ada bahan yang cocok.' : 'Belum ada bahan baku. Tambahkan lewat formulir di samping.');
+    $('ingBody').innerHTML = list.length ? list.map(i => {
+        const used = usageCount(i.id);
+        const empty = !(Number(i.stock) > 0);
+        return `<tr>
+            <td>
+                <div class="font-medium text-slate-800">${esc(i.name)}</div>
+                <div class="text-[11px] text-slate-400">${used ? `Dipakai di ${used} resep` : 'Belum dipakai resep'}</div>
+            </td>
+            <td class="font-semibold ${empty ? 'text-rose-600' : ''}">${num(i.stock)}</td>
+            <td class="text-slate-500">${esc(i.unit)}</td>
+            <td>${rp(i.price)}</td>
+            <td class="text-right whitespace-nowrap">
+                <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-ing" data-id="${esc(i.id)}" title="Edit bahan" aria-label="Edit bahan"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-sm bg-rose-50 text-rose-600 hover:bg-rose-100" data-action="delete-ing" data-id="${esc(i.id)}" title="Hapus bahan" aria-label="Hapus bahan"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`;
+    }).join('') : emptyRow(5, S.ingredients.length ? 'Tidak ada bahan yang cocok.' : 'Belum ada bahan baku. Tambahkan lewat formulir di samping.');
 }
 
 function editIngredient(id) {
     const i = ingById(id);
     if (!i) return;
+    const unit = $('ingUnit');
+    if (i.unit && ![...unit.options].some(o => o.value === i.unit)) unit.add(new Option(i.unit, i.unit)); // satuan lama di luar daftar
     $('ingId').value = i.id;
     $('ingName').value = i.name ?? '';
     $('ingStock').value = i.stock ?? 0;
-    $('ingUnit').value = i.unit;
+    unit.value = i.unit;
     $('ingPrice').value = i.price || '';
     $('ingTitle').textContent = 'Edit bahan baku';
     $('ingCancel').classList.remove('hidden');
@@ -808,7 +864,7 @@ async function saveIngredient(e) {
 async function deleteIngredient(id) {
     const i = ingById(id);
     if (!i) return;
-    const used = S.recipes.filter(r => (r.items ?? []).some(it => same(it.ingredientId, id))).length;
+    const used = usageCount(id);
     const ok = await confirmBox({
         title: 'Hapus bahan baku?',
         message: `"${i.name}" akan dihapus.` + (used ? `\nBahan ini dipakai di ${used} resep dan akan tampil sebagai "Bahan terhapus" di sana.` : ''),
@@ -818,7 +874,7 @@ async function deleteIngredient(id) {
 
     const { error } = await db.from('ingredients').delete().eq('id', id);
     if (error) return toast(msg(error), 'error');
-    if ($('ingId').value && same($('ingId').value, id)) resetIngredientForm();
+    if (same($('ingId').value, id)) resetIngredientForm();
     await loadData();
     toast('Bahan baku dihapus.');
 }
@@ -827,26 +883,35 @@ async function deleteIngredient(id) {
 // EVENT
 // =========================================================
 const ACTIONS = {
-    reload: () => loadData(),
+    reload: b => busy(b, loadData),
     'new-recipe': () => openRecipe(),
     'edit-recipe': b => openRecipe(b.dataset.id),
     'delete-recipe': b => deleteRecipe(b.dataset.id),
-    'add-row': () => $('recipeRows').insertAdjacentHTML('beforeend', recipeRow()),
-    'del-row': b => b.closest('.recipe-row').remove(),
+    'add-row': () => addRecipeRow().querySelector('button').focus(),
+    'del-row': b => {
+        b.closest('.recipe-row').remove();
+        if (!$('recipeRows').children.length) addRecipeRow();
+        updateRecipeCost();
+    },
     'edit-ing': b => editIngredient(b.dataset.id),
     'delete-ing': b => deleteIngredient(b.dataset.id),
     'reset-ing': () => resetIngredientForm(),
     'show-unmapped': () => { $('onlyUnmapped').checked = true; renderMapping(); showTab('mapping'); },
-    batch: b => {
-        $('calcBatch').value = round2(Math.max(0.5, (parseFloat($('calcBatch').value) || 0) + Number(b.dataset.step)));
-        renderCalc();
-    },
-    'copy-list': copyList,
+    'calc-product': b => selectCalcProduct(b.dataset.id),
+    batch: b => setBatch(Math.max(0.5, (parseFloat($('calcBatch').value) || 0) + Number(b.dataset.step))),
+    'set-max': () => setBatch(calcContext().maxBatch),
     produce,
     order: () => openOrder()
 };
 
+// Klik backdrop menutup modal (hanya jika tekan & lepas mouse sama-sama di backdrop)
+let downTarget = null;
+document.addEventListener('mousedown', e => { downTarget = e.target; });
+
 document.addEventListener('click', e => {
+    if (e.target.classList?.contains('modal') && downTarget === e.target) {
+        return e.target.querySelector('[data-close]')?.click();
+    }
     const close = e.target.closest('[data-close]');
     if (close) return closeModal(close.closest('.modal').id);
     const tab = e.target.closest('[data-tab]');
@@ -868,8 +933,10 @@ $('ingSearch').addEventListener('input', renderIngredients);
 $('calcProduct').addEventListener('change', renderCalc);
 $('calcBatch').addEventListener('input', renderCalc);
 $('mappingBody').addEventListener('change', onMappingChange);
+$('recipeRows').addEventListener('input', updateRecipeCost);
 $('recipeRows').addEventListener('change', e => {
     if (e.target.matches('select')) e.target.closest('.recipe-row').querySelector('.unit').textContent = ingById(e.target.value)?.unit ?? '';
+    updateRecipeCost();
 });
 $('orderRows').addEventListener('change', onOrderRowChange);
 $('orderBulk').addEventListener('change', onBulkSupplier);
