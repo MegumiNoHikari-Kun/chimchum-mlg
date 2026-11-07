@@ -2,7 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f97316">
     <title>Analisa Pelanggan - ChimChum</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -10,39 +11,80 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        body { font-family: 'Poppins', sans-serif; }
+        body { font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+        html { scroll-behavior: smooth; }
+        [id^="sec-"] { scroll-margin-top: var(--hdr, 150px); }
 
-        /* Chip filter */
+        /* Scroll horizontal tanpa scrollbar (chip, nav, tab) */
+        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Chip filter & tombol pilihan */
         .chip { padding: .4rem .8rem; border-radius: .6rem; font-size: .75rem; font-weight: 600; background: #f1f5f9; color: #475569; border: 1px solid transparent; transition: background .15s, color .15s; white-space: nowrap; cursor: pointer; }
         .chip:hover { background: #e2e8f0; }
         .chip.active { background: #f97316; color: #fff; }
-        .chip:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+        .seg-btn { padding: .3rem .7rem; border-radius: .5rem; font-size: 11px; font-weight: 600; color: #64748b; white-space: nowrap; }
+        .seg-btn.active { background: #fff; color: #ea580c; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+        .chip:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
 
-        /* Header tabel menempel saat scroll */
+        /* Navigasi antar-bagian */
+        #secNav a { padding: .35rem .75rem; border-radius: 999px; font-size: 11px; font-weight: 600; color: #64748b; white-space: nowrap; flex-shrink: 0; }
+        #secNav a:hover { color: #ea580c; }
+        #secNav a.active { background: #fff7ed; color: #ea580c; }
+
+        /* Angka besar di kartu ringkasan: menyesuaikan lebar layar, tidak terpotong */
+        .hero-val { font-size: clamp(1.05rem, 4.8vw, 1.6rem); word-break: break-word; }
+
+        /* Header tabel menempel saat scroll (desktop) */
         .tbl-scroll { max-height: 34rem; overflow: auto; }
-        .tbl thead th { position: sticky; top: 0; z-index: 1; background: inherit; }
+        .tbl thead th { position: sticky; top: 0; z-index: 1; background: #fff7ed; }
         th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
         th[data-sort]:hover { color: #ea580c; }
 
-        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+        /* Tabel responsif: di layar kecil setiap baris berubah jadi kartu */
+        @media (max-width: 767.98px) {
+            .rtable thead { display: none; }
+            .rtable, .rtable tbody { display: block; width: 100%; }
+            .rtable tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem .75rem; padding: .9rem 1rem; }
+            .rtable.cols-3 tr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .rtable td { display: block; padding: 0 !important; min-width: 0; }
+            .rtable td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; line-height: 1.2; font-weight: 500; color: #94a3b8; margin-bottom: 2px; }
+            .rtable td.cell-full { grid-column: 1 / -1; }
+            .rtable td.cell-hide-sm { display: none; }
+            .tbl-scroll { max-height: none; overflow: visible; }
+        }
+
+        /* Heatmap jam x hari */
+        .hm { border-collapse: separate; border-spacing: 3px; font-size: 10px; }
+        .hm-cell { min-width: 28px; height: 28px; text-align: center; border-radius: 6px; font-weight: 600; }
+        .hm-h { font-weight: 500; color: #94a3b8; text-align: center; padding-bottom: 2px; }
+        .hm-day { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; padding-right: 6px; font-weight: 600; color: #475569; white-space: nowrap; }
+        .hm-tot { text-align: center; color: #64748b; font-weight: 600; padding: 0 4px; }
+
+        dialog::backdrop { background: rgba(15, 23, 42, .45); }
+
+        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 overflow-y-auto">
 
-    <!-- Header & filter (menempel di atas) -->
-    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-3">
-            <div class="flex justify-between items-center gap-3 flex-wrap">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-chart-pie text-orange-500 mr-2"></i>Analisa Pelanggan</h2>
-                    <p class="text-[11px] text-slate-500">Transaksi, menu terlaris, pelanggan baru dan repeat. Pesanan berstatus Cancel tidak dihitung. <span id="lastUpdated" class="text-slate-400"></span></p>
+    <!-- Header, filter & navigasi (menempel di atas) -->
+    <header id="appHeader" class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 pt-3 pb-2 space-y-2.5">
+            <div class="flex justify-between items-center gap-2">
+                <div class="min-w-0">
+                    <h2 class="text-base sm:text-lg font-bold text-slate-800 truncate"><i class="fa-solid fa-chart-pie text-orange-500 mr-1.5"></i>Analisa Pelanggan</h2>
+                    <p class="text-[11px] text-slate-500 truncate"><span class="hidden sm:inline">Pesanan berstatus Cancel tidak dihitung. </span><span id="lastUpdated" class="text-slate-400"></span></p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="openSettings()" title="Pengaturan target & komisi" aria-label="Pengaturan" class="bg-slate-100 hover:bg-slate-200 text-slate-700 w-9 h-9 sm:w-auto sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-sliders"></i><span class="hidden lg:inline">Pengaturan</span>
+                    </button>
                     <div id="exportWrap" class="relative">
-                        <button onclick="toggleExportMenu()" aria-haspopup="true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
-                            <i class="fa-solid fa-file-csv"></i> Export CSV <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                        <button onclick="toggleExportMenu()" aria-haspopup="true" aria-label="Export CSV" class="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-3 sm:px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                            <i class="fa-solid fa-file-csv"></i><span class="hidden sm:inline">Export CSV</span> <i class="fa-solid fa-chevron-down text-[9px]"></i>
                         </button>
-                        <div id="exportMenu" class="hidden absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-40">
+                        <div id="exportMenu" class="hidden absolute right-0 mt-2 w-[min(18rem,calc(100vw-1.5rem))] bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-40">
                             <p class="px-3 pt-2 pb-1 text-[11px] text-slate-400">Isi file mengikuti periode dan channel yang sedang dipilih.</p>
                             <button onclick="exportOrdersCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
                                 <i class="fa-solid fa-receipt text-orange-500 mt-0.5"></i>
@@ -50,21 +92,54 @@
                             </button>
                             <button onclick="exportMenuCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
                                 <i class="fa-solid fa-utensils text-rose-500 mt-0.5"></i>
-                                <span><span class="block text-xs font-semibold text-slate-700">Penjualan per menu</span><span class="block text-[11px] text-slate-400">Jumlah terjual dan omzet tiap menu</span></span>
+                                <span><span class="block text-xs font-semibold text-slate-700">Penjualan per menu</span><span class="block text-[11px] text-slate-400">Terjual, tren, kategori, dan omzet tiap menu</span></span>
                             </button>
                             <button onclick="exportCustomersCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
                                 <i class="fa-solid fa-users text-indigo-500 mt-0.5"></i>
                                 <span><span class="block text-xs font-semibold text-slate-700">Daftar pelanggan</span><span class="block text-[11px] text-slate-400">Sesuai segmen dan pencarian di tabel pelanggan</span></span>
                             </button>
+                            <button onclick="exportWinbackCSV(); toggleExportMenu(false)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 flex items-start gap-3">
+                                <i class="fa-brands fa-whatsapp text-emerald-500 mt-0.5"></i>
+                                <span><span class="block text-xs font-semibold text-slate-700">Daftar follow-up</span><span class="block text-[11px] text-slate-400">Pelanggan yang mulai jarang/hilang + link WA</span></span>
+                            </button>
                         </div>
                     </div>
-                    <button onclick="loadAnalytics()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
-                        <i id="refreshIcon" class="fa-solid fa-rotate-right"></i> Refresh
+                    <button onclick="loadAnalytics()" aria-label="Refresh data" class="bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 sm:w-auto sm:px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <i id="refreshIcon" class="fa-solid fa-rotate-right"></i><span class="hidden sm:inline">Refresh</span>
                     </button>
                 </div>
             </div>
 
-            <div class="flex items-center gap-x-6 gap-y-2 flex-wrap">
+            <!-- Filter versi HP: dua dropdown sebaris -->
+            <div class="grid grid-cols-2 gap-2 sm:hidden">
+                <label class="relative">
+                    <span class="sr-only">Periode</span>
+                    <i class="fa-regular fa-calendar absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 text-xs pointer-events-none"></i>
+                    <select id="periodSelect" class="w-full appearance-none bg-slate-100 rounded-xl pl-8 pr-7 py-2 text-xs font-semibold text-slate-700">
+                        <option value="7">7 hari</option>
+                        <option value="30">30 hari</option>
+                        <option value="90">90 hari</option>
+                        <option value="month">Bulan ini</option>
+                        <option value="all">Semua waktu</option>
+                        <option value="custom">Pilih tanggal</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] pointer-events-none"></i>
+                </label>
+                <label class="relative">
+                    <span class="sr-only">Channel</span>
+                    <i class="fa-solid fa-store absolute left-3 top-1/2 -translate-y-1/2 text-orange-500 text-xs pointer-events-none"></i>
+                    <select id="channelSelect" class="w-full appearance-none bg-slate-100 rounded-xl pl-8 pr-7 py-2 text-xs font-semibold text-slate-700">
+                        <option value="all">Semua channel</option>
+                        <option value="offline">Offline</option>
+                        <option value="shopeefood">ShopeeFood</option>
+                        <option value="grabfood">GrabFood</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] pointer-events-none"></i>
+                </label>
+            </div>
+
+            <!-- Filter versi tablet/desktop: chip -->
+            <div class="hidden sm:flex items-center gap-x-6 gap-y-2 flex-wrap">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-[11px] font-medium text-slate-500">Periode</span>
                     <div id="periodChips" class="flex flex-wrap gap-1.5" role="group" aria-label="Pilih periode">
@@ -74,13 +149,6 @@
                         <button class="chip" data-period="month">Bulan Ini</button>
                         <button class="chip" data-period="all">Semua</button>
                         <button class="chip" data-period="custom"><i class="fa-regular fa-calendar mr-1"></i>Pilih Tanggal</button>
-                    </div>
-                    <div id="customRange" class="hidden">
-                        <div class="flex items-center gap-2">
-                            <input type="date" id="dateStart" aria-label="Tanggal mulai" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-                            <span class="text-xs text-slate-400">sampai</span>
-                            <input type="date" id="dateEnd" aria-label="Tanggal akhir" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs">
-                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
@@ -93,64 +161,112 @@
                     </div>
                 </div>
             </div>
+
+            <div id="customRange" class="hidden">
+                <div class="grid grid-cols-[1fr_auto_1fr] sm:flex items-center gap-2">
+                    <input type="date" id="dateStart" aria-label="Tanggal mulai" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs w-full sm:w-auto">
+                    <span class="text-xs text-slate-400">s/d</span>
+                    <input type="date" id="dateEnd" aria-label="Tanggal akhir" class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs w-full sm:w-auto">
+                </div>
+            </div>
+
+            <nav id="secNav" class="flex gap-1 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0" aria-label="Lompat ke bagian">
+                <a href="#sec-ringkasan">Ringkasan</a>
+                <a href="#sec-insight">Insight</a>
+                <a href="#sec-retensi">Retensi</a>
+                <a href="#sec-menu">Menu</a>
+                <a href="#sec-waktu">Jam Ramai</a>
+                <a href="#sec-channel">Channel</a>
+                <a href="#sec-followup">Follow-up</a>
+                <a href="#sec-pelanggan">Pelanggan</a>
+            </nav>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-6 pb-16">
 
         <!-- Filter aktif -->
-        <div id="filterSummary" class="flex flex-wrap gap-2 mb-4"></div>
+        <div id="filterSummary" class="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap"></div>
 
-        <div id="emptyNotice" class="hidden mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-xs">
+        <div id="emptyNotice" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-xs">
             <i class="fa-solid fa-circle-info mr-1"></i> Belum ada transaksi pada periode dan channel ini. Coba pilih periode yang lebih panjang atau channel lain.
         </div>
 
-        <!-- Ringkasan utama -->
-        <section aria-label="Ringkasan penjualan">
-            <div id="heroCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3"></div>
+        <!-- Ringkasan utama + target bulan ini -->
+        <section id="sec-ringkasan" aria-label="Ringkasan penjualan" class="space-y-3">
+            <div id="heroCards" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3"></div>
+            <div id="targetCard"></div>
         </section>
 
-        <!-- Ringkasan pelanggan -->
-        <section aria-label="Ringkasan pelanggan">
-            <div id="kpiCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
+        <!-- Insight & rekomendasi -->
+        <section id="sec-insight" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+            <div class="mb-3">
+                <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-wand-magic-sparkles text-orange-500 mr-1"></i> Insight & rekomendasi</h3>
+                <p class="text-[11px] text-slate-400">Dibuat otomatis dari data periode dan channel terpilih. Yang perlu perhatian ditaruh paling atas.</p>
+            </div>
+            <div id="insightList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
+            <button id="insightToggle" class="hidden mt-3 text-xs font-semibold text-orange-600 hover:text-orange-700"></button>
         </section>
 
-        <!-- Grafik -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Tren order: pelanggan baru dan repeat</h3>
-                <div class="relative h-64"><canvas id="trendChart"></canvas></div>
+        <!-- Retensi pelanggan: KPI + grafik -->
+        <section id="sec-retensi" aria-label="Retensi pelanggan" class="space-y-4">
+            <div id="kpiCards" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                    <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                        <h3 class="text-sm font-semibold text-slate-700">Tren: pelanggan baru vs repeat</h3>
+                        <div id="trendToggle" class="flex bg-slate-100 rounded-lg p-0.5" role="group" aria-label="Pilih metrik">
+                            <button class="seg-btn active" data-metric="orders">Order</button>
+                            <button class="seg-btn" data-metric="revenue">Omzet</button>
+                        </div>
+                    </div>
+                    <div class="relative h-56 sm:h-64"><canvas id="trendChart"></canvas></div>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-3">Komposisi pelanggan aktif</h3>
+                    <div class="relative h-56 sm:h-64"><canvas id="splitChart"></canvas></div>
+                </div>
             </div>
-            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Komposisi pelanggan</h3>
-                <div class="relative h-64"><canvas id="splitChart"></canvas></div>
-            </div>
-        </div>
+        </section>
 
         <!-- Menu terlaris + Kombo -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <section id="sec-menu" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div class="p-4 flex items-center justify-between flex-wrap gap-2">
-                    <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-trophy text-amber-500 mr-1"></i> Menu paling sering dipesan</h3>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-trophy text-amber-500 mr-1"></i> Performa menu</h3>
+                        <p class="text-[11px] text-slate-400">Tren dibanding periode sebelumnya dengan panjang yang sama.</p>
+                    </div>
                     <select id="menuSort" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs cursor-pointer">
                         <option value="qty">Urutkan: Jumlah Terjual</option>
                         <option value="revenue">Urutkan: Omzet</option>
                         <option value="orders">Urutkan: Jumlah Order</option>
+                        <option value="delta">Urutkan: Kenaikan</option>
                     </select>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
+                <div class="md:overflow-x-auto border-t border-slate-100 md:border-0">
+                    <table class="rtable cols-3 w-full text-left text-xs">
                         <thead class="bg-orange-50 text-slate-700 font-semibold">
                             <tr>
-                                <th class="p-3">#</th><th class="p-3">Menu</th><th class="p-3">Terjual</th>
+                                <th class="p-3">Menu</th><th class="p-3">Terjual</th><th class="p-3">vs Sebelumnya</th>
                                 <th class="p-3">Omzet</th><th class="p-3">Muncul di Order</th><th class="p-3" title="Porsi qty yang dibeli pelanggan repeat">% Repeat</th>
                             </tr>
                         </thead>
                         <tbody id="menuBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-                <div class="px-4 py-3 border-t border-slate-100">
+                <div class="px-4 py-3 border-t border-slate-100 space-y-2">
                     <button id="menuToggle" class="hidden text-xs font-semibold text-orange-600 hover:text-orange-700"></button>
+                    <details class="text-[11px] text-slate-500">
+                        <summary class="cursor-pointer font-semibold text-slate-600">Arti kategori menu</summary>
+                        <ul class="mt-2 space-y-1.5">
+                            <li><span class="inline-block px-1.5 py-0.5 rounded-md border text-[9px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">Bintang</span> Laris dan harganya di atas rata-rata. Jaga kualitas, tampilkan paling depan.</li>
+                            <li><span class="inline-block px-1.5 py-0.5 rounded-md border text-[9px] font-semibold bg-sky-50 text-sky-700 border-sky-200">Andalan</span> Laris tapi harganya di bawah rata-rata. Uji naik harga sedikit atau jadikan paket.</li>
+                            <li><span class="inline-block px-1.5 py-0.5 rounded-md border text-[9px] font-semibold bg-amber-50 text-amber-700 border-amber-200">Potensial</span> Harga tinggi tapi jarang dipesan. Perbaiki foto/deskripsi, minta kasir merekomendasikan.</li>
+                            <li><span class="inline-block px-1.5 py-0.5 rounded-md border text-[9px] font-semibold bg-rose-50 text-rose-700 border-rose-200">Evaluasi</span> Jarang dipesan dan murah. Pertimbangkan diganti atau dihapus.</li>
+                            <li class="text-slate-400">"Laris" = terjual ≥ 70% dari rata-rata porsi per menu. Harga dipakai sebagai pendekatan margin karena modal per menu belum tercatat.</li>
+                        </ul>
+                    </details>
                 </div>
             </div>
             <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
@@ -158,82 +274,97 @@
                 <div id="pairsList" class="space-y-2 text-xs"></div>
                 <p class="text-[11px] text-slate-400 mt-3">Cocok dijadikan paket hemat atau bundling.</p>
             </div>
-        </div>
+        </section>
 
-        <!-- Jam ramai, hari ramai, metode bayar -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-1">Jam paling ramai (WIB)</h3>
-                <p id="hourInsight" class="text-[11px] text-slate-500 mb-3 min-h-[16px]"></p>
-                <div class="relative h-48"><canvas id="hourChart"></canvas></div>
-            </div>
-            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
-                <h3 class="text-sm font-semibold text-slate-700 mb-1">Hari paling ramai</h3>
-                <p id="dayInsight" class="text-[11px] text-slate-500 mb-3 min-h-[16px]"></p>
-                <div class="relative h-48"><canvas id="dayChart"></canvas></div>
+        <!-- Jam x hari + metode bayar -->
+        <section id="sec-waktu" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-4 min-w-0">
+                <h3 class="text-sm font-semibold text-slate-700 mb-1"><i class="fa-solid fa-clock text-orange-500 mr-1"></i> Kapan pelanggan datang (WIB)</h3>
+                <p id="timeInsight" class="text-[11px] text-slate-500 mb-3 min-h-[16px]"></p>
+                <div id="heatmap" class="overflow-x-auto -mx-4 px-4 pb-1"></div>
+                <div class="flex items-center gap-2 mt-2 text-[10px] text-slate-400">
+                    <span>Sepi</span><span class="h-2 w-24 rounded-full" style="background:linear-gradient(90deg,rgba(249,115,22,.12),#f97316)"></span><span>Ramai</span>
+                    <span class="ml-auto">Angka = jumlah order. Geser ke samping di HP.</span>
+                </div>
             </div>
             <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
                 <h3 class="text-sm font-semibold text-slate-700 mb-3">Metode pembayaran</h3>
                 <div id="payList" class="space-y-3 text-xs"></div>
             </div>
-        </div>
+        </section>
 
         <!-- Perbandingan channel -->
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
+        <section id="sec-channel" class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="p-4">
                 <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-store text-orange-500 mr-1"></i> Perbandingan channel</h3>
-                <p class="text-[11px] text-slate-400">ShopeeFood dan GrabFood tidak memberi no. WA, jadi pelanggan dikenali dari nama (nama mirip seperti "Eni" dan "Eny" digabung otomatis). Repeat rate di channel online bersifat <b>perkiraan</b>. Tabel ini selalu menampilkan semua channel pada periode terpilih.</p>
+                <p class="text-[11px] text-slate-400">Selalu menampilkan semua channel pada periode terpilih. Omzet bersih = omzet dikurangi perkiraan komisi aplikasi (atur di <button onclick="openSettings()" class="underline text-orange-600">Pengaturan</button>). Repeat di channel online bersifat <b>perkiraan</b> karena pelanggan dikenali dari nama.</p>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
+            <div class="md:overflow-x-auto border-t border-slate-100 md:border-0">
+                <table class="rtable cols-3 w-full text-left text-xs">
                     <thead class="bg-orange-50 text-slate-700 font-semibold">
-                        <tr><th class="p-3">Channel</th><th class="p-3">Transaksi</th><th class="p-3">Menu Terjual</th><th class="p-3">Omzet</th><th class="p-3">Rata-rata/Order</th><th class="p-3">Pelanggan</th><th class="p-3">Repeat</th><th class="p-3" title="Order tanpa nama / nomor meja">Tanpa Identitas</th></tr>
+                        <tr><th class="p-3">Channel</th><th class="p-3">Transaksi</th><th class="p-3">Menu Terjual</th><th class="p-3">Omzet</th><th class="p-3">Porsi</th><th class="p-3">Omzet Bersih (est.)</th><th class="p-3">Rata-rata/Order</th><th class="p-3">Pelanggan</th><th class="p-3">Repeat</th><th class="p-3" title="Order tanpa nama / nomor meja">Tanpa Identitas</th></tr>
                     </thead>
                     <tbody id="channelBody" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
         <!-- Win-back -->
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
-            <div class="p-4">
-                <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-bullhorn text-rose-500 mr-1"></i> Perlu di-follow up <span class="ml-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px]" id="winbackCount">0</span></h3>
-                <p class="text-[11px] text-slate-400">Pelanggan yang sudah order 2x atau lebih tetapi tidak order lagi dalam 30 hari terakhir (tidak terpengaruh pilihan periode). Klik tombol WA untuk mengirim promo atau sapaan.</p>
+        <section id="sec-followup" class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 space-y-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-bullhorn text-rose-500 mr-1"></i> Perlu di-follow up <span class="ml-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px]" id="winbackCount">0</span></h3>
+                    <p class="text-[11px] text-slate-400">Pelanggan yang sudah order 2x atau lebih tetapi sudah melewati 1,5x jeda order biasanya (minimal 14 hari). Dihitung sampai hari ini, tidak terpengaruh pilihan periode. Diurutkan dari total belanja terbesar.</p>
+                </div>
+                <div id="winTabs" class="inline-flex bg-slate-100 rounded-lg p-0.5" role="group" aria-label="Pilih daftar">
+                    <button class="seg-btn active" data-tab="risk">Mulai jarang (<span class="cnt">0</span>)</button>
+                    <button class="seg-btn" data-tab="lost">Hilang &gt; 90 hari (<span class="cnt">0</span>)</button>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
+            <div class="md:overflow-x-auto border-t border-slate-100 md:border-0">
+                <table class="rtable cols-3 w-full text-left text-xs">
                     <thead class="bg-rose-50 text-slate-700 font-semibold">
-                        <tr><th class="p-3">Pelanggan</th><th class="p-3">Total Order</th><th class="p-3">Total Belanja</th><th class="p-3">Terakhir Order</th><th class="p-3">Menu Favorit</th><th class="p-3">Aksi</th></tr>
+                        <tr><th class="p-3">Pelanggan</th><th class="p-3">Total Order</th><th class="p-3">Total Belanja</th><th class="p-3">Terakhir Order</th><th class="p-3">Pola Order</th><th class="p-3">Menu Favorit</th><th class="p-3">Aksi</th></tr>
                     </thead>
                     <tbody id="winbackBody" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
         <!-- Daftar pelanggan -->
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
-            <div class="p-4 flex items-center justify-between flex-wrap gap-3">
+        <section id="sec-pelanggan" class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 space-y-3">
                 <div>
                     <h3 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-users text-orange-500 mr-1"></i> Daftar pelanggan</h3>
-                    <p class="text-[11px] text-slate-400">Baru = 1x order, Repeat = 2–3x, Loyal = 4x atau lebih (seluruh riwayat). Hanya pelanggan yang aktif di periode terpilih. Klik judul kolom untuk mengurutkan.</p>
+                    <p class="text-[11px] text-slate-400">Baru = 1x order, Repeat = 2–3x, Loyal = 4x atau lebih (seluruh riwayat). Hanya pelanggan yang aktif di periode terpilih.<span class="hidden md:inline"> Klik judul kolom untuk mengurutkan.</span></p>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <div id="segFilter" class="flex gap-1 flex-wrap"></div>
-                    <div class="relative">
+                <div id="segFilter" class="flex gap-1 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap"></div>
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1 md:flex-none">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
-                        <input id="custSearch" type="text" placeholder="Cari nama atau no HP" class="pl-8 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-orange-400 w-48">
+                        <input id="custSearch" type="search" placeholder="Cari nama atau no HP" class="pl-8 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-orange-400 w-full md:w-56">
                         <button id="custClear" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="Hapus pencarian"><i class="fa-solid fa-xmark text-xs"></i></button>
                     </div>
+                    <select id="custSortSm" aria-label="Urutkan pelanggan" class="md:hidden bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs max-w-[45%]">
+                        <option value="total:desc">Belanja periode ↓</option>
+                        <option value="orders:desc">Order periode ↓</option>
+                        <option value="life:desc">Total semua waktu ↓</option>
+                        <option value="last:desc">Order terbaru</option>
+                        <option value="status:desc">Paling lama tak order</option>
+                        <option value="first:asc">Pelanggan terlama</option>
+                        <option value="name:asc">Nama A–Z</option>
+                    </select>
                 </div>
             </div>
-            <div class="tbl-scroll">
-                <table class="tbl w-full text-left text-xs">
+            <div class="tbl-scroll border-t border-slate-100 md:border-0">
+                <table class="tbl rtable cols-3 w-full text-left text-xs">
                     <thead id="custHead" class="bg-orange-50 text-slate-700 font-semibold">
                         <tr>
                             <th class="p-3" data-sort="name">Pelanggan<span class="sort-ind"></span></th>
                             <th class="p-3" data-sort="channel">Channel<span class="sort-ind"></span></th>
                             <th class="p-3">WhatsApp</th>
                             <th class="p-3" data-sort="seg">Segmen<span class="sort-ind"></span></th>
+                            <th class="p-3" data-sort="status">Status<span class="sort-ind"></span></th>
                             <th class="p-3" data-sort="orders">Order Periode<span class="sort-ind"></span></th>
                             <th class="p-3" data-sort="total">Belanja Periode<span class="sort-ind"></span></th>
                             <th class="p-3" data-sort="life">Total Semua Waktu<span class="sort-ind"></span></th>
@@ -246,13 +377,13 @@
                 </table>
             </div>
             <div id="custFooter" class="px-4 py-3 text-[11px] text-slate-500 border-t border-slate-100"></div>
-        </div>
+        </section>
 
         <!-- Nama yang digabung otomatis -->
-        <details class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-10">
+        <details class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <summary class="p-4 cursor-pointer text-sm font-semibold text-slate-700">
                 <i class="fa-solid fa-code-merge text-amber-500 mr-1"></i> Nama yang digabung otomatis (<span id="mergedCount">0</span>)
-                <span class="font-normal text-[11px] text-slate-400 ml-1">Cek apakah penggabungannya sudah benar</span>
+                <span class="block sm:inline font-normal text-[11px] text-slate-400 sm:ml-1">Cek apakah penggabungannya sudah benar</span>
             </summary>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
@@ -262,6 +393,45 @@
             </div>
         </details>
     </main>
+
+    <!-- Pengaturan target & komisi -->
+    <dialog id="settingsDlg" class="rounded-2xl p-0 w-[min(26rem,calc(100vw-2rem))] shadow-2xl">
+        <form id="settingsForm" class="p-5 space-y-4">
+            <div class="flex items-start justify-between gap-2">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-sliders text-orange-500 mr-1"></i> Pengaturan analisa</h3>
+                    <p class="text-[11px] text-slate-400">Disimpan di browser ini saja.</p>
+                </div>
+                <button type="button" onclick="closeSettings()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <label class="block">
+                <span class="text-xs font-semibold text-slate-700">Target omzet bulanan</span>
+                <div class="relative mt-1">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">Rp</span>
+                    <input id="setTarget" type="text" inputmode="numeric" placeholder="mis. 30.000.000" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+                </div>
+                <span class="text-[10px] text-slate-400">Kosongkan jika belum ingin memakai target.</span>
+            </label>
+            <div>
+                <span class="text-xs font-semibold text-slate-700">Komisi aplikasi (%)</span>
+                <div class="grid grid-cols-2 gap-3 mt-1">
+                    <label class="block">
+                        <span class="text-[11px] text-slate-500">ShopeeFood</span>
+                        <input id="setFeeShopee" type="number" min="0" max="100" step="0.5" inputmode="decimal" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+                    </label>
+                    <label class="block">
+                        <span class="text-[11px] text-slate-500">GrabFood</span>
+                        <input id="setFeeGrab" type="number" min="0" max="100" step="0.5" inputmode="decimal" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400">
+                    </label>
+                </div>
+                <span class="text-[10px] text-slate-400">Sesuaikan dengan kontrak merchant. Dipakai untuk menghitung omzet bersih per channel.</span>
+            </div>
+            <div class="flex justify-end gap-2 pt-1">
+                <button type="button" onclick="closeSettings()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Batal</button>
+                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600">Simpan</button>
+            </div>
+        </form>
+    </dialog>
 
     <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
