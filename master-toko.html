@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0f172a">
+    <title>Master Toko · ChimChum Admin</title>
+    <link rel="icon" type="image/png" href="./assets/logo-transparan.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#fff5f0', 100: '#ffedd5', 200: '#fed7aa', 400: '#ff8a5c', 500: '#ff6b35', 600: '#ea580c', 700: '#c2410c' }
+                    },
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .spin { animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+        .shake { animation: shake .3s ease-in-out; }
+        .field { width: 100%; padding: .65rem .85rem; border-radius: .75rem; border: 1px solid #e2e8f0; background: #fff; font-size: 16px; transition: box-shadow .15s, border-color .15s; }
+        @media (min-width: 640px) { .field { font-size: .875rem; } }
+        .field:focus { outline: none; border-color: #ff6b35; box-shadow: 0 0 0 3px #ffedd5; }
+        .field.invalid { border-color: #f87171; box-shadow: 0 0 0 3px #fee2e2; }
+        .field.changed { border-color: #fbbf24; background: #fffbeb; }
+        .label { display: block; font-size: .75rem; font-weight: 600; color: #475569; margin-bottom: .3rem; }
+        .hint { font-size: .7rem; color: #94a3b8; margin-top: .3rem; }
+        .pb-safe { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+        html { scroll-padding-top: 5rem; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <!-- ===================== LOADING ===================== -->
+    <div id="screen-loading" class="min-h-screen flex items-center justify-center text-slate-400 text-sm">
+        <i class="fa-solid fa-circle-notch spin mr-2"></i> Memuat...
+    </div>
+
+    <!-- ===================== LOGIN ===================== -->
+    <div id="screen-login" class="hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-800">
+        <form id="login-form" class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 space-y-4">
+            <div class="text-center">
+                <img src="./assets/logo-transparan.png" alt="" class="w-14 mx-auto mb-2" onerror="this.style.display='none'">
+                <h1 class="font-bold text-xl text-slate-900">Master Toko</h1>
+                <p class="text-xs text-slate-500">Masuk dengan akun admin ChimChum</p>
+            </div>
+            <div>
+                <label for="login-email" class="label">Email</label>
+                <input id="login-email" type="email" autocomplete="username" required class="field" placeholder="admin@email.com">
+            </div>
+            <div>
+                <label for="login-password" class="label">Password</label>
+                <div class="relative">
+                    <input id="login-password" type="password" autocomplete="current-password" required class="field pr-10" placeholder="••••••••">
+                    <button type="button" id="toggle-password" aria-label="Lihat password" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 text-slate-400 hover:text-slate-600"><i class="fa-regular fa-eye"></i></button>
+                </div>
+            </div>
+            <p id="login-error" class="hidden text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"></p>
+            <button id="login-btn" type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl transition disabled:opacity-60">Masuk</button>
+            <a href="./index.html" class="block text-center text-xs text-slate-500 hover:text-slate-700"><i class="fa-solid fa-arrow-left mr-1"></i>Kembali ke toko</a>
+        </form>
+    </div>
+
+    <!-- ===================== BUKAN ADMIN ===================== -->
+    <div id="screen-denied" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-xl p-6 text-center space-y-3">
+            <div class="w-14 h-14 mx-auto rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xl"><i class="fa-solid fa-lock"></i></div>
+            <h2 class="font-bold text-lg text-slate-900">Akses ditolak</h2>
+            <p class="text-sm text-slate-500">Akun <b id="denied-email"></b> belum terdaftar sebagai admin toko.</p>
+            <p class="text-[11px] text-slate-400">Daftarkan lewat tabel <code>store_admins</code> di Supabase.</p>
+            <button data-logout class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl text-sm">Keluar & ganti akun</button>
+        </div>
+    </div>
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <div id="screen-app" class="hidden">
+        <header class="bg-slate-900 text-white sticky top-0 z-30">
+            <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center"><i class="fa-solid fa-store text-sm"></i></div>
+                    <div class="leading-tight">
+                        <p class="font-bold text-sm">Master Toko</p>
+                        <p id="admin-email" class="text-[10px] text-slate-400"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <a href="./index.html" target="_blank" class="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-semibold flex items-center gap-1.5"><i class="fa-solid fa-arrow-up-right-from-square"></i><span class="hidden sm:inline">Lihat toko</span></a>
+                    <button data-logout class="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-semibold flex items-center gap-1.5"><i class="fa-solid fa-right-from-bracket"></i><span class="hidden sm:inline">Keluar</span></button>
+                </div>
+            </div>
+            <!-- Tab navigasi (mobile) -->
+            <nav class="lg:hidden border-t border-white/10 overflow-x-auto">
+                <div class="flex gap-1 px-3 py-2 text-xs font-semibold whitespace-nowrap">
+                    <a href="#sec-kontak" class="px-3 py-1.5 rounded-lg bg-white/10">Kontak</a>
+                    <a href="#sec-jam" class="px-3 py-1.5 rounded-lg bg-white/10">Jam</a>
+                    <a href="#sec-lokasi" class="px-3 py-1.5 rounded-lg bg-white/10">Lokasi</a>
+                    <a href="#sec-delivery" class="px-3 py-1.5 rounded-lg bg-white/10">Pesan Antar</a>
+                    <a href="#sec-hero" class="px-3 py-1.5 rounded-lg bg-white/10">Hero</a>
+                </div>
+            </nav>
+        </header>
+
+        <div class="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-[200px_1fr] lg:gap-6">
+            <!-- Sidebar (desktop) -->
+            <aside class="hidden lg:block">
+                <nav class="sticky top-20 space-y-1 text-sm">
+                    <a href="#sec-kontak" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900"><i class="fa-solid fa-address-card w-4 text-brand-500"></i> Identitas & Kontak</a>
+                    <a href="#sec-jam" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900"><i class="fa-solid fa-clock w-4 text-brand-500"></i> Jam Operasional</a>
+                    <a href="#sec-lokasi" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900"><i class="fa-solid fa-location-dot w-4 text-brand-500"></i> Alamat & Lokasi</a>
+                    <a href="#sec-delivery" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900"><i class="fa-solid fa-motorcycle w-4 text-brand-500"></i> Aplikasi Pesan Antar</a>
+                    <a href="#sec-hero" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900"><i class="fa-solid fa-image w-4 text-brand-500"></i> Hero Banner</a>
+                    <p id="last-updated" class="px-3 pt-4 text-[11px] text-slate-400"></p>
+                </nav>
+            </aside>
+
+            <form id="store-form" class="space-y-5 pb-28" novalidate>
+                <div id="load-error" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm rounded-2xl p-4"></div>
+
+                <!-- Identitas & Kontak -->
+                <section id="sec-kontak" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <h2 class="font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-address-card text-brand-500"></i> Identitas & Kontak</h2>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="f-store_name" class="label">Nama toko *</label>
+                            <input id="f-store_name" data-field="store_name" class="field" maxlength="60" required>
+                        </div>
+                        <div>
+                            <label for="f-wa_number" class="label">Nomor WhatsApp admin *</label>
+                            <input id="f-wa_number" data-field="wa_number" type="tel" inputmode="tel" class="field" placeholder="085723785380" required>
+                            <p class="hint">Boleh tulis 08…, +62… atau 62…. Dipakai untuk tombol WA & kirim pesanan. Tampil sebagai <b id="wa-display-preview" class="text-slate-600"></b> · <a id="wa-test" href="#" target="_blank" class="text-emerald-600 font-semibold">Tes chat</a></p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Jam Operasional -->
+                <section id="sec-jam" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <h2 class="font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-clock text-brand-500"></i> Jam Operasional</h2>
+                    <div class="grid sm:grid-cols-3 gap-4">
+                        <div>
+                            <label for="f-open_days" class="label">Hari buka *</label>
+                            <input id="f-open_days" data-field="open_days" class="field" list="days-options" placeholder="Setiap hari" required>
+                            <datalist id="days-options">
+                                <option value="Setiap hari"><option value="Senin – Sabtu"><option value="Senin – Jumat"><option value="Selasa – Minggu">
+                            </datalist>
+                        </div>
+                        <div>
+                            <label for="f-open_time" class="label">Jam buka *</label>
+                            <input id="f-open_time" data-field="open_time" type="time" class="field" required>
+                        </div>
+                        <div>
+                            <label for="f-close_time" class="label">Jam tutup *</label>
+                            <input id="f-close_time" data-field="close_time" type="time" class="field" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="f-services" class="label">Layanan</label>
+                        <input id="f-services" data-field="services" class="field" placeholder="Take Away & Delivery" maxlength="80">
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl px-3 py-2.5">
+                        <i class="fa-solid fa-eye text-slate-400"></i>
+                        Tampil di web: <b id="hours-preview" class="text-slate-700"></b>
+                        <span id="open-now-preview" class="ml-auto font-semibold"></span>
+                    </div>
+                    <p class="hint !mt-0">Jam tutup lebih kecil dari jam buka dianggap lewat tengah malam (cth 16.00 – 02.00). Jam buka = jam tutup berarti buka 24 jam.</p>
+                </section>
+
+                <!-- Alamat & Lokasi -->
+                <section id="sec-lokasi" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <h2 class="font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-location-dot text-brand-500"></i> Alamat & Lokasi</h2>
+                    <div>
+                        <label for="f-address" class="label">Alamat lengkap *</label>
+                        <textarea id="f-address" data-field="address" rows="2" class="field resize-none" required></textarea>
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="f-area_label" class="label">Area singkat</label>
+                            <input id="f-area_label" data-field="area_label" class="field" placeholder="Sawojajar, Malang" maxlength="60">
+                            <p class="hint">Tampil di kartu jam buka pada hero.</p>
+                        </div>
+                        <div>
+                            <label for="f-maps_url" class="label">Link Google Maps</label>
+                            <input id="f-maps_url" data-field="maps_url" type="url" class="field" placeholder="https://maps.app.goo.gl/...">
+                            <p class="hint">Untuk tombol "Buka di Google Maps". Di Google Maps: Bagikan → Salin link.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-4">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="f-maps_embed_url" class="label">Kode embed peta (opsional)</label>
+                                <textarea id="f-maps_embed_url" data-field="maps_embed_url" rows="3" class="field resize-none text-xs font-mono" placeholder='Tempel kode <iframe src="https://www.google.com/maps/embed?..."> di sini'></textarea>
+                                <p class="hint">Google Maps → Bagikan → <b>Sematkan peta</b> → Salin HTML. Koordinat di bawah akan terisi otomatis. Kosongkan untuk memakai koordinat saja.</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="f-latitude" class="label">Latitude</label>
+                                    <input id="f-latitude" data-field="latitude" type="number" step="any" class="field" placeholder="-7.9785">
+                                </div>
+                                <div>
+                                    <label for="f-longitude" class="label">Longitude</label>
+                                    <input id="f-longitude" data-field="longitude" type="number" step="any" class="field" placeholder="112.6566">
+                                </div>
+                            </div>
+                            <button type="button" id="btn-geolocate" class="text-xs font-semibold text-brand-600 hover:text-brand-700"><i class="fa-solid fa-location-crosshairs mr-1"></i>Pakai lokasi saya sekarang (saat berada di toko)</button>
+                        </div>
+                        <div>
+                            <p class="label">Pratinjau peta</p>
+                            <div class="h-64 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                <iframe id="map-preview" title="Pratinjau peta" class="w-full h-full" style="border:0" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Aplikasi Pesan Antar -->
+                <section id="sec-delivery" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <div>
+                        <h2 class="font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-motorcycle text-brand-500"></i> Aplikasi Pesan Antar</h2>
+                        <p class="text-xs text-slate-500">Kosongkan link untuk menyembunyikan tombolnya di web.</p>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label for="f-shopeefood_url" class="label"><span class="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1"></span>ShopeeFood</label>
+                            <div class="flex gap-2"><input id="f-shopeefood_url" data-field="shopeefood_url" type="url" class="field" placeholder="https://spf.shopee.co.id/..."><a data-test-link="f-shopeefood_url" target="_blank" class="flex-shrink-0 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold flex items-center">Tes</a></div>
+                        </div>
+                        <div>
+                            <label for="f-grabfood_url" class="label"><span class="inline-block w-2 h-2 rounded-full bg-green-600 mr-1"></span>GrabFood</label>
+                            <div class="flex gap-2"><input id="f-grabfood_url" data-field="grabfood_url" type="url" class="field" placeholder="https://food.grab.com/..."><a data-test-link="f-grabfood_url" target="_blank" class="flex-shrink-0 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold flex items-center">Tes</a></div>
+                        </div>
+                        <div>
+                            <label for="f-gofood_url" class="label"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>GoFood</label>
+                            <div class="flex gap-2"><input id="f-gofood_url" data-field="gofood_url" type="url" class="field" placeholder="https://gofood.co.id/malang/restaurant/..."><a data-test-link="f-gofood_url" target="_blank" class="flex-shrink-0 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold flex items-center">Tes</a></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Hero Banner -->
+                <section id="sec-hero" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <h2 class="font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-image text-brand-500"></i> Hero Banner</h2>
+                    <div class="grid lg:grid-cols-2 gap-4">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="f-hero_badge" class="label">Label kecil</label>
+                                <input id="f-hero_badge" data-field="hero_badge" class="field" maxlength="40" placeholder="🔥 Freshly Made">
+                                <p class="hint">Kosongkan untuk menyembunyikan.</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="f-hero_title" class="label">Judul *</label>
+                                    <input id="f-hero_title" data-field="hero_title" class="field" maxlength="60" required>
+                                </div>
+                                <div>
+                                    <label for="f-hero_highlight" class="label">Judul (oranye)</label>
+                                    <input id="f-hero_highlight" data-field="hero_highlight" class="field" maxlength="40">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="f-hero_subtitle" class="label">Sub judul <span id="subtitle-count" class="text-slate-400 font-normal"></span></label>
+                                <textarea id="f-hero_subtitle" data-field="hero_subtitle" rows="3" maxlength="220" class="field resize-none"></textarea>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="label">Pratinjau</p>
+                            <div class="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 relative overflow-hidden">
+                                <div class="absolute -right-10 -top-10 w-40 h-40 bg-brand-500/20 rounded-full blur-2xl"></div>
+                                <span id="pv-badge" class="relative inline-block bg-brand-500/20 text-brand-400 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border border-brand-500/30 mb-3"></span>
+                                <h3 class="relative text-2xl font-extrabold tracking-tight leading-tight mb-2"><span id="pv-title"></span> <span id="pv-highlight" class="text-brand-400"></span></h3>
+                                <p id="pv-subtitle" class="relative text-slate-300 text-xs mb-4"></p>
+                                <span class="relative inline-block bg-brand-500 text-xs font-semibold px-4 py-2 rounded-xl">Pesan Sekarang</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </form>
+        </div>
+
+        <!-- Sticky save bar -->
+        <div class="fixed inset-x-0 bottom-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 pb-safe pt-3 px-4">
+            <div class="max-w-6xl mx-auto flex items-center gap-3">
+                <p id="dirty-status" class="text-xs text-slate-500 flex-grow"><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>Semua tersimpan</p>
+                <button type="button" id="btn-reset" disabled class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Batalkan</button>
+                <button type="submit" form="store-form" id="btn-save" disabled class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-md shadow-brand-500/25 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed flex items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" role="status" aria-live="polite" class="fixed left-1/2 -translate-x-1/2 bottom-24 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-xl opacity-0 translate-y-2 pointer-events-none transition duration-200 max-w-[90vw] text-center"></div>
+
+    <script type="module" src="./js/module/master-toko.js"></script>
+</body>
+</html>
