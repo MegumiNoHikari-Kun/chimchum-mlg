@@ -223,6 +223,95 @@ function compRow(x, total) {
     </li>`;
 }
 
+// ---------------------------------------------------------
+// Stok setengah jadi per resep (dipakai bersama oleh menu terkait)
+// ---------------------------------------------------------
+const stockPending = new Map(); // id resep -> { delta, timer }
+let lastShift = false;
+
+function stockBlock(r) {
+    const id = esc(r.id);
+    if (!usesStock(r)) {
+        return `<button type="button" class="self-start text-[11px] font-semibold text-indigo-600 hover:text-indigo-700" data-action="stock-on" data-id="${id}"
+            title="Simpan stok hasil produksi resep ini (pcs). Menu terkait mengambil dari stok yang sama.">
+            <i class="fa-solid fa-layer-group mr-1"></i>Aktifkan stok setengah jadi</button>`;
+    }
+    const st = Number(r.stok) || 0;
+    const saving = stockPending.has(String(r.id));
+    const btn = 'w-8 h-8 flex items-center justify-center text-slate-500 transition disabled:opacity-30';
+    return `<div class="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2 flex items-center justify-between gap-2">
+        <div class="min-w-0">
+            <p class="text-[10px] font-semibold text-indigo-500">Stok setengah jadi${saving ? ' <i class="fa-solid fa-circle-notch fa-spin ml-1"></i>' : ''}</p>
+            <p class="text-sm font-bold ${st <= 0 ? 'text-rose-600' : 'text-indigo-800'}">${num(st)} <span class="text-[10px] font-medium text-indigo-400">pcs</span></p>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+            <div class="inline-flex items-center rounded-lg border border-indigo-200 bg-white overflow-hidden">
+                <button type="button" class="${btn} hover:bg-rose-50 hover:text-rose-500" data-action="stock-step" data-step="-1" data-id="${id}" ${st <= 0 ? 'disabled' : ''}
+                    title="Kurangi 1 (Shift: 10)" aria-label="Kurangi stok ${esc(recName(r))}"><i class="fa-solid fa-minus text-[9px]"></i></button>
+                <input type="number" min="0" step="any" inputmode="decimal" value="${st}" data-recipe-stock data-id="${id}"
+                    class="w-14 h-8 text-center text-xs font-semibold text-slate-700 border-x border-indigo-100 outline-none focus:bg-indigo-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                    aria-label="Stok ${esc(recName(r))}">
+                <button type="button" class="${btn} hover:bg-emerald-50 hover:text-emerald-600" data-action="stock-step" data-step="1" data-id="${id}"
+                    title="Tambah 1 (Shift: 10)" aria-label="Tambah stok ${esc(recName(r))}"><i class="fa-solid fa-plus text-[9px]"></i></button>
+            </div>
+            <button type="button" class="p-1.5 text-slate-300 hover:text-rose-500" data-action="stock-off" data-id="${id}" title="Matikan stok setengah jadi" aria-label="Matikan stok setengah jadi">
+                <i class="fa-solid fa-power-off text-[11px]"></i></button>
+        </div>
+    </div>`;
+}
+
+/** Ubah stok resep secara optimistis; klik beruntun digabung lalu dikirim sebagai selisih. */
+function adjustRecipeStock(id, delta) {
+    const r = recById(id);
+    if (!r || !delta) return;
+    const cur = Number(r.stok) || 0;
+    const next = Math.max(0, round2(cur + delta));
+    delta = round2(next - cur);
+    if (!delta) return;
+
+    r.stok = next;
+    const key = String(r.id);
+    const entry = stockPending.get(key) || { delta: 0 };
+    entry.delta = round2(entry.delta + delta);
+    clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => saveRecipeStock(key), 600);
+    stockPending.set(key, entry);
+    renderRecipes();
+}
+
+async function saveRecipeStock(key) {
+    const entry = stockPending.get(key);
+    if (!entry) return;
+    stockPending.delete(key);
+    if (!entry.delta) return renderRecipes();
+
+    const { error } = await db.rpc('adjust_recipe_stock', { p_recipe_id: key, p_delta: entry.delta });
+    if (error) toast(msg(error, 'Gagal menyimpan stok.'), 'error');
+    else toast('Stok setengah jadi tersimpan.');
+    if (!stockPending.size) await loadData(); // ambil angka terbaru + porsi menu terkait
+}
+
+async function toggleRecipeStock(id, on) {
+    const r = recById(id);
+    if (!r) return;
+    const menus = S.products.filter(p => same(p.resep_id, id)).map(pName);
+    const ok = await confirmBox(on ? {
+        title: 'Aktifkan stok setengah jadi?',
+        message: `Proses produksi "${recName(r)}" akan menambah stok pcs resep ini.` +
+            (menus.length ? `\nMenu terkait mengambil dari stok yang sama:\n• ${menus.join('\n• ')}` : '\nBelum ada menu yang terhubung ke resep ini.'),
+        okText: 'Aktifkan'
+    } : {
+        title: 'Matikan stok setengah jadi?',
+        message: `Stok menu yang memakai "${recName(r)}" kembali diatur manual di halaman Stok.`,
+        okText: 'Matikan', danger: true
+    });
+    if (!ok) return;
+    const { data, error } = await db.from('recipes').update({ pakai_stok: on }).eq('id', id).select('id');
+    if (error || !data?.length) return toast(msg(error, 'Gagal menyimpan. Periksa RLS policy tabel recipes.'), 'error');
+    await loadData();
+    toast(on ? 'Stok setengah jadi aktif. Isi jumlah pcs saat ini di kartu resep.' : 'Stok setengah jadi dimatikan.');
+}
+
 function renderRecipes() {
     const q = $('recipeSearch').value.toLowerCase().trim();
     const list = S.recipes.filter(r =>
@@ -260,8 +349,6 @@ function renderRecipes() {
                 <div class="min-w-0">
                     <h3 class="font-bold text-sm text-slate-800 leading-snug">${esc(recName(r))}</h3>
                     <p class="text-[11px] text-slate-400">${rows.length} bahan · ${menus.length} menu</p>
-                    ${usesStock(r) ? `<p class="mt-1"><span class="badge bg-indigo-50 text-indigo-700 border border-indigo-100" title="Stok setengah jadi resep ini, dipakai bersama oleh menu terkait">
-                        <i class="fa-solid fa-layer-group mr-1"></i>Stok ${num(r.stok)} pcs</span></p>` : ''}
                 </div>
                 <div class="acts flex gap-1 shrink-0">
                     <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-recipe" data-id="${esc(r.id)}" title="Edit resep" aria-label="Edit resep ${esc(recName(r))}"><i class="fa-solid fa-pen"></i></button>
@@ -280,6 +367,8 @@ function renderRecipes() {
                     <p class="text-[10px] text-slate-400 truncate">${limitTxt}</p>
                 </div>
             </div>
+
+            ${stockBlock(r)}
 
             <div>
                 <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Komposisi per batch</p>
@@ -339,7 +428,6 @@ function openRecipe(id) {
     $('recipeId').value = r?.id ?? '';
     $('recipeName').value = r ? recName(r) : '';
     $('recipeTitle').textContent = r ? 'Edit master resep' : 'Buat master resep';
-    $('recipeUseStock').checked = !!r?.pakai_stok;
     $('recipeRows').innerHTML = '';
     (r?.items?.length ? r.items : [{}]).forEach(it => addRecipeRow(it.ingredientId, it.amount));
     updateRecipeCost();
@@ -359,10 +447,7 @@ async function saveRecipe(e) {
 
     const editing = $('recipeId').value;
     await busy(e.submitter, async () => {
-        const { error } = await db.from('recipes').upsert([{
-            id: editing || 'rec_' + Date.now(), name, description: name, items,
-            pakai_stok: $('recipeUseStock').checked
-        }]);
+        const { error } = await db.from('recipes').upsert([{ id: editing || 'rec_' + Date.now(), name, description: name, items }]);
         if (error) return toast(msg(error), 'error');
         closeModal('recipeModal');
         await loadData();
@@ -987,12 +1072,15 @@ const ACTIONS = {
     batch: b => setBatch(Math.max(0.5, (parseFloat($('calcBatch').value) || 0) + Number(b.dataset.step))),
     'set-max': () => setBatch(calcContext().maxBatch),
     produce,
-    order: () => openOrder()
+    order: () => openOrder(),
+    'stock-step': b => adjustRecipeStock(b.dataset.id, Number(b.dataset.step) * (lastShift ? 10 : 1)),
+    'stock-on': b => toggleRecipeStock(b.dataset.id, true),
+    'stock-off': b => toggleRecipeStock(b.dataset.id, false)
 };
 
 // Klik backdrop menutup modal (hanya jika tekan & lepas mouse sama-sama di backdrop)
 let downTarget = null;
-document.addEventListener('mousedown', e => { downTarget = e.target; });
+document.addEventListener('mousedown', e => { downTarget = e.target; lastShift = e.shiftKey; });
 
 document.addEventListener('click', e => {
     if (e.target.classList?.contains('modal') && downTarget === e.target) {
@@ -1013,6 +1101,20 @@ document.addEventListener('keydown', e => {
 });
 
 $('recipeSearch').addEventListener('input', renderRecipes);
+$('recipeBody').addEventListener('change', e => {
+    const inp = e.target.closest('[data-recipe-stock]');
+    if (!inp) return;
+    const r = recById(inp.dataset.id);
+    const val = parseFloat(inp.value);
+    if (!r || !(val >= 0)) { inp.value = Number(r?.stok) || 0; return; }
+    adjustRecipeStock(inp.dataset.id, val - (Number(r.stok) || 0));
+});
+$('recipeBody').addEventListener('keydown', e => {
+    const inp = e.target.closest('[data-recipe-stock]');
+    if (!inp) return;
+    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+    else if (e.key === 'Escape') { inp.value = Number(recById(inp.dataset.id)?.stok) || 0; inp.blur(); }
+});
 $('mappingSearch').addEventListener('input', renderMapping);
 $('onlyUnmapped').addEventListener('change', renderMapping);
 $('ingSearch').addEventListener('input', renderIngredients);
