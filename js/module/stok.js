@@ -24,8 +24,7 @@ const ENABLE_REALTIME = true;
 // STATE
 // =========================================================
 let products = [];
-let ingredients = [];   // dipakai untuk stok setengah jadi
-let recipes = [];       // resep -> output_ingredient_id (hasil produksi)
+let recipes = [];       // resep dengan pakai_stok = stok setengah jadi (pcs)
 let filteredProducts = [];
 let loading = true;
 let loadError = false;
@@ -46,9 +45,9 @@ const notes = new Map();     // id -> { type: 'saved' | 'error', until }
 const flashIds = new Set();  // baris yang perlu disorot pada render berikutnya
 
 // Stok setengah jadi (pcs)
-const wipConfirmed = new Map(); // id bahan -> stok terakhir yang tersimpan
-const wipPending = new Map();   // id bahan -> { timer, inFlight, again }
-const wipNotes = new Map();     // id bahan -> { type, until }
+const wipConfirmed = new Map(); // id resep -> stok terakhir yang tersimpan
+const wipPending = new Map();   // id resep -> { timer, inFlight, again }
+const wipNotes = new Map();     // id resep -> { type, until }
 
 let toastTimer = null;
 let searchTimer = null;
@@ -77,26 +76,26 @@ const getStock = (p) => Math.max(0, Number(p?.stok) || 0);
 
 // ---- Stok setengah jadi ----
 const fmtNum = (n) => (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
-const findIng = (id) => ingredients.find((i) => keyOf(i.id) === keyOf(id));
 const findRecipe = (id) => recipes.find((r) => keyOf(r.id) === keyOf(id));
+const recName = (r) => String(r?.name ?? r?.description ?? 'Resep');
+const wipStock = (r) => Number(r?.stok) || 0;
 const porsiPcs = (p) => Number(p?.porsi_pcs) > 0 ? Number(p.porsi_pcs) : 1;
-/** Bahan setengah jadi yang menjadi sumber stok produk ini (null = stok manual). */
+/** Resep yang menyimpan stok untuk produk ini (null = stok manual). */
 function wipOf(p) {
     const r = p?.resep_id != null ? findRecipe(p.resep_id) : null;
-    return r?.output_ingredient_id ? findIng(r.output_ingredient_id) || null : null;
+    return r?.pakai_stok ? r : null;
 }
 const isAuto = (p) => !!wipOf(p);
 function wipItems() {
-    const ids = new Set(recipes.map((r) => r.output_ingredient_id).filter(Boolean).map(keyOf));
-    return ingredients.filter((i) => ids.has(keyOf(i.id)))
-        .sort((a, b) => String(a.name).localeCompare(String(b.name), 'id'));
+    return recipes.filter((r) => r.pakai_stok)
+        .sort((a, b) => recName(a).localeCompare(recName(b), 'id'));
 }
 const productsOfWip = (id) => products.filter((p) => keyOf(wipOf(p)?.id) === keyOf(id)).sort(byName);
 /** Hitung ulang porsi produk otomatis secara lokal (server juga menghitung lewat trigger). */
 function recalcAutoProducts() {
     products = products.map((p) => {
         const w = wipOf(p);
-        return w ? { ...p, stok: Math.max(0, Math.floor((Number(w.stock) || 0) / porsiPcs(p))) } : p;
+        return w ? { ...p, stok: Math.max(0, Math.floor(wipStock(w) / porsiPcs(p))) } : p;
     });
 }
 const getStatus = (p) => {
@@ -212,20 +211,17 @@ window.loadStok = async function () {
     setRefreshing(true);
     try {
         await authReady;
-        const [prodRes, recRes, ingRes] = await Promise.all([
+        const [prodRes, recRes] = await Promise.all([
             supabase.from('products').select('*'),
             supabase.from('recipes').select('*'),
-            supabase.from('ingredients').select('*'),
         ]);
         if (prodRes.error) throw prodRes.error;
         products = prodRes.data || [];
-        // Resep & bahan opsional: jika gagal, semua produk dianggap stok manual
+        // Resep opsional: jika gagal, semua produk dianggap stok manual
         if (recRes.error) console.warn('Gagal memuat resep:', recRes.error);
-        if (ingRes.error) console.warn('Gagal memuat bahan:', ingRes.error);
         recipes = recRes.error ? [] : (recRes.data || []);
-        ingredients = ingRes.error ? [] : (ingRes.data || []);
         wipConfirmed.clear();
-        ingredients.forEach((i) => wipConfirmed.set(keyOf(i.id), Number(i.stock) || 0));
+        recipes.forEach((r) => wipConfirmed.set(keyOf(r.id), wipStock(r)));
         confirmed.clear();
         products.forEach((p) => confirmed.set(keyOf(p.id), getStock(p)));
         loadError = false;
@@ -434,9 +430,9 @@ function statusBadge(p) {
 function autoLabel(p) {
     const w = wipOf(p);
     return `<div class="inline-flex flex-col items-center text-center rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-1.5 max-w-[170px]"
-        title="Stok dihitung otomatis: ${esc(w.name)} ÷ ${fmtNum(porsiPcs(p))} pcs per porsi">
+        title="Stok dihitung otomatis: stok resep ${esc(recName(w))} ÷ ${fmtNum(porsiPcs(p))} pcs per porsi">
         <span class="text-[10px] font-semibold text-indigo-700"><i class="fa-solid fa-link mr-1"></i>Otomatis</span>
-        <span class="text-[10px] text-indigo-500 truncate max-w-full">dari ${esc(w.name)}</span>
+        <span class="text-[10px] text-indigo-500 truncate max-w-full">dari ${esc(recName(w))}</span>
     </div>`;
 }
 
@@ -694,7 +690,7 @@ function updateStock(id, raw) {
     const target = findP(key);
     if (!target) return;
     if (isAuto(target)) {
-        window.showStatus(`Stok ${getName(target)} otomatis dari ${wipOf(target).name}. Ubah di bagian Stok Setengah Jadi.`, 'error');
+        window.showStatus(`Stok ${getName(target)} otomatis dari resep ${recName(wipOf(target))}. Ubah di bagian Stok Setengah Jadi.`, 'error');
         refresh();
         return;
     }
@@ -777,8 +773,8 @@ window.inputStock = function (id) {
 
 // =========================================================
 // STOK SETENGAH JADI
-//  - Disimpan sebagai bahan (tabel ingredients) yang menjadi hasil produksi resep
-//  - Perubahan dikirim sebagai selisih lewat RPC adjust_ingredient_stock (atomik,
+//  - Disimpan di resep (recipes.stok) yang dicentang "Simpan stok hasil produksi"
+//  - Perubahan dikirim sebagai selisih lewat RPC adjust_recipe_stock (atomik,
 //    aman jika bersamaan ada order yang memotong stok)
 //  - Porsi menu (products.stok) dihitung ulang oleh trigger di database
 // =========================================================
@@ -817,7 +813,7 @@ function renderWip() {
     if (!items.length) {
         box.innerHTML = `<div class="sm:col-span-2 lg:col-span-3 text-center py-6 px-4 border border-dashed border-slate-200 rounded-xl">
             <p class="text-xs font-semibold text-slate-500">Belum ada stok setengah jadi.</p>
-            <p class="text-[11px] text-slate-400 mt-1">Buka <b>Master Resep</b> → edit resep → pilih <b>Hasil produksi</b>. Menu yang memakai resep itu akan dihitung otomatis.</p>
+            <p class="text-[11px] text-slate-400 mt-1">Buka <b>Master Resep</b> → edit resep → centang <b>Simpan stok hasil produksi</b>. Menu yang terhubung ke resep itu akan dihitung otomatis.</p>
         </div>`;
         return;
     }
@@ -825,16 +821,16 @@ function renderWip() {
     const btn = 'w-10 h-10 md:w-9 md:h-9 flex items-center justify-center text-slate-500 transition disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:bg-orange-50';
     box.innerHTML = items.map((w) => {
         const key = keyOf(w.id);
-        const st = Number(w.stock) || 0;
+        const st = wipStock(w);
         const menus = productsOfWip(w.id);
         const tone = st <= 0 ? 'text-rose-600' : 'text-slate-800';
-        const k = esc(key), name = esc(w.name);
+        const k = esc(key), name = esc(recName(w));
         return `
         <div class="border border-slate-100 rounded-xl p-4 flex flex-col gap-3 ${flashIds.has('w:' + key) ? 'row-flash' : ''}">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <div class="font-semibold text-sm text-slate-800 truncate" title="${name}">${name}</div>
-                    <div class="text-2xl font-bold ${tone} leading-tight mt-1">${fmtNum(st)} <span class="text-xs font-medium text-slate-400">${esc(w.unit || 'pcs')}</span></div>
+                    <div class="text-2xl font-bold ${tone} leading-tight mt-1">${fmtNum(st)} <span class="text-xs font-medium text-slate-400">pcs</span></div>
                     <div data-wip-note="${k}" class="h-3.5 text-[10px] font-medium">${wipNoteBadge(key)}</div>
                 </div>
                 <div class="inline-flex items-center rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden shrink-0 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
@@ -867,13 +863,13 @@ function renderWip() {
 }
 
 function setLocalWip(key, val) {
-    ingredients = ingredients.map((i) => (keyOf(i.id) === key ? { ...i, stock: val } : i));
+    recipes = recipes.map((r) => (keyOf(r.id) === key ? { ...r, stok: val } : r));
     recalcAutoProducts();
 }
 
 function updateWip(id, raw) {
     const key = keyOf(id);
-    const w = findIng(key);
+    const w = findRecipe(key);
     if (!w) return;
 
     const str = String(raw ?? '').trim();
@@ -881,9 +877,9 @@ function updateWip(id, raw) {
     if (str === '' || !Number.isFinite(num)) { refresh(); return; }
 
     const newVal = Math.max(0, Math.round(num * 100) / 100);
-    if (newVal === (Number(w.stock) || 0)) { refresh(); return; }
+    if (newVal === wipStock(w)) { refresh(); return; }
 
-    if (!wipConfirmed.has(key)) wipConfirmed.set(key, Number(w.stock) || 0);
+    if (!wipConfirmed.has(key)) wipConfirmed.set(key, wipStock(w));
     setLocalWip(key, newVal);
     flashIds.add('w:' + key);
     refresh();
@@ -901,10 +897,10 @@ async function saveWip(key) {
     if (!entry) return;
     if (entry.inFlight) { entry.again = true; return; }
 
-    const w = findIng(key);
+    const w = findRecipe(key);
     if (!w) { wipPending.delete(key); return; }
 
-    const target = Number(w.stock) || 0;
+    const target = wipStock(w);
     const delta = Math.round((target - (wipConfirmed.get(key) ?? 0)) * 100) / 100;
     if (delta === 0) { wipPending.delete(key); paintWipNote(key); return; }
 
@@ -913,7 +909,7 @@ async function saveWip(key) {
 
     try {
         await authReady;
-        const { data, error } = await supabase.rpc('adjust_ingredient_stock', { p_ingredient_id: key, p_delta: delta });
+        const { data, error } = await supabase.rpc('adjust_recipe_stock', { p_recipe_id: key, p_delta: delta });
         if (error) throw error;
 
         const serverVal = Number(data);
@@ -930,7 +926,7 @@ async function saveWip(key) {
         syncProductsQuiet();
     } catch (e) {
         entry.inFlight = false;
-        window.showStatus(`Gagal menyimpan stok ${w.name}: ${e?.message || e}`, 'error');
+        window.showStatus(`Gagal menyimpan stok ${recName(w)}: ${e?.message || e}`, 'error');
         if (entry.queued) { paintWipNote(key); return; }
         wipPending.delete(key);
         setLocalWip(key, wipConfirmed.get(key) ?? 0);
@@ -990,17 +986,17 @@ function onRealtime(payload) {
     refresh();
 }
 
-function onIngredientRealtime(payload) {
+function onRecipeRealtime(payload) {
     const { eventType, new: row, old } = payload || {};
     if (eventType === 'DELETE') {
-        ingredients = ingredients.filter((i) => keyOf(i.id) !== keyOf(old?.id));
+        recipes = recipes.filter((r) => keyOf(r.id) !== keyOf(old?.id));
     } else if (row && row.id != null) {
         const key = keyOf(row.id);
-        const idx = ingredients.findIndex((i) => keyOf(i.id) === key);
+        const idx = recipes.findIndex((r) => keyOf(r.id) === key);
         if (wipPending.has(key)) return; // admin sedang mengubah: pertahankan nilai lokal
-        if (idx >= 0 && Number(ingredients[idx].stock) !== Number(row.stock)) flashIds.add('w:' + key);
-        if (idx >= 0) ingredients[idx] = row; else ingredients.push(row);
-        wipConfirmed.set(key, Number(row.stock) || 0);
+        if (idx >= 0 && wipStock(recipes[idx]) !== wipStock(row)) flashIds.add('w:' + key);
+        if (idx >= 0) recipes[idx] = row; else recipes.push(row);
+        wipConfirmed.set(key, wipStock(row));
     } else {
         return;
     }
@@ -1015,7 +1011,7 @@ async function subscribeRealtime() {
         supabase
             .channel('stok-siap-jual')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, onRealtime)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ingredients' }, onIngredientRealtime)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes' }, onRecipeRealtime)
             .subscribe();
     } catch (e) {
         console.warn('Realtime tidak aktif:', e);
@@ -1092,8 +1088,8 @@ function bindEvents() {
         const t = e.target.closest('[data-wip-step],[data-step],[data-status],[data-clear],[data-page],[data-action]');
         if (!t || t.disabled) return;
         if (t.dataset.wipStep) {
-            const w = findIng(t.dataset.id);
-            if (w) updateWip(t.dataset.id, (Number(w.stock) || 0) + Number(t.dataset.wipStep) * (e.shiftKey ? 10 : 1));
+            const w = findRecipe(t.dataset.id);
+            if (w) updateWip(t.dataset.id, wipStock(w) + Number(t.dataset.wipStep) * (e.shiftKey ? 10 : 1));
         }
         else if (t.dataset.step) window.stepStock(t.dataset.id, Number(t.dataset.step) * (e.shiftKey ? 10 : 1));
         else if (t.dataset.status) window.setFilter(t.dataset.status);
@@ -1118,7 +1114,7 @@ function bindEvents() {
         const winp = e.target.closest?.('[data-wip-input]');
         if (winp) {
             if (e.key === 'Enter') { e.preventDefault(); winp.blur(); }
-            else if (e.key === 'Escape') { winp.value = Number(findIng(winp.dataset.id)?.stock) || 0; winp.blur(); }
+            else if (e.key === 'Escape') { winp.value = wipStock(findRecipe(winp.dataset.id)); winp.blur(); }
             return;
         }
         const inp = e.target.closest?.('[data-stock-input]');
