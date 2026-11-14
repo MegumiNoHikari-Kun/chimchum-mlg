@@ -294,17 +294,13 @@
                     <label class="lbl" for="recipeName">Nama resep</label>
                     <input id="recipeName" class="field" required autocomplete="off" placeholder="Cth: Adonan Dasar Ayam">
                 </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="col-span-2">
-                        <label class="lbl" for="recipeOutput">Hasil produksi (stok setengah jadi)</label>
-                        <select id="recipeOutput" class="field"></select>
-                    </div>
-                    <div>
-                        <label class="lbl" for="recipeOutputQty">Hasil / batch</label>
-                        <input type="number" id="recipeOutputQty" class="field" min="0" step="any" inputmode="decimal" value="1">
-                    </div>
-                    <p class="col-span-3 text-[11px] text-slate-400 -mt-1">Stok ini bertambah saat <b>Proses produksi</b> dan berkurang saat menu terjual. Resep Original &amp; Mentai boleh memilih stok yang sama.</p>
-                </div>
+                <label class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+                    <input type="checkbox" id="recipeUseStock" class="mt-0.5 accent-orange-500">
+                    <span class="text-xs text-slate-700">
+                        <b>Simpan stok hasil produksi (pcs)</b>
+                        <span class="block text-[11px] text-slate-400 mt-0.5">Proses produksi menambah stok resep ini, dan semua menu yang terhubung ke resep ini mengambil dari stok yang sama. Matikan untuk menu yang dibuat saat dipesan (mis. Es Teh).</span>
+                    </span>
+                </label>
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <span class="lbl" style="margin:0">Komposisi bahan (per 1 batch)</span>
