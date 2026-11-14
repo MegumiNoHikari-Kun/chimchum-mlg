@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Resep &amp; Kalkulator Restok - ChimChum</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #f8fafc; }
+
+        /* ---------- Komponen dasar ---------- */
+        .field { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .75rem; padding: .625rem .875rem; font-size: .75rem; outline: 0; transition: border-color .15s, box-shadow .15s, background .15s; }
+        .field:focus { background: #fff; border-color: #f97316; box-shadow: 0 0 0 3px #ffedd5; }
+        .field:disabled { cursor: not-allowed; }
+        .field.search { padding-left: 2.25rem; }
+        .field.amt { width: 6rem; flex: none; }
+        .field.sup { width: 9.5rem; flex: none; padding-top: .375rem; padding-bottom: .375rem; }
+        .lbl { display: block; font-size: .6875rem; font-weight: 600; color: #475569; margin-bottom: .375rem; }
+        .on-orange .lbl { color: #9a3412; }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; font-weight: 600; font-size: .75rem; padding: .625rem 1rem; border-radius: .75rem; transition: background .15s, opacity .15s; white-space: nowrap; }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+        .btn-primary { background: #f97316; color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: #ea580c; }
+        .btn-green { background: #059669; color: #fff; }
+        .btn-green:hover:not(:disabled) { background: #047857; }
+        .btn-danger { background: #e11d48; color: #fff; }
+        .btn-danger:hover:not(:disabled) { background: #be123c; }
+        .btn-ghost { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
+        .btn-ghost:hover:not(:disabled) { background: #f8fafc; }
+        .btn-sm { padding: .4rem .6rem; border-radius: .5rem; }
+        .btn-icon { padding-left: .875rem; padding-right: .875rem; }
+
+        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; }
+
+        .tab { padding: .5rem 1rem; border-radius: .75rem; font-size: .75rem; font-weight: 600; color: #475569; white-space: nowrap; transition: color .15s, background .15s; }
+        .tab:hover { color: #ea580c; }
+        .tab.active { background: #fff; color: #ea580c; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+
+        .tbl { width: 100%; font-size: .75rem; text-align: left; border-collapse: collapse; }
+        .tbl th { padding: .75rem 1rem; background: #f8fafc; color: #64748b; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+        .tbl td { padding: .75rem 1rem; border-top: 1px solid #f1f5f9; vertical-align: top; }
+        .tbl tbody tr:hover { background: #fffaf5; }
+        .tbl td.empty { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; }
+
+        .badge { display: inline-flex; align-items: center; padding: .125rem .5rem; border-radius: 9999px; font-size: .625rem; font-weight: 600; white-space: nowrap; }
+        .b-ok { background: #ecfdf5; color: #047857; }
+        .b-warn { background: #fffbeb; color: #b45309; }
+        .b-bad { background: #fff1f2; color: #be123c; }
+
+        .dot { display: inline-block; width: .4rem; height: .4rem; border-radius: 9999px; flex: none; vertical-align: middle; margin-right: .25rem; }
+        .empty-card { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; font-size: .75rem; }
+        .recipe-card { transition: border-color .15s, box-shadow .15s; }
+        .recipe-card:hover { border-color: #fed7aa; box-shadow: 0 4px 14px rgb(249 115 22 / .08); }
+        .recipe-card .acts { opacity: .55; transition: opacity .15s; }
+        .recipe-card:hover .acts, .recipe-card:focus-within .acts { opacity: 1; }
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] .more-label { display: none; }
+        details:not([open]) .less-label { display: none; }
+
+        .spin { animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal:not(.hidden) > * { animation: pop .18s ease-out; }
+        @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+        .btn:focus-visible, .tab:focus-visible, .field:focus-visible, .badge:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+    </style>
+</head>
+
+<body class="text-slate-800">
+
+    <!-- ================= HEADER + TAB ================= -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-orange-500"></i> Master Resep
+                </h1>
+                <p class="text-[11px] text-slate-500">Kelola resep, hubungkan ke menu, hitung kebutuhan bahan, dan order ke supplier.</p>
+            </div>
+            <nav class="flex gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto" role="tablist" aria-label="Menu halaman">
+                <button class="tab" role="tab" data-tab="recipes"><i class="fa-solid fa-book mr-1.5"></i>Resep</button>
+                <button class="tab" role="tab" data-tab="mapping"><i class="fa-solid fa-link mr-1.5"></i>Menu &amp; Resep <span id="unmappedBadge" class="badge b-bad ml-1 hidden">0</span></button>
+                <button class="tab" role="tab" data-tab="calculator"><i class="fa-solid fa-calculator mr-1.5"></i>Kalkulator</button>
+                <button class="tab" role="tab" data-tab="ingredients"><i class="fa-solid fa-boxes-stacked mr-1.5"></i>Bahan Baku</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
+
+        <!-- Gagal memuat data -->
+        <div id="loadError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-xs flex items-center justify-between gap-3" role="alert">
+            <span><i class="fa-solid fa-circle-exclamation mr-2"></i><span id="loadErrorMsg"></span></span>
+            <button class="btn btn-ghost btn-sm" data-action="reload"><i class="fa-solid fa-rotate"></i> Coba lagi</button>
+        </div>
+
+        <!-- Produk menipis / habis -->
+        <div id="lowStock" class="hidden bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex gap-3">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5"></i>
+            <div class="min-w-0">
+                <h2 class="text-xs font-bold text-amber-900">Produk siap jual menipis (stok 5 atau kurang)</h2>
+                <p class="text-[11px] text-amber-700">Klik nama menu untuk langsung menghitung produksinya.</p>
+                <div id="lowStockList" class="flex flex-wrap gap-1.5 mt-2"></div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 1: MASTER RESEP ================= -->
+        <section id="panel-recipes" class="space-y-4">
+            <div class="grid grid-cols-3 gap-3">
+                <div class="card px-4 py-3">
+                    <p class="text-[11px] font-semibold text-slate-400">Resep</p>
+                    <p id="statRecipes" class="text-xl font-bold">0</p>
+                </div>
+                <div class="card px-4 py-3">
+                    <p class="text-[11px] font-semibold text-slate-400">Menu</p>
+                    <p id="statProducts" class="text-xl font-bold">0</p>
+                </div>
+                <button class="card px-4 py-3 text-left hover:border-rose-300 transition" data-action="show-unmapped" title="Lihat menu yang belum punya resep">
+                    <p class="text-[11px] font-semibold text-rose-500">Menu tanpa resep <i class="fa-solid fa-arrow-right text-[9px]"></i></p>
+                    <p id="statUnmapped" class="text-xl font-bold text-rose-600">0</p>
+                </button>
+            </div>
+
+            <div class="card p-4 space-y-3">
+                <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                    <div class="relative sm:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="recipeSearch" type="search" class="field search" placeholder="Cari resep atau bahan..." aria-label="Cari resep">
+                    </div>
+                    <button class="btn btn-primary" data-action="new-recipe"><i class="fa-solid fa-plus"></i> Buat resep baru</button>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400">
+                    <span><span class="dot bg-emerald-500"></span> stok cukup untuk 1 batch</span>
+                    <span><span class="dot bg-rose-500"></span> stok kurang</span>
+                    <span><span class="inline-block w-4 h-1 rounded bg-orange-300 align-middle mr-1"></span> porsi biaya bahan</span>
+                </div>
+            </div>
+
+            <div id="recipeBody" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 items-start">
+                <div class="card empty-card sm:col-span-2 xl:col-span-3"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat resep...</div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: MENU & RESEP ================= -->
+        <section id="panel-mapping" class="hidden">
+            <div class="card p-4 space-y-3">
+                <div>
+                    <h2 class="font-bold text-sm">Hubungkan menu ke resep</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Satu resep boleh dipakai banyak menu. Perubahan tersimpan otomatis.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                    <div class="relative sm:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="mappingSearch" type="search" class="field search" placeholder="Cari menu..." aria-label="Cari menu">
+                    </div>
+                    <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="onlyUnmapped" class="w-4 h-4 accent-orange-500"> Hanya menu tanpa resep
+                    </label>
+                </div>
+                <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th class="w-16">Foto</th>
+                                <th>Menu</th>
+                                <th>Stok</th>
+                                <th class="min-w-[220px]">Resep yang dipakai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mappingBody">
+                            <tr><td colspan="4" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat menu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: KALKULATOR RESTOK ================= -->
+        <section id="panel-calculator" class="hidden space-y-4">
+            <div class="on-orange bg-orange-50 border border-orange-100 rounded-2xl p-4 sm:p-5">
+                <h2 class="font-bold text-sm">Hitung kebutuhan produksi</h2>
+                <p class="text-xs text-slate-600 mt-0.5 mb-4">Pilih menu dan jumlah batch. Kebutuhan bahan langsung dibandingkan dengan stok gudang.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                    <div>
+                        <label class="lbl" for="calcProduct">Menu</label>
+                        <select id="calcProduct" class="field" aria-label="Pilih menu"></select>
+                    </div>
+                    <div>
+                        <label class="lbl" for="calcBatch">Jumlah batch</label>
+                        <div class="flex gap-1">
+                            <button type="button" class="btn btn-ghost btn-icon" data-action="batch" data-step="-0.5" aria-label="Kurangi batch"><i class="fa-solid fa-minus"></i></button>
+                            <input type="number" id="calcBatch" value="1" min="0.1" step="0.1" inputmode="decimal" class="field text-center" style="width:5.5rem">
+                            <button type="button" class="btn btn-ghost btn-icon" data-action="batch" data-step="0.5" aria-label="Tambah batch"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card overflow-hidden">
+                <div class="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-bold text-sm">Rincian kebutuhan bahan baku</h3>
+                        <div id="calcSummary" class="flex flex-wrap gap-1.5 mt-1.5"></div>
+                    </div>
+                    <span id="calcLabel" class="badge bg-orange-50 text-orange-700 border border-orange-200">Menunggu pilihan menu...</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="tbl">
+                        <thead>
+                            <tr><th>Bahan baku</th><th>Kebutuhan</th><th>Stok gudang</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="calcBody"></tbody>
+                    </table>
+                </div>
+                <div class="p-4 border-t border-slate-100 bg-slate-50 flex flex-wrap gap-2 justify-end sticky bottom-0">
+                    <button id="btnOrder" class="btn btn-ghost" data-action="order" disabled><i class="fa-solid fa-cart-shopping text-orange-500"></i> Order (PO) bahan kurang</button>
+                    <button id="btnProduce" class="btn btn-green" data-action="produce" disabled><i class="fa-solid fa-check-to-slot"></i> Proses produksi</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: BAHAN BAKU ================= -->
+        <section id="panel-ingredients" class="hidden grid lg:grid-cols-3 gap-4 items-start">
+            <form id="ingForm" class="card p-5 space-y-4 lg:sticky lg:top-24">
+                <h2 id="ingTitle" class="font-bold text-sm">Tambah bahan baku</h2>
+                <input type="hidden" id="ingId">
+                <div>
+                    <label class="lbl" for="ingName">Nama bahan</label>
+                    <input id="ingName" class="field" required autocomplete="off" placeholder="Cth: Ayam Fillet Dada">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="lbl" for="ingStock">Stok gudang</label>
+                        <input type="number" id="ingStock" class="field" step="any" min="0" inputmode="decimal" required placeholder="0">
+                    </div>
+                    <div>
+                        <label class="lbl" for="ingUnit">Satuan</label>
+                        <select id="ingUnit" class="field"></select>
+                    </div>
+                </div>
+                <div>
+                    <label class="lbl" for="ingPrice">Harga per satuan (Rp)</label>
+                    <input type="number" id="ingPrice" class="field" step="any" min="0" inputmode="decimal" placeholder="Cth: 25000">
+                    <p class="text-[10px] text-slate-400 mt-1">Dipakai untuk menghitung biaya resep dan estimasi belanja.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-1"><i class="fa-solid fa-floppy-disk"></i> Simpan bahan</button>
+                    <button type="button" id="ingCancel" class="btn btn-ghost hidden" data-action="reset-ing">Batal</button>
+                </div>
+            </form>
+
+            <div class="card p-4 space-y-3 lg:col-span-2">
+                <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="font-bold text-sm">Inventaris gudang</h2>
+                        <p id="ingCount" class="text-[11px] text-slate-400">0 bahan</p>
+                    </div>
+                    <div class="relative sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="ingSearch" type="search" class="field search" placeholder="Cari bahan baku..." aria-label="Cari bahan baku">
+                    </div>
+                </div>
+                <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                    <table class="tbl">
+                        <thead>
+                            <tr><th>Bahan</th><th>Stok</th><th>Satuan</th><th>Harga</th><th class="text-right">Aksi</th></tr>
+                        </thead>
+                        <tbody id="ingBody">
+                            <tr><td colspan="5" class="empty"><i class="fa-solid fa-circle-notch spin text-orange-500 mr-2"></i>Memuat bahan baku...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= MODAL: RESEP ================= -->
+    <div id="recipeModal" class="modal hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <form id="recipeForm" class="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl" role="dialog" aria-labelledby="recipeTitle">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 id="recipeTitle" class="font-bold text-sm">Buat master resep</h3>
+                <button type="button" class="text-slate-400 hover:text-slate-600 p-1" data-close aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4">
+                <input type="hidden" id="recipeId">
+                <div>
+                    <label class="lbl" for="recipeName">Nama resep</label>
+                    <input id="recipeName" class="field" required autocomplete="off" placeholder="Cth: Adonan Dasar Ayam">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-2">
+                        <label class="lbl" for="recipeOutput">Hasil produksi (stok setengah jadi)</label>
+                        <select id="recipeOutput" class="field"></select>
+                    </div>
+                    <div>
+                        <label class="lbl" for="recipeOutputQty">Hasil / batch</label>
+                        <input type="number" id="recipeOutputQty" class="field" min="0" step="any" inputmode="decimal" value="1">
+                    </div>
+                    <p class="col-span-3 text-[11px] text-slate-400 -mt-1">Stok ini bertambah saat <b>Proses produksi</b> dan berkurang saat menu terjual. Resep Original &amp; Mentai boleh memilih stok yang sama.</p>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="lbl" style="margin:0">Komposisi bahan (per 1 batch)</span>
+                        <button type="button" class="text-xs font-semibold text-orange-600 hover:text-orange-700" data-action="add-row">+ Tambah bahan</button>
+                    </div>
+                    <div id="recipeRows" class="space-y-2"></div>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex items-center justify-between gap-3">
+                <div class="text-xs text-slate-500">Biaya bahan / batch <span id="recipeCost" class="font-bold text-slate-800">Rp 0</span></div>
+                <div class="flex gap-2">
+                    <button type="button" class="btn btn-ghost" data-close>Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ================= MODAL: ORDER SUPPLIER ================= -->
+    <div id="orderModal" class="modal hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <form id="orderForm" class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl" role="dialog" aria-labelledby="orderTitle">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 id="orderTitle" class="font-bold text-sm">Order stok ke supplier</h3>
+                <button type="button" class="text-slate-400 hover:text-slate-600 p-1" data-close aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4">
+                <div id="orderBulkWrap">
+                    <label class="lbl" for="orderBulk">Pilih supplier sekaligus</label>
+                    <select id="orderBulk" class="field" aria-label="Supplier untuk semua bahan"></select>
+                </div>
+                <p id="orderNoSup" class="hidden text-[11px] bg-amber-50 text-amber-700 border border-amber-200 rounded-xl px-3 py-2">
+                    Belum ada data supplier. PO tetap bisa dibuat dengan catatan "Supplier belum ditentukan".
+                </p>
+                <div>
+                    <p class="lbl">Bahan yang kurang</p>
+                    <div id="orderRows" class="space-y-2"></div>
+                </div>
+                <div>
+                    <label class="lbl" for="orderNotes">Catatan (opsional)</label>
+                    <textarea id="orderNotes" rows="2" class="field resize-none" placeholder="Cth: kirim sebelum jam 8 pagi"></textarea>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex items-center justify-between gap-3">
+                <div class="text-xs text-slate-500">Estimasi <span id="orderTotal" class="font-bold text-slate-800">Rp 0</span></div>
+                <div class="flex gap-2">
+                    <button type="button" class="btn btn-ghost" data-close>Batal</button>
+                    <button type="submit" id="orderSubmit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Buat PO</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ================= MODAL: KONFIRMASI ================= -->
+    <div id="confirmModal" class="modal hidden fixed inset-0 z-[90] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl text-center space-y-3" role="alertdialog" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+            <div class="text-3xl"><i id="confirmIcon" class="fa-solid fa-circle-question text-orange-500"></i></div>
+            <h3 id="confirmTitle" class="font-bold text-sm">Konfirmasi</h3>
+            <p id="confirmMessage" class="text-xs text-slate-600 whitespace-pre-line"></p>
+            <div class="flex gap-2 justify-center pt-1">
+                <button id="confirmCancel" type="button" class="btn btn-ghost" data-close>Batal</button>
+                <button id="confirmOk" type="button" class="btn btn-primary">Ya, lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toasts" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-80 z-[100] flex flex-col gap-2" aria-live="polite"></div>
+
+    <script type="module">
+        import { requireAuth } from './js/module/auth-guard.js';
+
+        const auth = await requireAuth(['admin']);
+        if (auth) await import('./js/module/master_resep.js');
+    </script>
+</body>
+</html>
