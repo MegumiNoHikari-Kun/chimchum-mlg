@@ -36,6 +36,9 @@ const supName = s => s.name ?? s.nama ?? 'Supplier';
 const ingById = id => S.ingredients.find(i => same(i.id, id));
 const recById = id => S.recipes.find(r => same(r.id, id));
 const isMapped = p => !!p.resep_id && !!recById(p.resep_id);
+// Stok setengah jadi = bahan yang menjadi hasil produksi suatu resep
+const wipOf = r => r?.output_ingredient_id ? ingById(r.output_ingredient_id) : null;
+const wipUsers = id => S.recipes.filter(r => same(r.output_ingredient_id, id));
 const sortBy = (arr, fn) => arr.sort((a, b) => String(fn(a)).localeCompare(String(fn(b)), 'id'));
 
 // Biaya bahan per 1 batch & jumlah resep yang memakai suatu bahan
@@ -258,6 +261,8 @@ function renderRecipes() {
                 <div class="min-w-0">
                     <h3 class="font-bold text-sm text-slate-800 leading-snug">${esc(recName(r))}</h3>
                     <p class="text-[11px] text-slate-400">${rows.length} bahan · ${menus.length} menu</p>
+                    ${wipOf(r) ? `<p class="mt-1"><span class="badge bg-indigo-50 text-indigo-700 border border-indigo-100" title="Hasil produksi resep ini">
+                        <i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>${esc(wipOf(r).name)} · stok ${num(wipOf(r).stock)} ${esc(wipOf(r).unit)}</span></p>` : ''}
                 </div>
                 <div class="acts flex gap-1 shrink-0">
                     <button class="btn btn-sm bg-orange-50 text-orange-600 hover:bg-orange-100" data-action="edit-recipe" data-id="${esc(r.id)}" title="Edit resep" aria-label="Edit resep ${esc(recName(r))}"><i class="fa-solid fa-pen"></i></button>
@@ -335,6 +340,9 @@ function openRecipe(id) {
     $('recipeId').value = r?.id ?? '';
     $('recipeName').value = r ? recName(r) : '';
     $('recipeTitle').textContent = r ? 'Edit master resep' : 'Buat master resep';
+    $('recipeOutput').innerHTML = '<option value="">-- Tidak ada (langsung dijual) --</option>' +
+        S.ingredients.map(i => `<option value="${esc(i.id)}"${same(i.id, r?.output_ingredient_id) ? ' selected' : ''}>${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+    $('recipeOutputQty').value = r?.output_qty ?? 1;
     $('recipeRows').innerHTML = '';
     (r?.items?.length ? r.items : [{}]).forEach(it => addRecipeRow(it.ingredientId, it.amount));
     updateRecipeCost();
@@ -352,9 +360,19 @@ async function saveRecipe(e) {
     if (!items.length) return toast('Resep minimal punya 1 bahan dengan jumlah lebih dari 0.', 'warn');
     if (duplicate) return toast('Ada bahan yang dipilih lebih dari sekali.', 'warn');
 
+    const output_ingredient_id = $('recipeOutput').value || null;
+    const output_qty = parseFloat($('recipeOutputQty').value);
+    if (output_ingredient_id && items.some(it => same(it.ingredientId, output_ingredient_id))) {
+        return toast('Hasil produksi tidak boleh sekaligus menjadi bahan di resep yang sama.', 'warn');
+    }
+    if (output_ingredient_id && !(output_qty > 0)) return toast('Jumlah hasil per batch harus lebih dari 0.', 'warn');
+
     const editing = $('recipeId').value;
     await busy(e.submitter, async () => {
-        const { error } = await db.from('recipes').upsert([{ id: editing || 'rec_' + Date.now(), name, description: name, items }]);
+        const { error } = await db.from('recipes').upsert([{
+            id: editing || 'rec_' + Date.now(), name, description: name, items,
+            output_ingredient_id, output_qty: output_ingredient_id ? output_qty : 1
+        }]);
         if (error) return toast(msg(error), 'error');
         closeModal('recipeModal');
         await loadData();
@@ -881,8 +899,10 @@ function renderIngredients() {
         const empty = !(Number(i.stock) > 0);
         return `<tr>
             <td>
-                <div class="font-medium text-slate-800">${esc(i.name)}</div>
-                <div class="text-[11px] text-slate-400">${used ? `Dipakai di ${used} resep` : 'Belum dipakai resep'}</div>
+                <div class="font-medium text-slate-800">${esc(i.name)}${wipUsers(i.id).length ? ' <span class="badge bg-indigo-50 text-indigo-700 border border-indigo-100 ml-1">Setengah jadi</span>' : ''}</div>
+                <div class="text-[11px] text-slate-400">${wipUsers(i.id).length
+                    ? `Hasil produksi: ${wipUsers(i.id).map(r => esc(recName(r))).join(', ')}`
+                    : used ? `Dipakai di ${used} resep` : 'Belum dipakai resep'}</div>
             </td>
             <td class="font-semibold ${empty ? 'text-rose-600' : ''}">${num(i.stock)}</td>
             <td class="text-slate-500">${esc(i.unit)}</td>
