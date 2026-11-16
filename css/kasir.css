@@ -296,6 +296,9 @@ kbd {
 .menu-card__price { font-weight: 700; color: var(--primary); font-size: 14px; }
 .menu-card__stock { font-size: 11px; color: var(--muted); }
 .menu-card__stock.is-low { color: var(--warning); font-weight: 600; }
+/* Sisa stok berdenyut saat berkurang / bertambah karena keranjang */
+.menu-card__stock.stock-pop { animation: stockPop .45s ease-out; transform-origin: left center; }
+@keyframes stockPop { 35% { transform: scale(1.18); color: var(--primary, #ff6b35); } }
 
 .menu-skeleton {
   aspect-ratio: 1 / 1.45; border-radius: var(--radius);
