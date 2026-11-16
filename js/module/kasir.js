@@ -109,6 +109,66 @@ function findProduct(id) {
     return cachedProducts.find(p => P.id(p) === String(id));
 }
 
+/* ---------- STOK SETENGAH JADI (dipakai bersama menu dengan resep sama) ---------- */
+const pools = new Map();     // recipe_id -> stok pcs
+const poolOfProd = new Map(); // product id -> { poolId, porsi }
+
+async function loadStockPools() {
+    pools.clear();
+    poolOfProd.clear();
+    try {
+        const { data, error } = await supabase
+            .from('product_stock_source')
+            .select('product_id, porsi_pcs, recipe_id, recipe_stok');
+        if (error) throw error;
+        (data || []).forEach(r => {
+            poolOfProd.set(String(r.product_id), {
+                poolId: String(r.recipe_id),
+                porsi: Number(r.porsi_pcs) > 0 ? Number(r.porsi_pcs) : 1
+            });
+            pools.set(String(r.recipe_id), Math.max(0, Number(r.recipe_stok) || 0));
+        });
+    } catch (e) {
+        console.warn('Stok setengah jadi tidak dimuat, memakai stok per produk:', e?.message || e);
+    }
+}
+
+// pcs stok resep yang sudah dipakai item lain di keranjang (resep sama)
+function poolUsed(poolId, exceptId) {
+    return Object.values(kasirCart).reduce((sum, i) => {
+        if (String(i.id) === String(exceptId)) return sum;
+        const link = poolOfProd.get(String(i.id));
+        return link && link.poolId === poolId ? sum + i.qty * link.porsi : sum;
+    }, 0);
+}
+
+// Jumlah maksimal produk ini di keranjang
+function maxQty(id) {
+    id = String(id);
+    const link = poolOfProd.get(id);
+    if (link && pools.has(link.poolId)) {
+        return Math.max(0, Math.floor((pools.get(link.poolId) - poolUsed(link.poolId, id)) / link.porsi));
+    }
+    const p = findProduct(id);
+    return p ? Math.max(0, P.stock(p)) : Math.max(0, Number(kasirCart[id]?.stok) || 0);
+}
+
+// Sisa yang masih bisa ditambahkan (sudah dikurangi isi keranjang)
+function remaining(id) {
+    return maxQty(id) - (kasirCart[String(id)]?.qty || 0);
+}
+
+function stockMsg(id, nama) {
+    const link = poolOfProd.get(String(id));
+    const max = maxQty(id);
+    if (link && poolUsed(link.poolId, String(id)) > 0) {
+        return max > 0
+            ? `Stok ${nama} hanya cukup untuk ${max} porsi (dipakai bersama menu lain di keranjang).`
+            : `Stok ${nama} sudah terpakai menu lain di keranjang.`;
+    }
+    return max > 0 ? `Stok ${nama} hanya ${max}.` : `Stok ${nama} habis.`;
+}
+
 /* =========================================================
    UI PRIMITIVES: TOAST, MODAL, CONFIRM
 ========================================================= */
@@ -300,6 +360,7 @@ window.loadProducts = async () => {
         if (error) throw error;
 
         cachedProducts = sortProducts(data || []);
+        await loadStockPools();
         syncCartWithStock();
         renderCategoryBar();
         applyMenuFilter();
@@ -333,17 +394,22 @@ window.loadProducts = async () => {
 // Sesuaikan isi keranjang dengan stok terbaru dari database
 function syncCartWithStock() {
     const adjusted = [];
-    Object.values(kasirCart).forEach(item => {
-        const p = findProduct(item.id);
-        if (!p) return;
-        item.stok = P.stock(p);
-        if (item.stok <= 0) {
-            delete kasirCart[item.id];
+    // Diproses berurutan: item yang sudah diterima ikut mengurangi stok bersama
+    const saved = Object.values(kasirCart);
+    kasirCart = {};
+    saved.forEach(item => {
+        if (!findProduct(item.id)) { kasirCart[item.id] = item; return; }
+        const max = maxQty(item.id);
+        if (max <= 0) {
             adjusted.push(`${item.nama} (habis)`);
-        } else if (item.qty > item.stok) {
-            item.qty = item.stok;
-            adjusted.push(`${item.nama} (maks ${item.stok})`);
+            return;
         }
+        if (item.qty > max) {
+            item.qty = max;
+            adjusted.push(`${item.nama} (maks ${max})`);
+        }
+        item.stok = max;
+        kasirCart[item.id] = item;
     });
     if (adjusted.length) {
         toast('Stok berubah, keranjang disesuaikan: ' + adjusted.join(', '), 'warning', 6000);
@@ -445,10 +511,10 @@ function renderKasirMenu(products = visibleProducts) {
         const id = P.id(p);
         const nama = P.name(p);
         const harga = P.price(p);
-        const stok = P.stock(p);
-        const habis = stok <= 0;
-        const low = !habis && stok <= LOW_STOCK;
         const qty = kasirCart[id]?.qty || 0;
+        const stok = remaining(id);
+        const habis = qty === 0 && stok <= 0;
+        const low = !habis && stok <= LOW_STOCK;
         const foto = P.image(p) || PLACEHOLDER_IMG;
 
         return `
@@ -461,24 +527,55 @@ function renderKasirMenu(products = visibleProducts) {
                     <img src="${escapeHtml(foto)}" alt="" loading="lazy"
                          onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'">
                     ${qty ? `<span class="menu-card__qty">${qty}</span>` : ''}
-                    ${habis ? `<span class="menu-card__flag">Habis</span>` : ''}
-                    ${low ? `<span class="menu-card__flag menu-card__flag--low">Sisa ${stok}</span>` : ''}
+                    ${stockFlagHTML(stok, habis, low)}
                 </span>
                 <span class="menu-card__body">
                     <span class="menu-card__name">${escapeHtml(nama)}</span>
                     <span class="menu-card__meta">
                         <span class="menu-card__price">${rupiah(harga)}</span>
-                        <span class="menu-card__stock ${low ? 'is-low' : ''}">${habis ? 'Stok habis' : `Stok ${stok}`}</span>
+                        <span class="menu-card__stock ${low ? 'is-low' : ''}" data-rem="${stok}">${stockText(stok, habis)}</span>
                     </span>
                 </span>
             </button>`;
     }).join('');
 }
 
-// Update badge qty di kartu menu tanpa render ulang semua gambar
+function stockText(stok, habis) {
+    return habis ? 'Stok habis' : stok <= 0 ? 'Maks. di keranjang' : `Stok ${stok}`;
+}
+
+function stockFlagHTML(stok, habis, low) {
+    if (habis) return `<span class="menu-card__flag">Habis</span>`;
+    if (low) return `<span class="menu-card__flag menu-card__flag--low">${stok <= 0 ? 'Maks' : `Sisa ${stok}`}</span>`;
+    return '';
+}
+
+// Update badge qty & sisa stok di kartu menu tanpa render ulang semua gambar.
+// Sisa stok langsung berkurang saat item masuk keranjang (termasuk menu lain
+// yang memakai stok setengah jadi yang sama).
 function updateMenuBadges() {
     document.querySelectorAll('#kasirMenuList .menu-card').forEach(card => {
         const qty = kasirCart[card.dataset.id]?.qty || 0;
+        const stok = remaining(card.dataset.id);
+        const habis = qty === 0 && stok <= 0;
+        const low = !habis && stok <= LOW_STOCK;
+
+        card.classList.toggle('is-out', habis);
+        card.disabled = habis;
+
+        const stockEl = card.querySelector('.menu-card__stock');
+        if (stockEl && stockEl.dataset.rem !== String(stok)) {
+            stockEl.dataset.rem = String(stok);
+            stockEl.textContent = stockText(stok, habis);
+            stockEl.classList.toggle('is-low', low);
+            stockEl.classList.remove('stock-pop');
+            void stockEl.offsetWidth;
+            stockEl.classList.add('stock-pop');
+            const img = card.querySelector('.menu-card__img');
+            img?.querySelectorAll('.menu-card__flag').forEach(f => f.remove());
+            img?.insertAdjacentHTML('beforeend', stockFlagHTML(stok, habis, low));
+        }
+
         card.classList.toggle('in-cart', qty > 0);
         let badge = card.querySelector('.menu-card__qty');
         if (qty > 0) {
@@ -518,25 +615,23 @@ window.addToKasirCart = function (id, nama, harga, stok) {
     const p = findProduct(productId);
     nama = p ? P.name(p) : String(nama ?? '');
     harga = p ? P.price(p) : (Number(harga) || 0);
-    stok = p ? P.stock(p) : Number(stok ?? DEFAULT_STOCK);
+    if (!p && !kasirCart[productId]) {
+        // produk di luar daftar (jarang): pakai stok yang dikirim pemanggil
+        kasirCart[productId] = { id: productId, nama, harga, qty: 0, stok: Number(stok ?? DEFAULT_STOCK) };
+    }
 
-    if (stok <= 0) {
-        toast(`Stok ${nama} habis.`, 'warning');
+    if (remaining(productId) <= 0) {
+        if (kasirCart[productId]?.qty === 0) delete kasirCart[productId];
+        toast(stockMsg(productId, nama), 'warning');
         return false;
     }
 
     if (!kasirCart[productId]) {
-        kasirCart[productId] = { id: productId, nama, harga, qty: 0, stok };
+        kasirCart[productId] = { id: productId, nama, harga, qty: 0, stok: maxQty(productId) };
     }
     const item = kasirCart[productId];
-    item.stok = stok;
-
-    if (item.qty >= item.stok) {
-        toast(`Stok ${nama} hanya ${item.stok}.`, 'warning');
-        return false;
-    }
-
     item.qty++;
+    item.stok = maxQty(productId);
     renderKasirCart({ highlightId: productId });
     bumpCard(productId);
     return true;
@@ -551,9 +646,10 @@ function setCartQty(id, qty) {
 
     if (qty <= 0) {
         delete kasirCart[item.id];
-    } else if (qty > item.stok) {
-        item.qty = item.stok;
-        toast(`Stok ${item.nama} hanya ${item.stok}.`, 'warning');
+    } else if (qty > maxQty(item.id)) {
+        item.qty = maxQty(item.id);
+        toast(stockMsg(item.id, item.nama), 'warning');
+        if (item.qty <= 0) delete kasirCart[item.id];
     } else {
         item.qty = qty;
     }
@@ -599,7 +695,7 @@ function renderKasirCart({ highlightId } = {}) {
             </div>`;
     } else {
         container.innerHTML = items.map(item => {
-            const atMax = item.qty >= item.stok;
+            const atMax = remaining(item.id) <= 0;
             return `
                 <div class="cart-item ${item.id === highlightId ? 'is-flash' : ''}" data-id="${escapeHtml(item.id)}">
                     <div class="cart-item__name">${escapeHtml(item.nama)}</div>
@@ -1808,7 +1904,7 @@ function setupKasirEvents() {
     search?.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const first = visibleProducts.find(p => P.stock(p) > 0);
+            const first = visibleProducts.find(p => remaining(P.id(p)) > 0);
             if (first && window.addToKasirCart(P.id(first))) search.select();
         }
     });
