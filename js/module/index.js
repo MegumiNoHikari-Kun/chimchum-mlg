@@ -23,6 +23,9 @@ const QRIS_IMG = './assets/ChimChum-QRISSHOPEE.png';
 
 window.products = [];
 let productsFromDb = false;
+// Stok setengah jadi per resep (pcs). Menu dengan resep yang sama memakai stok bersama.
+// recipe_id -> stok pcs; diisi dari view product_stock_source
+const pools = new Map();
 let cart = loadJSON(CART_KEY, []);
 let currentFilter = 'all';
 let searchQuery = '';
@@ -71,6 +74,45 @@ function cartSubtotal() {
 
 function cartQty() {
     return cart.reduce((s, i) => s + i.qty, 0);
+}
+
+/* ---------- STOK (termasuk stok setengah jadi bersama) ---------- */
+const isPooled = (p) => p && p.poolId != null && pools.has(String(p.poolId));
+const hasStockInfo = (p) => isPooled(p) || (p && p.stock !== undefined);
+
+// pcs stok resep yang sudah "dipakai" item lain di keranjang (resep sama)
+function poolUsed(poolId, exceptId) {
+    return cart.reduce((sum, i) => {
+        if (String(i.id) === String(exceptId)) return sum;
+        const p = findProduct(i.id);
+        return p && String(p.poolId) === String(poolId) ? sum + i.qty * p.porsi : sum;
+    }, 0);
+}
+
+// Jumlah maksimal produk ini yang boleh ada di keranjang
+function maxQty(p) {
+    if (!p) return 0;
+    if (isPooled(p)) {
+        const free = pools.get(String(p.poolId)) - poolUsed(p.poolId, p.id);
+        return Math.max(0, Math.floor(free / p.porsi));
+    }
+    return p.stock === undefined ? Infinity : Math.max(0, Number(p.stock) || 0);
+}
+
+// Sisa yang masih bisa ditambahkan (sudah dikurangi isi keranjang)
+function remaining(p) {
+    const inCart = findCartItem(p.id);
+    return maxQty(p) - (inCart ? inCart.qty : 0);
+}
+
+function stockLimitMsg(p) {
+    const max = maxQty(p);
+    if (isPooled(p) && poolUsed(p.poolId, p.id) > 0) {
+        return max > 0
+            ? `Stok ${p.name} hanya cukup untuk ${max} porsi (dipakai bersama menu lain di keranjang)`
+            : `Stok ${p.name} sudah habis terpakai menu lain di keranjang`;
+    }
+    return `Stok ${p.name} hanya tersisa ${max}`;
 }
 
 function capitalize(s) {
@@ -361,9 +403,12 @@ async function loadProductsFromSupabase() {
                 price: Number(p.harga || p.price || 0),
                 desc: p.deskripsi || p.desc || '',
                 image: p.foto || p.image || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=500',
-                stock: p.stock !== undefined ? Number(p.stock) : (p.stok !== undefined ? Number(p.stok) : 10)
+                stock: p.stock !== undefined ? Number(p.stock) : (p.stok !== undefined ? Number(p.stok) : 10),
+                poolId: null,
+                porsi: Number(p.porsi_pcs) > 0 ? Number(p.porsi_pcs) : 1
             }));
             productsFromDb = true;
+            await loadStockPools();
         } else {
             window.products = sampleProducts;
         }
@@ -385,19 +430,43 @@ async function loadProductsFromSupabase() {
     updateCartUI();
 }
 
+// Hubungkan produk ke stok setengah jadi resepnya (jika view tersedia).
+// Gagal / belum ada migrasi -> tiap produk tetap memakai stoknya sendiri.
+async function loadStockPools() {
+    pools.clear();
+    try {
+        const { data, error } = await supabase
+            .from('product_stock_source')
+            .select('product_id, porsi_pcs, recipe_id, recipe_stok');
+        if (error) throw error;
+        (data || []).forEach(row => {
+            const p = findProduct(row.product_id);
+            if (!p) return;
+            p.poolId = String(row.recipe_id);
+            p.porsi = Number(row.porsi_pcs) > 0 ? Number(row.porsi_pcs) : 1;
+            pools.set(String(row.recipe_id), Math.max(0, Number(row.recipe_stok) || 0));
+        });
+    } catch (e) {
+        console.warn('Stok setengah jadi tidak dimuat, memakai stok per produk:', e?.message || e);
+    }
+}
+
 // Sinkronkan keranjang yang tersimpan dengan harga & stok terbaru
 function reconcileCart() {
     if (!productsFromDb || cart.length === 0) return;
     let changed = false;
 
-    cart = cart.reduce((acc, item) => {
+    // Diproses berurutan: item yang sudah diterima ikut mengurangi stok bersama
+    const saved = cart;
+    cart = [];
+    saved.forEach(item => {
         const p = findProduct(item.id);
-        if (!p || (p.stock !== undefined && p.stock <= 0)) { changed = true; return acc; }
-        const qty = p.stock !== undefined ? Math.min(item.qty, p.stock) : item.qty;
+        const max = p ? maxQty(p) : 0;
+        if (!p || max <= 0) { changed = true; return; }
+        const qty = Math.min(item.qty, max);
         if (qty !== item.qty || p.price !== item.price) changed = true;
-        acc.push({ ...p, qty });
-        return acc;
-    }, []);
+        cart.push({ ...p, qty });
+    });
 
     if (changed) showToast('Keranjang diperbarui sesuai stok & harga terbaru');
 }
@@ -446,9 +515,10 @@ $('menu-search')?.addEventListener('input', (e) => {
 });
 
 function actionSlotHTML(item) {
-    const out = item.stock !== undefined && item.stock <= 0;
     const inCart = findCartItem(item.id);
     const qty = inCart ? inCart.qty : 0;
+    const out = qty === 0 && remaining(item) <= 0;
+    const full = qty > 0 && remaining(item) <= 0;
     const id = esc(item.id);
 
     if (out) {
@@ -462,25 +532,34 @@ function actionSlotHTML(item) {
     return `<div class="w-full flex items-center justify-between bg-brand-50 border border-brand-200 rounded-xl p-1">
                 <button data-action="dec" data-id="${id}" aria-label="Kurangi" class="w-9 h-8 rounded-lg bg-white hover:bg-slate-50 text-brand-600 flex items-center justify-center shadow-sm"><i class="fa-solid ${qty === 1 ? 'fa-trash-can' : 'fa-minus'} text-xs"></i></button>
                 <span class="font-bold text-brand-700 text-sm">${qty}</span>
-                <button data-action="inc" data-id="${id}" aria-label="Tambah" class="w-9 h-8 rounded-lg bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shadow-sm"><i class="fa-solid fa-plus text-xs"></i></button>
+                <button data-action="inc" data-id="${id}" aria-label="Tambah" ${full ? 'disabled title="Stok tidak cukup"' : ''} class="w-9 h-8 rounded-lg bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-plus text-xs"></i></button>
             </div>`;
 }
 
-function productCard(item) {
-    const out = item.stock !== undefined && item.stock <= 0;
-    const low = !out && item.stock !== undefined && item.stock <= 5;
+// Badge stok / overlay habis di foto produk. Angkanya ikut berkurang saat item masuk keranjang.
+function stockSlotHTML(item) {
+    if (!hasStockInfo(item)) return '';
+    const rem = remaining(item);
     const inCart = !!findCartItem(item.id);
+    if (rem <= 0 && !inCart) {
+        return `<div class="absolute inset-0 bg-slate-900/50 flex items-center justify-center"><span class="bg-white text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full">Stok Habis</span></div>`;
+    }
+    if (rem === Infinity) return '';
+    const tone = rem <= 0 ? 'bg-slate-800 text-white' : rem <= 5 ? 'bg-red-500 text-white' : 'bg-white/90 backdrop-blur text-slate-700';
+    const label = rem <= 0 ? 'Maks. di keranjang' : `Sisa ${rem}`;
+    return `<span data-stock-badge class="stock-badge absolute bottom-2 right-2 ${tone} text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">${label}</span>`;
+}
+
+function productCard(item) {
+    const inCart = !!findCartItem(item.id);
+    const out = !inCart && remaining(item) <= 0;
 
     return `
         <article data-card="${esc(item.id)}" class="group bg-white rounded-2xl border shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition ${inCart ? 'border-brand-300 ring-2 ring-brand-100' : 'border-slate-100'} ${out ? 'opacity-70' : ''}">
             <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
                 <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'">
                 <span class="absolute top-2 left-2 bg-white/90 backdrop-blur text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wide">${esc(item.category)}</span>
-                ${out
-                    ? `<div class="absolute inset-0 bg-slate-900/50 flex items-center justify-center"><span class="bg-white text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full">Stok Habis</span></div>`
-                    : low
-                        ? `<span class="absolute bottom-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">Sisa ${item.stock}</span>`
-                        : ''}
+                <div data-stock-slot="${esc(item.id)}" data-rem="${remaining(item)}">${stockSlotHTML(item)}</div>
             </div>
             <div class="p-3 sm:p-4 flex flex-col flex-grow">
                 <h4 class="font-semibold text-slate-900 text-sm sm:text-base leading-snug line-clamp-2">${esc(item.name)}</h4>
@@ -546,8 +625,18 @@ function refreshProductSlots() {
         if (!product) return;
         slot.innerHTML = actionSlotHTML(product);
         const card = slot.closest('[data-card]');
+        const stockSlot = card?.querySelector('[data-stock-slot]');
+        if (stockSlot) {
+            const rem = String(remaining(product));
+            if (stockSlot.dataset.rem !== rem) {
+                stockSlot.dataset.rem = rem;
+                stockSlot.innerHTML = stockSlotHTML(product);
+                stockSlot.querySelector('[data-stock-badge]')?.classList.add('pop');
+            }
+        }
         if (card) {
             const inCart = !!findCartItem(product.id);
+            card.classList.toggle('opacity-70', !inCart && remaining(product) <= 0);
             card.classList.toggle('border-brand-300', inCart);
             card.classList.toggle('ring-2', inCart);
             card.classList.toggle('ring-brand-100', inCart);
@@ -583,16 +672,14 @@ window.addToCart = function (productId) {
     const product = findProduct(productId);
     if (!product) return;
 
-    if (product.stock !== undefined && product.stock <= 0) {
-        showNotification('Stok Habis', `Mohon maaf, produk ${product.name} sedang kosong dan tidak dapat dipesan.`, 'warning');
-        return;
-    }
-
     const existing = findCartItem(productId);
-    const currentQty = existing ? existing.qty : 0;
 
-    if (product.stock !== undefined && currentQty + 1 > product.stock) {
-        showToast(`Stok ${product.name} hanya tersisa ${product.stock}`);
+    if (remaining(product) <= 0) {
+        if (!existing && maxQty(product) <= 0 && !(isPooled(product) && poolUsed(product.poolId, product.id) > 0)) {
+            showNotification('Stok Habis', `Mohon maaf, produk ${product.name} sedang kosong dan tidak dapat dipesan.`, 'warning');
+        } else {
+            showToast(stockLimitMsg(product));
+        }
         return;
     }
 
@@ -618,8 +705,8 @@ window.updateCartQty = function (productId, change) {
 
     const newQty = item.qty + change;
     if (newQty > 0) {
-        if (product && product.stock !== undefined && newQty > product.stock) {
-            showToast(`Stok ${product.name} hanya tersisa ${product.stock}`);
+        if (product && newQty > maxQty(product)) {
+            showToast(stockLimitMsg(product));
             return;
         }
         item.qty = newQty;
@@ -699,7 +786,7 @@ function updateCartUI() {
                 <div class="flex items-center bg-slate-100 rounded-xl p-0.5 flex-shrink-0">
                     <button data-action="dec" data-id="${id}" aria-label="Kurangi" class="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-600"><i class="fa-solid ${item.qty === 1 ? 'fa-trash-can text-red-400' : 'fa-minus'} text-[11px]"></i></button>
                     <span class="text-sm font-bold w-6 text-center">${item.qty}</span>
-                    <button data-action="inc" data-id="${id}" aria-label="Tambah" class="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-600"><i class="fa-solid fa-plus text-[11px]"></i></button>
+                    <button data-action="inc" data-id="${id}" aria-label="Tambah" ${remaining(findProduct(item.id) || item) <= 0 ? 'disabled title="Stok tidak cukup"' : ''} class="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"><i class="fa-solid fa-plus text-[11px]"></i></button>
                 </div>
             </div>`;
         }).join('<div class="border-t border-slate-100"></div>');
