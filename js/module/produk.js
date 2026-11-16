@@ -31,6 +31,9 @@ const FALLBACK_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
 // =========================================================
 let products = [];
 let filteredProducts = [];
+// Resep yang menyimpan stok setengah jadi: stok menu terkait dihitung otomatis
+let stockRecipes = new Map(); // recipe id -> { id, name, stok }
+let editingAuto = null;       // resep otomatis dari produk yang sedang diedit
 let usingLocalStorage = false;
 let isLoading = false;
 let isSaving = false;
@@ -458,6 +461,7 @@ function openModal(mode = 'add', product = null) {
         $('p-harga').value = getProductPrice(product) || '';
         $('p-hpp').value = getProductHpp(product) || '';
         $('p-stok').value = getProductStock(product);
+        setStockLocked(autoRecipeOf(product));
         $('p-foto').value = getProductImage(product);
         $('p-deskripsi').value = getProductDescription(product);
 
@@ -519,7 +523,43 @@ function editProduct(id) {
 // =========================================================
 // FORM: RESET, VALIDASI, INFO
 // =========================================================
+async function loadStockRecipes() {
+    try {
+        const { data, error } = await supabase.from('recipes').select('id, name, stok, pakai_stok').eq('pakai_stok', true);
+        if (error) throw error;
+        stockRecipes = new Map((data || []).map(r => [String(r.id), r]));
+    } catch (e) {
+        stockRecipes = new Map(); // kolom belum ada / gagal: semua stok tetap manual
+        console.warn('Resep stok setengah jadi tidak dimuat:', e?.message || e);
+    }
+}
+
+const autoRecipeOf = (product) => product?.resep_id != null ? stockRecipes.get(String(product.resep_id)) || null : null;
+
+// Kunci input stok untuk produk yang stoknya otomatis dari resep
+function setStockLocked(recipe) {
+    editingAuto = recipe;
+    const input = $('p-stok');
+    if (!input) return;
+    input.disabled = !!recipe;
+    input.classList.toggle('opacity-60', !!recipe);
+    document.querySelectorAll('[data-stok-step]').forEach(b => { b.disabled = !!recipe; b.classList.toggle('opacity-40', !!recipe); });
+
+    let hint = $('p-stok-auto');
+    if (!hint) {
+        hint = document.createElement('p');
+        hint.id = 'p-stok-auto';
+        hint.className = 'text-[11px] text-indigo-600 mt-1';
+        $('err-p-stok')?.after(hint);
+    }
+    hint.classList.toggle('hidden', !recipe);
+    hint.innerHTML = recipe
+        ? `<i class="fa-solid fa-link mr-1"></i>Otomatis dari stok resep <b>${escapeHtml(recipe.name || '')}</b> (${Number(recipe.stok) || 0} pcs). Ubah di halaman Stok atau Master Resep.`
+        : '';
+}
+
 function resetForm() {
+    setStockLocked(null);
     FORM_FIELDS.forEach(id => {
         const el = $(id);
         if (el) el.value = '';
@@ -557,7 +597,7 @@ function validateForm() {
     if (!v.nama) errors['p-nama'] = 'Nama produk wajib diisi.';
     if (v.hargaRaw === '' || !Number.isFinite(v.harga) || v.harga <= 0) errors['p-harga'] = 'Harga jual harus lebih dari 0.';
     if (!Number.isFinite(v.hpp) || v.hpp < 0) errors['p-hpp'] = 'HPP tidak boleh negatif.';
-    if (!Number.isFinite(v.stok) || v.stok < 0 || !Number.isInteger(v.stok)) errors['p-stok'] = 'Stok harus angka bulat 0 atau lebih.';
+    if (!editingAuto && (!Number.isFinite(v.stok) || v.stok < 0 || !Number.isInteger(v.stok))) errors['p-stok'] = 'Stok harus angka bulat 0 atau lebih.';
     if (v.foto && !validImageUrl(v.foto)) errors['p-foto'] = 'URL foto harus diawali http:// atau https://';
 
     const payload = {
@@ -570,6 +610,8 @@ function validateForm() {
         foto: v.foto,
         deskripsi: v.deskripsi
     };
+    // Stok produk otomatis dihitung database dari stok resep: jangan ditimpa
+    if (editingAuto) delete payload.stok;
 
     return { payload, errors };
 }
@@ -754,6 +796,7 @@ async function loadProducts({ silent = false } = {}) {
 
         products = Array.isArray(data) ? data : [];
         usingLocalStorage = false;
+        await loadStockRecipes();
         setConnectionStatus(true, false);
         hideBanner();
         saveLocalProducts();
